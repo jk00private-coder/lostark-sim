@@ -3,97 +3,194 @@ import React from 'react';
 export default function CharacterDetailedPage() {
   return (
     <main className="min-h-screen bg-[#0f1215] text-slate-200 p-4 md:p-8 font-sans">
-      {/* 전체 컨테이너를 2열로 나눕니다. 
-         3:7 비율을 위해 grid-cols-[3fr_7fr] 사용 
-      */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[3fr_7fr] gap-6">
-        
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[3fr_7fr] gap-4">
+
         {/* [왼쪽 열 - 30% 영역] */}
-        <div className="space-y-6">
-          {/* 1. 기본 정보 */}
+        <div className="space-y-4">
+          {/* 1. 기본 정보 (기존 코드 유지) */}
           <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
-            <h2 className="text-lg font-bold mb-4 text-orange-400 border-b border-slate-700 pb-2">기본 정보</h2>
-            <div className="space-y-4">
-              <div className="w-full aspect-[3/4] bg-slate-800 rounded flex items-center justify-center text-slate-500 border border-slate-700">
-                캐릭터 전신샷
-              </div>
-              <div className="space-y-2">
-                <p className="text-2xl font-black text-white">닉네임닉네임</p>
-                <p className="text-orange-500 font-bold">Lv. 1620.00</p>
-                <div className="text-sm text-slate-400">
-                  <p>서버: <span className="text-slate-200">카제로스</span></p>
-                  <p>길드: <span className="text-slate-200">아만서버최강</span></p>
-                  <p>직업: <span className="text-slate-200">슬레이어</span></p>
+            <div className="flex justify-between items-stretch gap-4">
+              <div className="flex flex-col justify-center space-y-1">
+                <p className="text-xl font-black text-white">소르가나</p>
+                <p className="text-orange-500 text-base">아이템 1710.00</p>
+                <p className="text-orange-500 text-base leading-none">전투력 2222.22</p>
+                <div className="text-sm text-slate-400 pt-2">
+                  {[
+                    ["서버", "아브렐슈드"],
+                    ["길드", "IOl"],
+                    ["직업", "가디언나이트"],
+                    ["깨달음", "업화의계승자"],
+                    ["칭호", "없음"],
+                    ["명예", "13"],
+                    ["원정대", "265"],
+                    ["영지", "이름있는영지"],
+                  ].map(([label, value]) => (
+                    <p key={label}>
+                      <span className="inline-block w-11">{label}</span>
+                      <span className="text-slate-200">{value}</span>
+                    </p>
+                  ))}
                 </div>
+              </div>
+              <div className="w-[150px] h-[250px] bg-slate-800 rounded border border-slate-700 relative overflow-hidden flex-shrink-0">
+                <img src="https://img.lostark.co.kr/armory/6/3BABD7DDE88F6BEE01CF19940559FB48264DABF217E51B3A46BC9970DAD04BA6.jpg" alt="Char" className="w-full h-full object-cover object-top" />
               </div>
             </div>
           </div>
 
-          {/* 2. 전투 스탯 (세로로 자유롭게 길어짐) */}
+          {/* 요청1: 전투 스탯 (2열 표시) */}
           <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
-            <h2 className="text-lg font-bold mb-4 text-green-400 border-b border-slate-700 pb-2">전투 특성</h2>
+            <div className="grid grid-cols-2 gap-x-6 text-sm">
+              {[
+                ["공격력", "58,230"], ["최대생명력", "185,000"],
+                ["치명", "1850"], ["제압", "54"],
+                ["특화", "650"], ["인내", "52"],
+                ["신속", "550"], ["숙련", "48"],
+                ["힘/민/지", "185,200"], ["무기공격력", "45,200"]
+              ].map(([label, val]) => (
+                <div key={label} className="flex justify-between border-slate-800/50 pb-1">
+                  <span className="text-slate-400 text-xs">{label}</span>
+                  <span className="font-bold text-slate-200">{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 요청3: 아크 그리드 (2행 분리) */}
+          <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
+            <h2 className="text-sm font-bold mb-4 text-yellow-500 border-b border-slate-700 pb-2">아크 그리드</h2>
+            <div className="space-y-6">
+              {/* 1행: 코어 정보 */}
+              <div className="grid grid-cols-2 gap-3 text-[11px]">
+                {["질서-해", "질서-달", "질서-별", "혼돈-해", "혼돈-달", "혼돈-별"].map((core) => (
+                  <div key={core} className="flex items-center gap-2 bg-slate-800/40 p-2 rounded">
+                    <div className="w-4 h-4 bg-yellow-600/50 rounded-full"></div>
+                    <span className="flex-1 text-slate-300">{core}</span>
+                    <span className="text-yellow-500 font-bold">20pt</span>
+                  </div>
+                ))}
+              </div>
+              {/* 2행: 부가 옵션 */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs border-t border-slate-800 pt-3">
+                {["보스피해", "추가피해", "공격력", "낙인력", "아군피해강화", "아군공격강화"].map((opt) => (
+                  <div key={opt} className="flex justify-between">
+                    <span className="text-slate-500">{opt}</span>
+                    <span className="text-slate-300">+4.5%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. 각인 정보 */}
+          <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
+            <h2 className="text-sm font-bold mb-4 text-orange-400 border-b border-slate-700 pb-2">각인 효과</h2>
             <div className="space-y-3">
-              {[["치명", 1850], ["신속", 650], ["특화", 50]].map(([label, val]) => (
-                <div key={label} className="flex justify-between">
-                  <span className="text-slate-400">{label}</span>
-                  <span className="font-bold">{val}</span>
+              {/* 헤더 부분 (항목 설명) */}
+              <div className="flex text-[10px] text-slate-500 pb-1 border-b border-slate-800">
+                <span className="flex-1">각인명</span>
+                <span className="w-12 text-center">스톤</span>
+                <span className="w-12 text-center">유물</span>
+                <span className="w-16 text-right">데미지 증가</span>
+              </div>
+
+              {/* 각인 리스트 */}
+              {[
+                { name: "원한", stone: 9, relic: 12, damage: "20.0%" },
+                { name: "예리한 둔기", stone: 7, relic: 12, damage: "16.5%" },
+                { name: "저주받은 인형", stone: 0, relic: 12, damage: "16.0%" },
+                { name: "아드레날린", stone: 7, relic: 12, damage: "6.0%" },
+                { name: "타격의 대가", stone: 0, relic: 12, damage: "16.0%" },
+              ].map((engraving) => (
+                <div key={engraving.name} className="flex items-center text-xs py-1 border-b border-slate-800/30 last:border-0">
+                  <span className="flex-1 font-bold text-slate-200">{engraving.name}</span>
+                  <span className="w-12 text-center text-blue-400">{engraving.stone}</span>
+                  <span className="w-12 text-center text-orange-400">{engraving.relic}</span>
+                  <span className="w-16 text-right font-semibold text-green-400">{engraving.damage}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 3. 아크 그리드 */}
+          {/* 5. 카드 세트 정보 */}
           <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
-            <h2 className="text-lg font-bold mb-4 text-yellow-500 border-b border-slate-700 pb-2">아크 그리드</h2>
-            <div className="grid grid-cols-5 gap-2">
-              {[...Array(10)].map((_, i) => (
-                <div key={i} className="aspect-square bg-slate-800 rounded-sm border border-slate-700"></div>
-              ))}
+            <h2 className="text-sm font-bold mb-4 text-blue-300 border-b border-slate-700 pb-2">카드 세트</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-white">세상을 구하는 빛</span>
+                <span className="text-[10px] px-2 py-0.5 bg-blue-900/30 text-blue-400 border border-blue-500/30 rounded">30각성</span>
+              </div>
+              <div className="p-3 bg-slate-800/40 rounded-md text-[11px] text-slate-400 leading-relaxed">
+                <p>• 공격 속성 성속성으로 변경</p>
+                <p>• 성속성 피해량 <span className="text-slate-200">+15.0%</span> 증가</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* [오른쪽 열 - 70% 영역] */}
-        <div className="space-y-6">
-          {/* 1. 장비칸 */}
+        <div className="space-y-4">
+          {/* 요청2: 장비칸 (2개 열 추가 분리) */}
           <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
-            <h2 className="text-lg font-bold mb-4 text-blue-400 border-b border-slate-700 pb-2">착용 장비</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {/* 장비 아이템 예시 */}
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded border border-slate-700">
-                  <div className="w-12 h-12 bg-slate-700 rounded border border-orange-500/50"></div>
-                  <div>
-                    <p className="text-xs text-slate-400">머리 방어구</p>
-                    <p className="text-sm font-bold text-orange-400">+25 고대</p>
+            <h2 className="text-sm font-bold mb-4 text-blue-400 border-b border-slate-700 pb-2">장비 및 악세서리</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* 1열: 방어구/무기/보구 */}
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-500 mb-2 underline">전투 장비</p>
+                {["무기", "머리", "상의", "하의", "장갑", "어깨", "보구"].map((item) => (
+                  <div key={item} className="flex items-center gap-3 p-2 bg-slate-800/30 rounded border border-slate-700/50">
+                    <div className="w-10 h-10 bg-orange-900/20 border border-orange-500/50 rounded"></div>
+                    <span className="text-sm">{item} <span className="text-xs text-slate-500 ml-2">고대 25강</span></span>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              {/* 2열: 장신구/팔찌/스톤 */}
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-500 mb-2 underline">장신구</p>
+                {["목걸이", "귀걸이 1", "귀걸이 2", "반지 1", "반지 2", "팔찌", "어빌리티 스톤"].map((item) => (
+                  <div key={item} className="flex items-center gap-3 p-2 bg-slate-800/30 rounded border border-slate-700/50">
+                    <div className="w-10 h-10 bg-purple-900/20 border border-purple-500/50 rounded"></div>
+                    <span className="text-sm">{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* 2. 보석칸 (보석은 많으므로 70% 영역에 두는게 유리) */}
+          {/* 요청4: 보석칸 (간략화 정보) */}
           <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
-            <h2 className="text-lg font-bold mb-4 text-purple-400 border-b border-slate-700 pb-2">보석 세팅</h2>
-            <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+            <div className="flex justify-between items-end mb-4 border-b border-slate-700 pb-2">
+              <h2 className="text-sm font-bold text-purple-400">보석 세팅</h2>
+              <p className="text-xs text-slate-400">겁화 <span className="text-orange-400">6</span> / 작열 <span className="text-cyan-400">5</span> <span className="ml-2 text-slate-500">공증합: +42%</span></p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {[...Array(11)].map((_, i) => (
-                <div key={i} className="flex flex-col items-center gap-1">
-                  <div className="w-full aspect-square bg-slate-800 rounded-full border border-purple-500/40 flex items-center justify-center">
-                    <span className="text-[10px] text-purple-300">10레벨</span>
+                <div key={i} className="flex items-center justify-between p-2 bg-slate-800/20 rounded text-[11px] border border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-purple-900/40 rounded-full border border-purple-500/30 flex items-center justify-center text-[8px]">10</div>
+                    <span className="text-slate-300">스킬명 {i+1}</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">멸화</span>
+                  <span className={i < 6 ? "text-orange-400" : "text-cyan-400"}>{i < 6 ? "겁화" : "작열"}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 3. 아크 패시브 */}
-          <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
-            <h2 className="text-lg font-bold mb-4 text-cyan-400 border-b border-slate-700 pb-2">아크 패시브</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="p-4 bg-slate-800/30 rounded border border-slate-700">진화 (Point: 120)</div>
-              <div className="p-4 bg-slate-800/30 rounded border border-slate-700">깨달음 (Point: 90)</div>
-              <div className="p-4 bg-slate-800/30 rounded border border-slate-700">도약 (Point: 40)</div>
+          {/* 요청5: 아크 패시브 (3열 표시 + 카르마) */}
+          <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg relative">
+            <h2 className="text-sm font-bold mb-4 text-cyan-400 border-b border-slate-700 pb-2">아크 패시브</h2>
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              {["진화", "깨달음", "도약"].map((tab) => (
+                <div key={tab} className="p-4 bg-slate-800/50 rounded-lg text-center border border-slate-700">
+                  <p className="text-xs text-slate-500 mb-1">{tab}</p>
+                  <p className="text-lg font-bold text-white">120 <span className="text-[10px] font-normal text-slate-500">pt</span></p>
+                </div>
+              ))}
+            </div>
+            {/* 우측 하단 카르마 정보 */}
+            <div className="absolute bottom-4 right-6 text-right">
+              <p className="text-[10px] text-slate-500">카르마 랭크 <span className="text-cyan-400 ml-1 italic font-bold">RANK 4</span></p>
+              <p className="text-[10px] text-slate-500">카르마 레벨 <span className="text-white ml-1">Lv. 80</span></p>
             </div>
           </div>
         </div>
