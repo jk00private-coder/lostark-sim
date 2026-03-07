@@ -13,19 +13,24 @@ export type SystemSourceId =
   | "NONE";
 
 /**
- * [순수 효과 성격 ID]
- * 어떤 수치가 변화하는지 정의합니다.
+ * [효과 타입 상수 배열]
+ * 새로운 효과가 필요하면 여기에 문자열만 추가하세요. 
+ * 자동으로 타입과 초기화 로직에 반영됩니다.
  */
-export type EffectTypeId = 
-  | "DMG_INC"           // 피해 증가
-  | "ATK_INC_PERCENT"   // 공격력 % 증가
-  | "ATK_INC_FIXED"     // 기본 공격력 수치 증가
-  | "CRIT_CHANCE"       // 치명타 확률
-  | "CRIT_DMG"          // 치명타 피해
-  | "COOLDOWN_RED"      // 재사용 대기시간 감소
-  | "MOV_SPEED"         // 이동 속도
-  | "ATK_SPEED"         // 공격 속도
-  | "NONE";
+export const EFFECT_TYPES = [
+  "DMG_INC", 
+  "ATK_INC_PERCENT", 
+  "ATK_INC_FIXED", 
+  "CRIT_CHANCE", 
+  "CRIT_DMG", 
+  "COOLDOWN_RED", 
+  "MOV_SPEED", 
+  "ATK_SPEED", 
+  "NONE"
+] as const;
+
+// 배열로부터 타입을 자동으로 추출 (Union Type 생성)
+export type EffectTypeId = (typeof EFFECT_TYPES)[number];
 
 /**
  * [직업별 스킬 ID 정의]
