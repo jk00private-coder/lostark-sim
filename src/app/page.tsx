@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ENGRAVINGS_DB } from '@/data/engravings';
 import { BaseSimData } from '@/types/sim-types';
+import { getSlotStatTotals } from '@/utils/calculator';
 
 export default function EngravingSimulator() {
   // 5개의 각인 슬롯 상태 (id, 유물레벨, 어빌레벨을 관리)
@@ -70,9 +71,12 @@ export default function EngravingSimulator() {
               {[0, 1, 2, 3, 4].map(v => <option key={v} value={v}>스톤 Lv.{v}</option>)}
             </select>
 
-            {/* 4열: 실제 데미지 증가율 (요청하신 대로 고정값 4.23%) */}
+            {/* 4열 수치 표시 부분 */}
             <div className="text-right text-xs font-mono text-emerald-400">
-              {slot.engravingId ? "+4.23%" : "0.00%"}
+              {slot.engravingId ? (
+                // 해당 슬롯이 가진 모든 수치를 단순 합산해서 보여줌 (원한은 피증, 아드는 공증+치확 등)
+                <>+{Object.values(getSlotStatTotals(slot)).reduce((a, b) => a + b, 0) * 100}%</>
+              ) : "0.00%"}
             </div>
           </div>
         ))}
