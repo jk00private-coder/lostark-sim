@@ -1,10 +1,36 @@
+<<<<<<< HEAD
 import React from 'react';
+=======
+"use client";
+
+import React, { useState } from 'react';
+import { ENGRAVINGS_DB } from '@/data/engravings';
+import { BaseSimData } from '@/types/sim-types';
+import { getSlotStatTotals } from '@/utils/calculator';
+
+export default function EngravingSimulator() {
+  // 5개의 각인 슬롯 상태 (id, 유물레벨, 어빌레벨을 관리)
+  const [slots, setSlots] = useState(
+    Array(5).fill(null).map(() => ({
+      engravingId: "",
+      relicLevel: 0,
+      abilityLevel: 0,
+    }))
+  );
+
+  const handleUpdateSlot = (index: number, key: string, value: any) => {
+    const newSlots = [...slots];
+    newSlots[index] = { ...newSlots[index], [key]: value };
+    setSlots(newSlots);
+  };
+>>>>>>> 9b05be95faf4350eeef6e53ce55d167726a4b34e
 
 export default function CharacterDetailedPage() {
   return (
     <main className="min-h-screen bg-[#0f1215] text-slate-200 p-4 md:p-8 font-sans">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[3fr_7fr] gap-4">
 
+<<<<<<< HEAD
         {/* [왼쪽 열 - 30% 영역] */}
         <div className="space-y-4">
           {/* 1. 기본 정보 (기존 코드 유지) */}
@@ -35,6 +61,49 @@ export default function CharacterDetailedPage() {
               <div className="w-[150px] h-[250px] bg-slate-800 rounded border border-slate-700 relative overflow-hidden flex-shrink-0">
                 <img src="https://img.lostark.co.kr/armory/6/3BABD7DDE88F6BEE01CF19940559FB48264DABF217E51B3A46BC9970DAD04BA6.jpg" alt="Char" className="w-full h-full object-cover object-top" />
               </div>
+=======
+      {/* 각인 슬롯 리스트 */}
+      <div className="space-y-2">
+        {slots.map((slot, idx) => (
+          <div 
+            key={idx} 
+            className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 items-center bg-[#0f1215] p-2 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors"
+          >
+            {/* 1열: 각인명 선택 */}
+            <select
+              value={slot.engravingId}
+              onChange={(e) => handleUpdateSlot(idx, "engravingId", e.target.value)}
+              className="bg-transparent text-xs text-slate-200 outline-none focus:text-orange-400 cursor-pointer"
+            >
+              <option value="">각인 선택 안함</option>
+              {ENGRAVINGS_DB.map(eng => (
+                <option key={eng.id} value={eng.id}>{eng.name}</option>
+              ))}
+            </select>
+
+            {/* 2열: 유물 레벨 선택 (고정 1,2,3,4) */}
+            <select 
+              className="bg-[#1c1f23] border border-slate-700 rounded text-[11px] text-slate-400 p-1 text-center outline-none"
+              onChange={(e) => handleUpdateSlot(idx, "relicLevel", e.target.value)}
+            >
+              {[0, 1, 2, 3, 4].map(v => <option key={v} value={v}>Lv.{v}</option>)}
+            </select>
+
+            {/* 3열: 어빌리티 스톤 (고정 1,2,3,4) */}
+            <select 
+              className="bg-[#1c1f23] border border-slate-700 rounded text-[11px] text-slate-400 p-1 text-center outline-none"
+              onChange={(e) => handleUpdateSlot(idx, "abilityLevel", e.target.value)}
+            >
+              {[0, 1, 2, 3, 4].map(v => <option key={v} value={v}>스톤 Lv.{v}</option>)}
+            </select>
+
+            {/* 4열 수치 표시 부분 */}
+            <div className="text-right text-xs font-mono text-emerald-400">
+              {slot.engravingId ? (
+                // 해당 슬롯이 가진 모든 수치를 단순 합산해서 보여줌 (원한은 피증, 아드는 공증+치확 등)
+                <>+{Object.values(getSlotStatTotals(slot)).reduce((a, b) => a + b, 0) * 100}%</>
+              ) : "0.00%"}
+>>>>>>> 9b05be95faf4350eeef6e53ce55d167726a4b34e
             </div>
           </div>
 
