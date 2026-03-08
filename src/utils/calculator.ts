@@ -54,25 +54,24 @@ export const calculateFinalEfficiency = (slots: {
   relicLevel: number; 
   abilityLevel: number 
 }[]) => {
-  let totalDmgMult = 1;     // 피해 증가 곱연산용
-  let totalAtkBonus = 0;    // 공격력 증가 합연산용
+  let totalDmgMult = 1;
+  let totalAtkBonus = 0;
   
   slots.forEach(slot => {
     if (!slot.engravingId) return;
     
     const stats = getSlotStatTotals(slot);
     
-    // 피해 증가(원한 등)는 각인마다 독립 곱연산
-    if (stats.DMG_INC > 0) {
-      totalDmgMult *= (1 + stats.DMG_INC);
+    // DMG_INC가 없을 경우를 대비해 기본값 0 처리
+    const dmgInc = stats.DMG_INC || 0;
+    const atkInc = stats.ATK_INC_PERCENT || 0;
+
+    if (dmgInc > 0) {
+      totalDmgMult *= (1 + dmgInc);
     }
-    
-    // 공격력 증가(아드 등)는 각인간 합연산
-    totalAtkBonus += stats.ATK_INC_PERCENT;
+    totalAtkBonus += atkInc;
   });
 
-  // 최종 배율 = (피증 곱) * (1 + 공증 합)
   const finalMultiplier = totalDmgMult * (1 + totalAtkBonus);
-  
-  return (finalMultiplier - 1) * 100; // 증가량 % 반환
+  return (finalMultiplier - 1) * 100;
 };
