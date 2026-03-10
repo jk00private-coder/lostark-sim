@@ -1,4 +1,5 @@
-// src/components/CharacterSearch.tsx
+// @/components/CharacterSearch
+
 "use client"; 
 
 import { useState } from 'react';

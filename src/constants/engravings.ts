@@ -1,0 +1,17 @@
+// src/constants/engravings.ts
+
+export const ENGRAVING_ID = {
+  ADRENALINE: 'ENGRAVING00',
+  KEEN_BLUNT_WEAPON: 'ENGRAVING01',
+  GRUDGE: 'ENGRAVING02',
+  CURSED_DOLL: 'ENGRAVING03',
+  HIT_MASTER: 'ENGRAVING04'
+} as const;
+
+export const ENGRAVING_NAME = {
+  [ENGRAVING_ID.ADRENALINE]: '아드레날린',
+  [ENGRAVING_ID.KEEN_BLUNT_WEAPON]: '예리한 둔기',
+  [ENGRAVING_ID.GRUDGE]: '원한',
+  [ENGRAVING_ID.CURSED_DOLL]: '저주받은 인형',
+  [ENGRAVING_ID.HIT_MASTER]: '타격의 대가'
+} as const;

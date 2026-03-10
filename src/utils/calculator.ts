@@ -26,7 +26,7 @@ export const getSlotStatTotals = (slot: {
   if (!engraving) return totals;
 
   // 1. 기본 수치 합산 (baseEffects)
-  engraving.baseEffects.forEach(eff => {
+  engraving.effects?.forEach(eff => {
     totals[eff.type] += eff.value;
   });
 

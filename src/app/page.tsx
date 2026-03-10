@@ -1,8 +1,12 @@
+// @/app/page
+
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ENGRAVINGS_DB } from '@/data/engravings';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
+import { GUARDIAN_KNIGHT_SKILLS_DB } from '@/data/skills/guardian-knight-skills';
+import { calculateSkillDamage } from '@/utils/skill-calculator';
 
 export default function EngravingSimulator() {
   const { slots, updateSlot, finalEfficiency } = useCalculatorStore();
@@ -95,7 +99,6 @@ export default function EngravingSimulator() {
               
               <div className="flex items-baseline gap-2">
                 <span className="text-xs text-slate-500 font-medium">각인 총 피해량</span>
-                {/* 실시간 계산된 합계 표시 */}
                 <span className="text-xl font-black text-orange-400 italic">
                   {finalEfficiency > 0 ? `${finalEfficiency.toFixed(2)}%` : "READY"}
                 </span>
@@ -139,7 +142,6 @@ export default function EngravingSimulator() {
                     {[0, 1, 2, 3, 4].map(v => <option key={v} value={v}>Lv.{v}</option>)}
                   </select>
 
-                  {/* 훅에서 이미 계산되어 넘어온 값을 그대로 출력 */}
                   <div className="text-right text-sm font-mono text-emerald-400">
                     +{slot.displayValue}%
                   </div>
@@ -230,7 +232,6 @@ export default function EngravingSimulator() {
             </div>
           </div>
         </div>
-
       </div>
     </main>
   );
