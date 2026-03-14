@@ -1,3 +1,5 @@
+// @/utils/calculator
+
 import { ENGRAVINGS_DB } from '@/data/engravings';
 import { EFFECT_TYPES, EffectTypeId } from '@/types/sim-types';
 
@@ -64,7 +66,7 @@ export const calculateFinalEfficiency = (slots: {
     
     // DMG_INC가 없을 경우를 대비해 기본값 0 처리
     const dmgInc = stats.DMG_INC || 0;
-    const atkInc = stats.ATK_INC_PERCENT || 0;
+    const atkInc = stats.ATK_PERCENT || 0;
 
     if (dmgInc > 0) {
       totalDmgMult *= (1 + dmgInc);

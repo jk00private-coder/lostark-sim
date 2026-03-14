@@ -2,17 +2,77 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import CharacterSearch from '@/components/CharacterSearch';
 import { ENGRAVINGS_DB } from '@/data/engravings';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
 import { GUARDIAN_KNIGHT_SKILLS_DB } from '@/data/skills/guardian-knight-skills';
 import { calculateSkillDamage } from '@/utils/skill-calculator';
+import { EFFECT_MAP } from '@/types/sim-types';
+import { type EngravingData } from '@/types/engraving-types';
 
 export default function EngravingSimulator() {
-  const { slots, updateSlot, finalEfficiency } = useCalculatorStore();
+  const { profile, stats, setProfile, setStats, slots, updateSlot } = useCalculatorStore();
+  
+  // 1. 주소창 레이더 작동
+  const searchParams = useSearchParams();
+  const characterName = searchParams.get('name'); // ?name=소르가나 -> '소르가나' 추출
+
+  // 2. 자동화 로봇 (이름이 바뀔 때마다 실행됨)
+  useEffect(() => {
+    if (characterName) {
+      // 진짜처럼 보이게 0.5초(500ms) 딜레이를 줍니다.
+      setTimeout(() => {
+        // [가짜 데이터 꾸러미] 진짜 API에서 정제되어 나왔다고 가정합니다.
+        const mockProfile = {
+          ...profile,
+          name: characterName, // 검색한 이름으로 변경
+          itemLevel: 1700,
+          title: '테스트 마스터'
+        };
+
+        const mockStats = {
+          ...stats,
+          baseAtk: 999999, // 확 변한 걸 알아보기 쉽게 터무니없는 숫자를 넣습니다.
+          critical: 1200,
+          specialization: 600,
+          damageInc: 0.50 // 피증 50%
+        };
+
+        // 3. 창고지기에게 전달하여 업데이트!
+        setProfile(mockProfile);
+        setStats(mockStats);
+        
+        alert(`${characterName}의 가짜 데이터를 성공적으로 불러왔습니다!`);
+      }, 500);
+    }
+  }, [characterName]); // 감시 대상: characterName
+
+  const applyEngraving = (engraving: EngravingData) => {
+  // 1. 현재 스탯을 복사합니다 (C언어의 구조체 복사)
+  let newStats = { ...stats };
+
+  // 2. 각인이 가진 모든 효과를 하나씩 꺼내서 적용합니다 (루프)
+  engraving.effects?.forEach((effect) => {
+    const targetKey = EFFECT_MAP[effect.type];  // 'ATK_PERCENT' -> 'atkPercent'
+    if (targetKey) {
+    // 기존 수치에 새로운 각인 수치를 더합니다.
+    (newStats as any)[targetKey] += effect.value;
+    }
+  });  
+
+  // 3. 계산이 끝난 새 스탯을 창고에 저장!
+  setStats(newStats);
+  alert(`${engraving.name} 효과가 적용되었습니다!`);
+  };
 
   return (
     <main className="min-h-screen bg-[#0f1215] text-slate-200 p-4 md:p-8 font-sans">
+
+      {/* 바로 여기에 검색창 부품을 끼워 넣습니다! */}
+      <CharacterSearch />
+
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[3fr_7fr] gap-4">
 
         {/* [왼쪽 열 - 30% 영역] */}
@@ -52,7 +112,7 @@ export default function EngravingSimulator() {
           <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
             <div className="grid grid-cols-2 gap-x-6 text-sm">
               {[
-                ["공격력", "58,230"], ["최대생명력", "185,000"],
+                ["공격력", stats.baseAtk.toLocaleString()], ["최대생명력", stats.damageInc.toFixed(2)],
                 ["치명", "1850"], ["제압", "54"],
                 ["특화", "650"], ["인내", "52"],
                 ["신속", "550"], ["숙련", "48"],
@@ -97,12 +157,12 @@ export default function EngravingSimulator() {
             <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
               <h2 className="text-sm font-bold text-orange-400">각인 효과</h2>
               
-              <div className="flex items-baseline gap-2">
+              {/* <div className="flex items-baseline gap-2">
                 <span className="text-xs text-slate-500 font-medium">각인 총 피해량</span>
                 <span className="text-xl font-black text-orange-400 italic">
                   {finalEfficiency > 0 ? `${finalEfficiency.toFixed(2)}%` : "READY"}
                 </span>
-              </div>
+              </div> */}
             </div>
 
             <div className="grid grid-cols-[2fr_1fr_1fr_1fr] mb-2 px-2 text-xs text-slate-500 font-bold uppercase tracking-wider">
@@ -111,10 +171,10 @@ export default function EngravingSimulator() {
               <div className="text-center">스톤</div>
               <div className="text-right">딜 증가율</div>
             </div>
-
+            
             <div className="space-y-1">
               {slots.map((slot, idx) => (
-                <div key={idx} className="grid grid-cols-[2fr_0.4fr_0.4fr_1fr] gap-1 items-center hover:border-slate-700 transition-colors">
+                <div key={idx} className="grid grid-cols-[2fr_0.4fr_0.4fr_1fr] gap-1 items-center hover:bg-slate-800/50 p-1 rounded transition-colors">
                   <select
                     value={slot.engravingId}
                     onChange={(e) => updateSlot(idx, "engravingId", e.target.value)}
@@ -122,22 +182,22 @@ export default function EngravingSimulator() {
                   >
                     <option value="">각인 선택 안함</option>
                     {ENGRAVINGS_DB.map(eng => (
-                      <option key={eng.id} value={eng.id}>{eng.name}</option>
+                      <option key={eng.id} value={eng.id} className="bg-[#121418]">{eng.name}</option>
                     ))}
                   </select>
 
                   <select 
                     value={slot.relicLevel}
-                    className="bg-[#1c1f23] border border-slate-700 rounded text-sm text-slate-400 p-1 text-center outline-none"
-                    onChange={(e) => updateSlot(idx, "relicLevel", e.target.value)}
+                    className="bg-[#1c1f23] border border-slate-700 rounded text-xs text-slate-400 p-1 text-center outline-none"
+                    onChange={(e) => updateSlot(idx, "relicLevel", Number(e.target.value))}
                   >
                     {[0, 1, 2, 3, 4].map(v => <option key={v} value={v}>Lv.{v}</option>)}
                   </select>
 
                   <select 
                     value={slot.abilityLevel}
-                    className="bg-[#1c1f23] border border-slate-700 rounded text-sm text-slate-400 p-1 text-center outline-none"
-                    onChange={(e) => updateSlot(idx, "abilityLevel", e.target.value)}
+                    className="bg-[#1c1f23] border border-slate-700 rounded text-xs text-slate-400 p-1 text-center outline-none"
+                    onChange={(e) => updateSlot(idx, "abilityLevel", Number(e.target.value))}
                   >
                     {[0, 1, 2, 3, 4].map(v => <option key={v} value={v}>Lv.{v}</option>)}
                   </select>
@@ -148,6 +208,8 @@ export default function EngravingSimulator() {
                 </div>
               ))}
             </div>
+
+            
           </div>
 
           {/* 5. 카드 세트 정보 */}
@@ -163,6 +225,31 @@ export default function EngravingSimulator() {
                 <p>• 성속성 피해량 <span className="text-slate-200">+15.0%</span> 증가</p>
               </div>
             </div>
+          </div>
+
+          <div className="p-4 bg-slate-800 rounded-lg mt-4">
+            <p className="mb-2">공격력 테스트: {stats.baseAtk.toLocaleString()}</p>
+            
+            <button 
+              onClick={() => setStats({ ...stats, baseAtk: stats.baseAtk + 1000 })}
+              className="bg-blue-500 px-4 py-2 rounded mr-2"
+            >
+              공격력 +1000
+            </button>
+
+            <button 
+              onClick={() => setStats({ ...stats, baseAtk: stats.baseAtk - 1000 })}
+              className="bg-red-500 px-4 py-2 rounded"
+            >
+              공격력 -1000
+            </button>
+
+            <button 
+              onClick={() => setStats({ ...stats, damageInc: stats.damageInc + 0.18 })}
+              className="bg-orange-600 px-4 py-2 rounded ml-2"
+            >
+              원한 적용 (피증 +18%)
+            </button>
           </div>
         </div>
 

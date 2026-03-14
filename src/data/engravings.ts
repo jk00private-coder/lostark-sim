@@ -1,3 +1,4 @@
+// @/data/engravings
 
 import {
   ENGRAVING_ID as ID,
@@ -21,13 +22,13 @@ export const ENGRAVINGS_DB: EngravingData[] = [
     id: ID.ADRENALINE,
     name: NAME[ID.ADRENALINE],
     effects: [
-      { type: 'ATK_INC_PERCENT', value: 0.054, target: 'ALL' },
+      { type: 'ATK_PERCENT', value: 0.054, target: 'ALL' },
       { type: 'CRIT_CHANCE', value: 0.14, target: 'ALL' }
     ],
     iconPath: '',
     bonus: {
       relic: { type: 'CRIT_CHANCE', values: [0.015, 0.03, 0.045, 0.06] },
-      ability: { type: 'ATK_INC_PERCENT', values: [0.0288, 0.036, 0.0498, 0.057] }
+      ability: { type: 'ATK_PERCENT', values: [0.0288, 0.036, 0.0498, 0.057] }
     }
   },
   {

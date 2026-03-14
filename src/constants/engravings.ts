@@ -1,4 +1,4 @@
-// src/constants/engravings.ts
+// @/constants/engravings.ts
 
 export const ENGRAVING_ID = {
   ADRENALINE: 'ENGRAVING00',

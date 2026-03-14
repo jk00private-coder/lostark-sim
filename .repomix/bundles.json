@@ -1,0 +1,14 @@
+{
+  "bundles": {
+    "lostark-sim_bundle-781": {
+      "name": "lostark-sim_bundle",
+      "created": "2026-03-14T04:18:25.544Z",
+      "lastUsed": "2026-03-14T04:47:18.117Z",
+      "tags": [],
+      "files": [
+        "src"
+      ],
+      "configPath": ".repomix/config/lostark-sim_bundle-repomix.config.json"
+    }
+  }
+}
