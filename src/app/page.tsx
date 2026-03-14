@@ -10,7 +10,7 @@ import { useCalculatorStore } from '@/hooks/useCalculatorStore';
 import { GUARDIAN_KNIGHT_SKILLS_DB } from '@/data/skills/guardian-knight-skills';
 import { calculateSkillDamage } from '@/utils/skill-calculator';
 import { EFFECT_MAP } from '@/types/sim-types';
-import { type EngravingData } from '@/types/engraving-types';
+import { type EngravingData } from '@/types/engraving';
 
 export default function EngravingSimulator() {
   const { profile, stats, setProfile, setStats, slots, updateSlot } = useCalculatorStore();

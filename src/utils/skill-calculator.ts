@@ -1,6 +1,6 @@
 // @/utils/skill-calculator
 
-import { SkillData, TripodData } from "../types/skill-types";
+import { SkillData, TripodData } from "../types/skill";
 
 /**
  * [데미지 계산기]

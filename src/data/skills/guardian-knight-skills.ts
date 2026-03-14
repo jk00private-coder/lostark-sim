@@ -4,7 +4,7 @@ import {
   GUARDIAN_KNIGHT_SKILL_ID as SKILL_ID, GUARDIAN_KNIGHT_SKILL_NAME as SKILL_NAME,
   GUARDIAN_KNIGHT_TRIPOD_ID as TRIPOD_ID, GUARDIAN_KNIGHT_TRIPOD_NAME as TRIPOD_NAME
 } from '../../constants/skills/guardian-knight';
-import { SkillData } from '../../types/skill-types';
+import { SkillData } from '../../types/skill';
 
 export const GUARDIAN_KNIGHT_SKILLS_DB: SkillData[] = [
     {

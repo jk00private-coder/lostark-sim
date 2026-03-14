@@ -1,7 +1,6 @@
 /**
- * LostArk Simulator Core Types
- * 시뮬레이션에 필요한 정규화된 데이터 타입을 정의
  * @/type/sim-types
+ * 시뮬레이션에 필요한 정규화된 데이터 타입을 정의
  */
 
 /** 단순 표시용 프로필 정보 */
@@ -22,7 +21,7 @@ export interface CharacterProfile {
 /** 전투 스탯 (기본 수치) */
 export interface CombatStats {
   baseAtk       : number;  // 기본 공격력
-  mainStat      : number;  // 주스탯 (힘민지)
+  mainStat      : number;  // 주스탯 (힘,지능,민첩)
   weaponAtk     : number;  // 무기 공격력
   critical      : number;  // 치명
   specialization: number;  // 특화
@@ -41,7 +40,7 @@ export interface StatModifiers {
   weaponAtkPercent : number;  // 무기 공격력 % 증가
   baseAtkPercent   : number;  // 기본 공격력 % 증가
   atkStatic        : number;  // 공격력 고정 증가
-  atkPercent       : number;  // 최종 공격력 % 증가
+  atkPercent       : number;  // 공격력 % 증가
 }
 
 /** 데미지 계산용 보정치 */

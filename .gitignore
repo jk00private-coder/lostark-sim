@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.repomix/
 
 # debug
 npm-debug.log*

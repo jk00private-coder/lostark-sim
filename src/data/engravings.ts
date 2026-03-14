@@ -3,7 +3,7 @@
 import {
   ENGRAVING_ID as ID,
   ENGRAVING_NAME as NAME } from '../constants/engravings';
-import { EngravingData } from '../types/engraving-types';
+import { EngravingData } from '../types/engraving';
 
 export const ENGRAVINGS_DB: EngravingData[] = [
   {
