@@ -64,7 +64,7 @@ export async function GET(
     { key: 'colosseums', path: 'colosseums' },
     { key: 'collectibles', path: 'collectibles' },
     { key: 'arkPassive', path: 'arkpassive' },
-    { key: 'arkGrid', path: 'arkgrid' } // arkgrid 경로 명시적 추가
+    { key: 'arkGrid', path: 'arkgrid' }
   ];
 
   try {
