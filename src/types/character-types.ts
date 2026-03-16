@@ -7,10 +7,10 @@
  * [설계 원칙]
  *   - UI 컴포넌트가 직접 소비하는 타입
  *   - 수치는 파싱된 number 타입 (문자열 없음)
- *   - color 필드는 API HTML에서 추출한 hex 문자열 (예: "#CE43FC")
- *     → 사용 여부는 UI 컴포넌트에서 판단
- *   - 영문 ID는 UI 표시 시 별도 맵핑 파일로 한글 변환
- *     → src/constants/label-maps.ts 에서 관리 예정
+ *   - 라벨(텍스트)과 수치(숫자)의 색깔은 로아에서 독립적으로 존재하므로
+ *     ColoredText / ColoredValue 를 분리해서 사용합니다
+ *     예: "공격력(흰색) +1.21%(노랑)" → label: ColoredText, value: ColoredValue
+ *   - 영문 ID는 UI 표시 시 src/constants/label-maps.ts 에서 한글 변환
  */
 
 
@@ -19,36 +19,47 @@
 // ============================================================
 
 /**
- * 수치 + 색깔을 함께 저장하는 기본 단위
- * API HTML에서 추출한 color를 그대로 보존합니다.
- * color 가 없으면 undefined (흰색/기본 처리)
+ * 숫자 수치 + 색깔
+ * API HTML에서 수치에 붙은 color 를 보존합니다.
+ *
+ * 예시:
+ *   "+1.21%" → { value: 0.0121, color: "#FFD200" }
+ *   "+390"   → { value: 390,    color: "#FE9600" }
  */
 export interface ColoredValue {
-  value: number;
-  color?: string; // hex 문자열 예: "#CE43FC" | "#FE9600" | "#99ff99"
+  value : number;
+  color?: string; // hex 문자열. undefined = 기본색(흰색) 처리
 }
 
 /**
- * 텍스트 + 색깔을 함께 저장하는 기본 단위
- * 아크그리드 효과명, 카드 효과 설명 등 텍스트에 색깔이 붙는 경우 사용
+ * 텍스트 + 색깔
+ * API HTML에서 텍스트에 붙은 color 를 보존합니다.
+ *
+ * 예시:
+ *   "공격력"     → { text: "공격력",    color: undefined }   // 기본 흰색
+ *   "[원한]"     → { text: "원한",      color: "#FFFFAC" }   // 각인명 황금
+ *   "[화신 스킬]" → { text: "화신 스킬", color: "#FF0000" }   // 화신 빨강
  */
 export interface ColoredText {
   text : string;
   color?: string;
 }
 
+/** 상/중/하 옵션 등급 */
+export type OptionGrade = 'HIGH' | 'MID' | 'LOW';
+
 /**
  * 딜 관련 개별 효과 수치
  * effectType 은 sim-types.ts 의 EffectTypeId 와 대응
+ *
+ * label 과 value 의 색깔이 다른 경우가 현저히 많으므로 분리합니다.
+ * 예: "추가 피해(흰색) +1.60%(보라)" → label/value 각각 color 보유
  */
 export interface EffectEntry {
   effectType: string;       // "DMG_INC" | "ATK_PERCENT" | "CRIT_DMG" 등
-  value     : number;       // 파싱된 수치 (0.21 = 21%)
-  color?    : string;       // API에서 추출한 색깔
+  label     : ColoredText;  // 효과 이름 + 색깔
+  value     : ColoredValue; // 수치 + 색깔
 }
-
-/** 상/중/하 옵션 등급 */
-export type OptionGrade = 'HIGH' | 'MID' | 'LOW';
 
 /**
  * 등급이 있는 딜 관련 효과 수치
@@ -66,8 +77,8 @@ export interface GradedEffectEntry extends EffectEntry {
 
 /**
  * 장비 세트 구분 ID
- * 장비 이름 키워드로 판별합니다 (data-normalizer 처리)
- * UI 표시용 한글 변환: src/constants/label-maps.ts 의 EQUIPMENT_SET_LABEL
+ * 장비 이름 키워드로 판별 (data-normalizer 처리)
+ * UI 표시용 한글: src/constants/label-maps.ts 의 EQUIPMENT_SET_LABEL
  *
  * 예시 (가디언나이트):
  *   "운명의 결단 할버드" → NORMAL_RELIC
@@ -126,23 +137,23 @@ export interface CombatStatsDisplay {
  * 전투 장비 표시용 (무기/투구/상의/하의/장갑/어깨)
  *
  * setType 판별: 장비 이름 키워드 → equipment-sets.ts DB 조회
- * itemTier 파싱: Tooltip ItemTitle.leftStr2 "아이템 레벨 1710 (티어 4)" → 4
+ * itemTier 파싱: Tooltip leftStr2 "아이템 레벨 1710 (티어 4)" → 4
  */
 export interface EquipmentDisplay {
   type      : string;           // "무기" | "투구" | "상의" | "하의" | "장갑" | "어깨"
   name      : string;           // "+18 운명의 업화 할버드"
   icon      : string;           // 아이콘 URL
-  grade     : string;           // "고대" | "유물"
-  refineStep: number;           // 18 — 이름에서 파싱
-  quality   : number;           // 95 — Tooltip ItemTitle.qualityValue
-  itemTier  : number;           // 4 — Tooltip leftStr2 파싱
-  setType   : EquipmentSetType; // "AEGIR_ANCIENT" 등
+  grade     : ColoredText;      // { text: "고대", color: "#E3C7A1" }
+  refineStep: number;           // 18
+  quality   : number;           // 95
+  itemTier  : number;           // 4
+  setType   : EquipmentSetType; // "AEGIR_ANCIENT"
 
   // 딜 관련 파싱 수치 (무기: 무기공격력/추가피해, 방어구: 주스탯 등)
   effects: EffectEntry[];
 
   // 아크패시브 포인트 기여 (방어구: 진화 +24)
-  arkPassivePoint: { category: string; point: number } | null;
+  arkPassivePoint: { category: ColoredText; point: ColoredValue } | null;
 }
 
 
@@ -155,38 +166,39 @@ export interface EquipmentDisplay {
  * 딜 계산에 간접적으로 영향 (주스탯 → 공격력 계산)
  */
 export interface AccessoryBaseEffect {
-  statType: string;      // "힘" | "민첩" | "지능" | "체력"
-  value   : number;      // 15446
-  color?  : string;      // 회색(#686660) = 비주스탯, 없음 = 주스탯
+  statType: ColoredText;  // { text: "힘", color: undefined } | { text: "민첩", color: "#686660" } — 회색 = 비주스탯
+  value   : ColoredValue; // { value: 15446, color: undefined }
 }
 
 /**
  * 악세서리 연마 효과
  * 딜 계산에 직접 영향
  * grade: 수치 기준 상/중/하 판별 (src/data/accessory-option-grades.ts)
+ *
+ * 예시: "추가 피해 +1.60%"
+ *   label: { text: "추가 피해", color: undefined }
+ *   value: { value: 0.016, color: "#CE43FC" }  // 보라 = % 수치
  */
-export interface AccessoryPolishEffect extends GradedEffectEntry {
-  label: string; // "공격력" | "추가 피해" | "치명타 피해" | "치명타 적중률" | "무기 공격력"
-}
+export interface AccessoryPolishEffect extends GradedEffectEntry {}
 
 /**
  * 악세서리 표시용 (목걸이/귀걸이/반지)
  *
- * baseEffects 와 polishEffects 를 분리해서 저장합니다.
- * UI 컴포넌트에서 섹션별로 나눠서 표시할 수 있습니다.
+ * baseEffects / polishEffects 분리 저장
+ * UI 컴포넌트에서 섹션별로 나눠서 표시 가능
  */
 export interface AccessoryDisplay {
-  type         : string;                    // "목걸이" | "귀걸이" | "반지"
-  name         : string;                    // "도래한 결전의 목걸이"
-  icon         : string;                    // 아이콘 URL
-  grade        : string;                    // "고대" | "유물"
-  quality      : number;                    // 70
-  itemTier     : number;                    // 4
-  baseEffects  : AccessoryBaseEffect[];     // 기본 효과 (힘/체력 등)
-  polishEffects: AccessoryPolishEffect[];   // 연마 효과 (공격력%, 치명타피해% 등)
+  type         : string;                  // "목걸이" | "귀걸이" | "반지"
+  name         : string;                  // "도래한 결전의 목걸이"
+  icon         : string;                  // 아이콘 URL
+  grade        : ColoredText;             // { text: "고대", color: "#E3C7A1" }
+  quality      : number;                  // 70
+  itemTier     : number;                  // 4
+  baseEffects  : AccessoryBaseEffect[];   // 기본 효과 (주스탯/체력)
+  polishEffects: AccessoryPolishEffect[]; // 연마 효과 (공격력%, 치명타피해% 등)
 
   // 아크패시브 포인트 기여 (깨달음 +13)
-  arkPassivePoint: { category: string; point: number } | null;
+  arkPassivePoint: { category: ColoredText; point: ColoredValue } | null;
 }
 
 
@@ -196,27 +208,31 @@ export interface AccessoryDisplay {
 
 /**
  * 팔찌 효과
- * 고정 특성(신속/특화)과 피해 관련 옵션이 섞여 있습니다.
- * 피해 관련 옵션은 grade(상/중/하) 판별 적용
+ * 고정 특성(신속/특화)과 피해 관련 랜덤 옵션이 섞여 있습니다.
+ *
+ * 색깔 의미:
+ *   파랑(#00B5FF) = 고정 특성 (신속/특화 수치)
+ *   주황(#FE9600) = % 랜덤 옵션
+ *   초록(#99ff99) = 조건부 효과 (치명타 시 피해 증가 등)
+ *   보라(#CE43FC) = % 랜덤 옵션 (연마효과와 동일 계열)
  */
 export interface BraceletEffect {
-  label     : string;      // "신속" | "특화" | "치명타 피해" | "추가 피해" | "치명타 시 피해 증가" | "헤드어택 피해"
-  effectType: string;      // sim-types EffectTypeId 대응
-  value     : number;      // 파싱 수치
-  color?    : string;      // 파랑(#00B5FF)=고정특성, 주황(#FE9600)=%, 초록(#99ff99)=조건부
-  isFixed   : boolean;     // true = 고정 특성(신속/특화), false = 랜덤 옵션
-  grade?    : OptionGrade; // 랜덤 옵션일 때만 상/중/하 판별
+  effectType: string;       // sim-types EffectTypeId 대응
+  label     : ColoredText;  // 효과 이름 + 색깔
+  value     : ColoredValue; // 수치 + 색깔
+  isFixed   : boolean;      // true = 고정 특성(신속/특화), false = 랜덤 옵션
+  grade?    : OptionGrade;  // 랜덤 옵션일 때만 상/중/하 판별
 }
 
 /** 팔찌 표시용 */
 export interface BraceletDisplay {
   name   : string;           // "찬란한 구원자의 팔찌"
   icon   : string;           // 아이콘 URL
-  grade  : string;           // "고대"
-  effects: BraceletEffect[]; // 팔찌 효과 목록
+  grade  : ColoredText;      // { text: "고대", color: "#E3C7A1" }
+  effects: BraceletEffect[];
 
   // 아크패시브 포인트 기여 (도약 +18)
-  arkPassivePoint: { category: string; point: number } | null;
+  arkPassivePoint: { category: ColoredText; point: ColoredValue } | null;
 }
 
 
@@ -226,23 +242,21 @@ export interface BraceletDisplay {
 
 /** 어빌리티 스톤 표시용 */
 export interface AbilityStoneDisplay {
-  name       : string;   // "위대한 비상의 돌"
-  icon       : string;   // 아이콘 URL
-  grade      : string;   // "고대"
-  baseAtkBonus: number;  // 기본 공격력 보너스 (없으면 0)
+  name        : string;      // "위대한 비상의 돌"
+  icon        : string;      // 아이콘 URL
+  grade       : ColoredText; // { text: "고대", color: "#E3C7A1" }
+  baseAtkBonus: number;      // 기본 공격력 보너스 (없으면 0)
 
   // 세공된 각인 목록
   engravings: {
-    name : string;  // "원한" | "아드레날린"
-    level: number;  // 1 | 3
-    color?: string; // 황금(#FFFFAC) = 각인명 색깔
+    name : ColoredText;  // { text: "아드레날린", color: "#FFFFAC" }
+    level: ColoredValue; // { value: 3, color: undefined }
   }[];
 
   // 패널티 각인
   penalty: {
-    name : string;  // "공격력 감소"
-    level: number;  // 0
-    color?: string; // 빨강(#FE2E2E) = 패널티 색깔
+    name : ColoredText;  // { text: "공격력 감소", color: "#FE2E2E" }
+    level: ColoredValue; // { value: 0, color: undefined }
   } | null;
 }
 
@@ -254,17 +268,16 @@ export interface AbilityStoneDisplay {
 /**
  * 아바타 표시용
  *
- * mainStatBonus: 같은 부위의 일반/이너 아바타 중 최댓값 적용
- *   영웅 아바타 = +1%, 전설 아바타 = +2%
- *   이너 아바타가 전설이면 해당 부위 보너스는 2% 적용
- *   UI에 이너 여부는 표시하지 않고 최종 수치만 표시
+ * mainStatBonus: 같은 부위의 일반/이너 중 최댓값 적용
+ *   영웅 = +1%, 전설 = +2%
+ *   이너 여부는 UI에 표시하지 않고 최종 수치만 저장
  */
 export interface AvatarDisplay {
-  type         : string;  // "무기 아바타" | "상의 아바타" | "하의 아바타"
-  name         : string;  // 표시용 이름 (이너 아바타면 이너 이름)
-  icon         : string;  // 아이콘 URL (이너 아바타면 이너 아이콘)
-  grade        : string;  // 최종 적용 아바타 등급
-  mainStatBonus: number;  // 0.01 | 0.02 — 최종 적용값
+  type         : string;      // "무기 아바타" | "상의 아바타" | "하의 아바타"
+  name         : string;      // 최종 적용 아바타 이름
+  icon         : string;      // 최종 적용 아바타 아이콘 URL
+  grade        : ColoredText; // { text: "전설", color: "#F99200" }
+  mainStatBonus: number;      // 0.01 | 0.02 — 최종 적용값
 }
 
 
@@ -274,8 +287,8 @@ export interface AvatarDisplay {
 
 /** 개별 각인 표시용 */
 export interface EngravingDisplay {
-  name             : string;        // "원한"
-  grade            : string;        // "유물"
+  name             : ColoredText;   // { text: "원한", color: "#FFFFAC" }
+  grade            : ColoredText;   // { text: "유물", color: "#FA5D00" }
   level            : number;        // 0 (최대)
   abilityStoneLevel: number | null; // 어빌리티 스톤 레벨 (없으면 null)
   description      : string;        // HTML 제거된 효과 설명
@@ -289,21 +302,20 @@ export interface EngravingDisplay {
 
 /** 개별 보석 표시용 */
 export interface GemDisplay {
-  slot        : number;  // 0~10
-  level       : number;  // 6 | 7 | 8
-  grade       : string;  // "전설" | "유물"
-  icon        : string;  // 아이콘 URL
-  skillName   : string;  // "렌딩 피니셔" | "블레이즈 스윕 계열"
-  effectType  : string;  // "피해" | "재사용 대기시간"
-  effectValue : number;  // 0.36 — "36.00%" 파싱
-  baseAtkBonus: number;  // 0.008 — "기본 공격력 0.80%" 파싱
-  color?      : string;  // 보석 등급 색깔 (유물: #FA5D00, 전설: #F99200)
+  slot        : number;      // 0~10
+  level       : number;      // 6 | 7 | 8
+  grade       : ColoredText; // { text: "유물", color: "#FA5D00" }
+  icon        : string;      // 아이콘 URL
+  skillName   : ColoredText; // { text: "렌딩 피니셔", color: "#FFD200" }
+  effectLabel : ColoredText; // { text: "피해", color: undefined }
+  effectValue : ColoredValue; // { value: 0.36, color: "#99ff99" }
+  baseAtkBonus: number;      // 0.008
 }
 
 /** 보석 전체 요약 */
 export interface GemSummaryDisplay {
   gems        : GemDisplay[];
-  totalBaseAtk: number;  // 0.0685 — "기본 공격력 총합 6.85%" 파싱
+  totalBaseAtk: ColoredValue; // { value: 0.0685, color: "#B7FB00" }
 }
 
 
@@ -314,11 +326,11 @@ export interface GemSummaryDisplay {
 /** 카드 세트 효과 표시용 */
 export interface CardSetDisplay {
   setName    : string;  // "세상을 구하는 빛"
-  totalAwake : number;  // 30 — 전체 각성 합계
-  activeItems: {        // 현재 각성 합계 기준 발동된 효과만
+  totalAwake : number;  // 30
+  activeItems: {
     name       : string;
-    description: string;  // HTML 제거된 효과 설명
-    color?     : string;  // 효과 수치 색깔 (#99ff99 = 증가)
+    description: string;      // HTML 제거된 효과 설명
+    value?     : ColoredValue; // 수치가 있는 경우 (없는 효과도 있음)
   }[];
 }
 
@@ -335,15 +347,19 @@ export interface ArkPassivePointDisplay {
   title    : string;                                 // "업화의 계승자"
 }
 
-/** 개별 아크패시브 효과 표시용 */
+/**
+ * 개별 아크패시브 효과 표시용
+ *
+ * category 색깔:
+ *   진화(#F1D594) | 깨달음(#83E9FF) | 도약(#C2EA55)
+ */
 export interface ArkPassiveEffectDisplay {
-  category   : string;  // "진화" | "깨달음" | "도약"
-  name       : string;  // "예리한 감각" — Description 에서 추출
-  tier       : number;  // 2
-  level      : number;  // 2
-  description: string;  // HTML 제거된 효과 설명
-  icon       : string;  // 아이콘 URL
-  color?     : string;  // 카테고리 색깔 (진화: #F1D594, 깨달음: #83E9FF, 도약: #C2EA55)
+  category   : ColoredText; // { text: "진화", color: "#F1D594" }
+  name       : ColoredText; // { text: "예리한 감각", color: undefined }
+  tier       : number;      // 2
+  level      : number;      // 2
+  description: string;      // HTML 제거된 효과 설명
+  icon       : string;      // 아이콘 URL
 }
 
 
@@ -353,20 +369,24 @@ export interface ArkPassiveEffectDisplay {
 
 /** 개별 아크그리드 코어 표시용 */
 export interface ArkGridCoreDisplay {
-  index: number;  // 슬롯 인덱스 (0~5)
-  name : string;  // "질서의 해 코어 : 피니셔"
-  point: number;  // 17
-  grade: string;  // "유물" | "전설"
-  icon : string;  // 아이콘 URL
-  color?: string; // 등급 색깔 (유물: #FA5D00, 전설: #F99200)
+  index: number;      // 슬롯 인덱스 (0~5)
+  name : ColoredText; // { text: "질서의 해 코어 : 피니셔", color: "#FA5D00" }
+  point: ColoredValue; // { value: 17, color: "#B7FB00" }
+  grade: ColoredText; // { text: "유물", color: "#FA5D00" }
+  icon : string;      // 아이콘 URL
 }
 
-/** 아크그리드 젬 합산 효과 표시용 */
+/**
+ * 아크그리드 젬 합산 효과 표시용
+ *
+ * 예시: "공격력 +1.21%"
+ *   label: { text: "공격력", color: undefined }
+ *   value: { value: 0.0121, color: "#FFD200" }
+ */
 export interface ArkGridEffectDisplay {
-  name        : string;   // "공격력"
-  level       : number;   // 33
-  valuePercent: number;   // 0.0121 — "+1.21%" 파싱
-  color?      : string;   // 수치 색깔 (#FFD200 = 노랑)
+  label: ColoredText;  // 효과 이름 + 색깔
+  level: number;       // 합산 레벨 (33)
+  value: ColoredValue; // 수치 + 색깔
 }
 
 /** 아크그리드 전체 표시용 */
@@ -382,19 +402,17 @@ export interface ArkGridDisplay {
 
 /** 선택된 트라이포드 표시용 */
 export interface SelectedTripodDisplay {
-  tier : number;  // 0 | 1 | 2
-  slot : number;  // 1 | 2 | 3
-  name : string;  // "약점 포착"
-  icon : string;  // 아이콘 URL
-  color?: string; // 트라이포드 색깔 (#FFBB63 = 선택됨)
+  tier : number;      // 0 | 1 | 2
+  slot : number;      // 1 | 2 | 3
+  name : ColoredText; // { text: "약점 포착", color: "#FFBB63" }
+  icon : string;      // 아이콘 URL
 }
 
 /** 장착 룬 표시용 */
 export interface EquippedRuneDisplay {
-  name  : string;  // "속행"
-  grade : string;  // "전설" | "영웅" | "희귀"
-  icon  : string;  // 아이콘 URL
-  color?: string;  // 등급 색깔 (전설: #F99200, 영웅: #CE43FC, 희귀: #00B0FA)
+  name : ColoredText; // { text: "속행", color: "#F99200" }
+  grade: ColoredText; // { text: "전설", color: "#F99200" }
+  icon : string;      // 아이콘 URL
 }
 
 /**
@@ -403,6 +421,9 @@ export interface EquippedRuneDisplay {
  * isUsed 판별 기준 (data-normalizer 처리):
  *   Level >= 4  OR  Rune 장착  OR  보석 적용 스킬
  *   각성기(skillType 100, 101) 는 항상 포함
+ *
+ * category 색깔:
+ *   일반(#83DCB7) | 발현(#FE9A2E) | 화신(#FF0000) | 각성기(#E73517)
  */
 export interface SkillDisplay {
   name           : string;                  // "렌딩 피니셔"
@@ -410,10 +431,10 @@ export interface SkillDisplay {
   level          : number;                  // 14
   type           : string;                  // "일반" | "홀딩" | "콤보" | "지점"
   skillType      : number;                  // 0 | 1 | 100 | 101
-  isUsed         : boolean;                 // 사용 스킬 여부 (normalizer 판별)
-  selectedTripods: SelectedTripodDisplay[]; // IsSelected=true 인 것만
+  category       : ColoredText;             // { text: "발현 스킬", color: "#FE9A2E" }
+  isUsed         : boolean;                 // 사용 스킬 여부
+  selectedTripods: SelectedTripodDisplay[];
   rune           : EquippedRuneDisplay | null;
-  color?         : string;                  // 스킬 분류 색깔 (발현: #FE9A2E, 화신: #FF0000, 일반: #83DCB7)
 }
 
 
