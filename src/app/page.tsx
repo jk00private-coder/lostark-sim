@@ -188,28 +188,51 @@ export default function EngravingSimulator() {
                 장비 및 악세서리
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
                 {/* 전투 장비 */}
                 <div className="space-y-2">
                   <p className="text-[10px] text-slate-500 mb-2 underline">전투 장비</p>
-                  {displayData.equipment.map((eq, i) => (
-                    <div key={i}
-                         className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
-                                    border border-slate-700/50">
-                      <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
-                        <img src={eq.icon} alt={eq.name}
-                             className="w-full h-full object-cover" />
+                    {['투구', '어깨', '상의', '하의', '장갑', '무기'].map(type => {
+                      const eq = displayData.equipment.find(e => e.type === type);
+                      if (!eq) return null;
+                      return (
+                        <div key={type}
+                            className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
+                                        border border-slate-700/50">
+                          <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
+                            <img src={eq.icon} alt={eq.name}
+                                className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <p className="text-xs" style={{ color: eq.grade.color }}>
+                              {eq.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              {eq.setType !== 'UNKNOWN' ? eq.setType : ''} 티어{eq.itemTier}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* 보주 — 무기 아래 */}
+                    {displayData.boJu && (
+                      <div className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
+                                      border border-slate-700/50">
+                        <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
+                          <img src={displayData.boJu.icon} alt={displayData.boJu.name}
+                              className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <p className="text-xs" style={{ color: displayData.boJu.grade.color }}>
+                            {displayData.boJu.name}
+                          </p>
+                          <p className="text-[10px] text-slate-500">
+                            {displayData.boJu.seasonLabel} 최대 낙원력{' '}
+                            {displayData.boJu.paradoxPower.toLocaleString()}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs" style={{ color: eq.grade.color }}>
-                          {eq.name}
-                        </p>
-                        <p className="text-[10px] text-slate-500">
-                          {eq.setType !== 'UNKNOWN' ? eq.setType : ''} 티어{eq.itemTier}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    )}
                 </div>
 
                 {/* 장신구 */}
@@ -269,6 +292,35 @@ export default function EngravingSimulator() {
                             }
                           </p>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 어빌리티 스톤 */}
+                  {displayData.abilityStone && (
+                    <div className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
+                                    border border-slate-700/50">
+                      <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
+                        <img src={displayData.abilityStone.icon}
+                            alt={displayData.abilityStone.name}
+                            className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs" style={{ color: displayData.abilityStone.grade.color }}>
+                          {displayData.abilityStone.name}
+                        </p>
+                        {displayData.abilityStone.engravings.map((eng, j) => (
+                          <p key={j} className="text-[10px]"
+                            style={{ color: eng.name.color }}>
+                            {eng.name.text} Lv.{eng.level.value}
+                          </p>
+                        ))}
+                        {displayData.abilityStone.penalty && (
+                          <p className="text-[10px]"
+                            style={{ color: displayData.abilityStone.penalty.name.color }}>
+                            {displayData.abilityStone.penalty.name.text} Lv.{displayData.abilityStone.penalty.level.value}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}

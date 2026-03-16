@@ -4,9 +4,8 @@
 import { useState, useEffect } from 'react';
 
 import { CharacterDisplayData } from '@/types/character-types';
-import {
-  CombatStats, StatModifiers, DamageModifiers,
-} from '@/types/sim-types';
+import { CombatStats, StatModifiers, DamageModifiers } from '@/types/sim-types';
+import { ENGRAVINGS_DB } from '@/data/engravings';
 
 // ============================================================
 // 계산용 데이터 타입
@@ -15,19 +14,18 @@ import {
 /**
  * 계산 엔진이 소비하는 수치 묶음
  * displayData 변경 시 useEffect 로 자동 동기화됩니다.
- * Phase 4 시뮬레이터에서 setCalcData() 로 수동 수정 가능합니다.
+ * Phase 4 시뮬레이터에서 overrideCalcData() 로 수동 수정 가능합니다.
  */
 export interface CalcData {
-  combatStats    : CombatStats;      // 전투 특성 수치 (치명, 특화, 신속 등)
-  statModifiers  : StatModifiers;    // 공격력 계열 보정치
-  damageModifiers: DamageModifiers;  // 피해 계열 보정치
+  combatStats    : CombatStats;
+  statModifiers  : StatModifiers;
+  damageModifiers: DamageModifiers;
 }
 
 // ============================================================
 // 초기값 생성 함수
 // ============================================================
 
-/** 모든 수치가 0인 CombatStats 초기값 */
 const createEmptyCombatStats = (): CombatStats => ({
   baseAtk       : 0,
   mainStat      : 0,
@@ -41,7 +39,6 @@ const createEmptyCombatStats = (): CombatStats => ({
   expertise     : 0,
 });
 
-/** 모든 수치가 0인 StatModifiers 초기값 */
 const createEmptyStatModifiers = (): StatModifiers => ({
   mainStatStatic  : 0,
   mainStatPercent : 0,
@@ -52,7 +49,6 @@ const createEmptyStatModifiers = (): StatModifiers => ({
   atkPercent      : 0,
 });
 
-/** 모든 수치가 0인 DamageModifiers 초기값 */
 const createEmptyDamageModifiers = (): DamageModifiers => ({
   damageInc         : 0,
   evolutionDamage   : 0,
@@ -68,7 +64,6 @@ const createEmptyDamageModifiers = (): DamageModifiers => ({
   cooldownReduction : 0,
 });
 
-/** 모든 수치가 0인 CalcData 초기값 */
 const createEmptyCalcData = (): CalcData => ({
   combatStats    : createEmptyCombatStats(),
   statModifiers  : createEmptyStatModifiers(),
@@ -80,15 +75,26 @@ const createEmptyCalcData = (): CalcData => ({
 // ============================================================
 
 /**
+ * 카드 효과 설명 → EffectTypeId 매핑
+ * "성속성 피해 +4.00%" 처럼 description 에 키워드가 포함된 경우 매핑합니다.
+ */
+const CARD_EFFECT_TYPE_MAP: Record<string, string> = {
+  '피해'      : 'DMG_INC',
+  '공격력'    : 'ATK_PERCENT',
+  '치명타 피해': 'CRIT_DMG',
+  '치명타 확률': 'CRIT_CHANCE',
+};
+
+/**
  * CharacterDisplayData 에서 계산 엔진용 수치를 추출합니다.
  *
  * 누적 순서:
- *   1. 전투 특성 (profile.Stats)
+ *   1. 전투 특성
  *   2. 장비 효과 (무기 공격력, 주스탯 등)
- *   3. 악세서리 연마효과 (공격력%, 추가피해% 등)
- *   4. 팔찌 효과
+ *   3. 악세서리 연마효과
+ *   4. 팔찌 효과 (랜덤 옵션만)
  *   5. 아바타 주스탯 보너스
- *   6. 각인 효과
+ *   6. 각인 효과 (ENGRAVINGS_DB 조회)
  *   7. 보석 공증
  *   8. 카드 효과
  *   9. 아크그리드 효과
@@ -100,8 +106,7 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   const statModifiers   = createEmptyStatModifiers();
   const damageModifiers = createEmptyDamageModifiers();
 
-  // sim-types.ts 의 EffectTypeId → calcData 필드 매핑
-  // data-normalizer 의 EFFECT_MAP 과 동일한 역할
+  // EffectTypeId → calcData 필드 누적 함수
   const applyEffect = (effectType: string, value: number) => {
     switch (effectType) {
       // StatModifiers
@@ -148,40 +153,49 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
     acc.polishEffects.forEach(eff => applyEffect(eff.effectType, eff.value.value));
   });
 
-  // ── 4. 팔찌 효과 ──────────────────────────────────────────
+  // ── 4. 팔찌 효과 (랜덤 옵션만) ───────────────────────────
+  // isFixed=true 인 고정 특성(신속/특화)은 combatStats 에 이미 포함됨
   display.bracelet?.effects.forEach(eff => {
-    if (!eff.isFixed) {
-      // 고정 특성(신속/특화)은 combatStats 에 이미 포함됨
-      applyEffect(eff.effectType, eff.value.value);
-    }
+    if (!eff.isFixed) applyEffect(eff.effectType, eff.value.value);
   });
 
   // ── 5. 아바타 주스탯 보너스 ───────────────────────────────
-  // 무기/상의/하의 아바타 각 mainStatBonus 합산
+  // 무기/상의/하의 아바타 mainStatBonus 합산 (+1%~+2% 각각)
   const totalAvatarBonus = display.avatars.reduce(
     (sum, av) => sum + av.mainStatBonus, 0
   );
   statModifiers.mainStatPercent += totalAvatarBonus;
 
   // ── 6. 각인 효과 ──────────────────────────────────────────
-  // ⚠️ ENGRAVINGS_DB 와 연결 필요
-  // 현재 engravings 는 description(텍스트)만 있고 effectType/value 없음
-  // TODO: ENGRAVINGS_DB 에서 각인 ID → 효과 수치 매핑 후 여기서 누적
+  // displayData.engravings[].name.text 로 ENGRAVINGS_DB 조회
+  display.engravings.forEach(eng => {
+    const db = ENGRAVINGS_DB.find(e => e.name === eng.name.text);
+    if (!db?.effects) return;
+    db.effects.forEach(eff => applyEffect(eff.type, eff.value));
+  });
 
   // ── 7. 보석 공증 ──────────────────────────────────────────
-  // gems.totalBaseAtk = 전체 공증 합산 수치
+  // gems.totalBaseAtk = API가 이미 합산한 전체 공증 수치
   statModifiers.baseAtkPercent += display.gems.totalBaseAtk.value;
 
   // ── 8. 카드 효과 ──────────────────────────────────────────
-  // ⚠️ 카드 효과는 description 텍스트 파싱 필요
-  // TODO: activeItems[].value 가 있는 경우 effectType 판별 후 누적
+  // activeItems[].description 에서 키워드로 effectType 판별
+  // activeItems[].value 가 있는 경우만 수치 누적
+  display.cards?.activeItems.forEach(item => {
+    if (!item.value) return;
+    for (const [keyword, effectType] of Object.entries(CARD_EFFECT_TYPE_MAP)) {
+      if (item.description.includes(keyword)) {
+        applyEffect(effectType, item.value.value);
+        break; // 첫 번째 매칭만 적용
+      }
+    }
+  });
 
   // ── 9. 아크그리드 효과 ────────────────────────────────────
-  // arkGrid.effects 는 이미 name 과 value 가 파싱되어 있음
-  // name → effectType 매핑
+  // API가 이미 합산한 최종 수치 사용
   const ARK_GRID_EFFECT_MAP: Record<string, string> = {
-    '낙인력'    : 'ATK_PERCENT',   // 낙인력은 지원용 — 딜러에게 무관하나 일단 포함
     '공격력'    : 'ATK_PERCENT',
+    '낙인력'    : 'ATK_PERCENT', // 지원 스탯이지만 일단 포함
     '보스 피해' : 'DMG_INC',
     '추가 피해' : 'ADD_DMG',
   };
@@ -210,11 +224,9 @@ export const useCalculatorStore = () => {
   // ── displayData 변경 시 calcData 자동 동기화 ─────────────
   useEffect(() => {
     if (!displayData) {
-      // displayData 가 없으면 calcData 초기화
       setCalcData(createEmptyCalcData());
       return;
     }
-    // displayData 에서 계산용 수치 추출하여 자동 동기화
     setCalcData(extractCalcData(displayData));
   }, [displayData]);
 
@@ -238,7 +250,6 @@ export const useCalculatorStore = () => {
     // UI용
     displayData,
     setDisplayData,
-
     // 계산용
     calcData,
     overrideCalcData,

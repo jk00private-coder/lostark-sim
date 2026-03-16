@@ -10,10 +10,8 @@
  *
  * [설계 원칙]
  *   - API가 주는 color 값을 그대로 보존 (UI 컴포넌트가 사용 여부 결정)
- *   - 상중하 등급은 API color 기반으로 판별
- *     TODO: src/data/accessory-option-grades.ts 생성 후 수치 기반으로 교체 예정
- *   - 장비 세트 판별은 직업 공통 키워드 기반
- *     TODO: src/data/equipment-sets.ts 생성 후 교체 예정
+ *   - 상중하 등급은 API color 기반 1차 판별 + 수치 기반 2차 판별
+ *   - 장비 세트 판별은 src/data/equipment-sets.ts DB 사용
  */
 
 import {
@@ -25,7 +23,7 @@ import {
   CharacterProfileDisplay, CombatStatsDisplay,
   EquipmentDisplay, AccessoryDisplay, AccessoryBaseEffect, AccessoryPolishEffect,
   BraceletDisplay, BraceletEffect,
-  AbilityStoneDisplay,
+  AbilityStoneDisplay,BoJuDisplay,
   AvatarDisplay,
   EngravingDisplay,
   GemDisplay, GemSummaryDisplay,
@@ -34,8 +32,11 @@ import {
   ArkGridDisplay, ArkGridCoreDisplay, ArkGridEffectDisplay,
   SkillDisplay, SelectedTripodDisplay, EquippedRuneDisplay,
   ColoredText, ColoredValue, EffectEntry,
-  EquipmentSetType, OptionGrade,
+  OptionGrade,
 } from '@/types/character-types';
+
+import { getEquipmentSetType } from '@/data/equipment-sets';
+import { getOptionGrade } from '@/data/accessory-option-grades';
 
 
 // ============================================================
@@ -166,19 +167,6 @@ const SKILL_CATEGORY_COLORS: Record<string, string> = {
 };
 
 /**
- * 장비 세트 타입 판별 (직업 공통 키워드 기반)
- *
- * ⚠️ TODO: src/data/equipment-sets.ts 생성 후 교체 예정
- * 현재는 티어4 공통 세트명 키워드로 임시 구현
- */
-const detectSetType = (name: string): EquipmentSetType => {
-  if (name.includes('결단')) return 'NORMAL_RELIC';
-  if (name.includes('업화')) return 'AEGIR_ANCIENT';
-  if (name.includes('전율')) return 'SERCA_ANCIENT';
-  return 'UNKNOWN';
-};
-
-/**
  * 악세서리 연마효과 텍스트에서 EffectTypeId 를 추출합니다.
  */
 const POLISH_EFFECT_TYPE_MAP: Record<string, string> = {
@@ -198,22 +186,33 @@ const detectPolishEffectType = (label: string): string => {
 };
 
 /**
- * 악세서리/팔찌 옵션 상/중/하 판별 — API color 기반
+ * 악세서리/팔찌 옵션 상/중/하 판별
  *
- * 로아 API는 연마효과 수치에 직접 색깔을 부여합니다:
+ * 1차: API color 기반 (가장 정확 — API가 직접 색깔 제공)
  *   상 → #FE9600 (주황)
  *   중 → #CE43FC (보라)
  *   하 → #00B5FF (파랑)
- *   고정값 → #99ff99 (초록) — 상중하 판별 불필요
  *
- * ⚠️ TODO: src/data/accessory-option-grades.ts 생성 후
- *          색깔 기반 → 수치 기반으로 교체 예정
+ * 2차: color 없는 경우 수치 기반 fallback
+ *   → src/data/accessory-option-grades.ts 의 getOptionGrade() 사용
+ *
+ * @param color       - API에서 추출한 색깔
+ * @param effectType  - sim-types.ts 의 EffectTypeId
+ * @param value       - 파싱된 수치
+ * @param isAccessory - true=악세서리, false=팔찌
  */
-const detectOptionGrade = (color: string | undefined): OptionGrade => {
+const detectOptionGrade = (
+  color      : string | undefined,
+  effectType : string,
+  value      : number,
+  isAccessory: boolean = true
+): OptionGrade => {
+  // 1차: color 기반 판별
   if (color === '#FE9600') return 'HIGH';
   if (color === '#CE43FC') return 'MID';
   if (color === '#00B5FF') return 'LOW';
-  return 'LOW'; // fallback
+  // 2차: 수치 기반 fallback
+  return getOptionGrade(effectType, value, isAccessory);
 };
 
 
@@ -251,7 +250,6 @@ export const normalizeProfile = (raw: RawCharacterData): CharacterProfileDisplay
 // ------------------------------------------------------------
 
 export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay => {
-  // profile.Stats 배열을 Type 기준으로 맵핑
   const statsMap = Object.fromEntries(
     raw.profile.Stats.map(s => [s.Type, parseInt(s.Value.replace(/,/g, ''))])
   );
@@ -272,10 +270,7 @@ export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay 
 // 2-3. 전투 장비 (무기/방어구)
 // ------------------------------------------------------------
 
-/**
- * Tooltip 에서 아크패시브 포인트 기여 추출
- * 방어구: Element_010, 악세서리/팔찌: Element_007
- */
+/** Tooltip 에서 아크패시브 포인트 기여 추출 */
 const extractArkPassivePoint = (
   tooltip: Record<string, any>
 ): { category: ColoredText; point: ColoredValue } | null => {
@@ -284,7 +279,6 @@ const extractArkPassivePoint = (
     const el      = tooltip[key];
     const content: string = el?.value?.Element_001 ?? '';
     if (content.includes('아크 패시브 포인트')) {
-      // "진화 +24" | "깨달음 +13" | "도약 +18"
       const m = stripHtml(content).match(/(진화|깨달음|도약)\s*\+(\d+)/);
       if (m) {
         return {
@@ -349,7 +343,7 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         refineStep: extractRefineStep(eq.Name),
         quality   : titleEl.qualityValue ?? 0,
         itemTier  : tier,
-        setType   : detectSetType(eq.Name),
+        setType   : getEquipmentSetType(eq.Name), // ← DB 사용
         effects,
         arkPassivePoint: extractArkPassivePoint(tooltip),
       };
@@ -372,14 +366,12 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
       const tier    = extractItemTier(titleEl.leftStr2 ?? '');
 
       // 기본 효과: Element_004.value.Element_001
-      // "힘 +15446\n민첩 +15446(회색)\n지능 +15446(회색)\n체력 +3789"
       const baseEffects: AccessoryBaseEffect[] = [];
       const baseStr: string = tooltip['Element_004']?.value?.Element_001 ?? '';
       baseStr.split(/<br\s*\/?>/i).filter(Boolean).forEach(line => {
         const clean = stripHtml(line);
         const m     = clean.match(/(힘|민첩|지능|체력)\s*\+(\d+)/);
         if (m) {
-          // 회색(#686660) = 비주스탯
           const isNonMain = line.toLowerCase().includes('#686660');
           baseEffects.push({
             statType: { text: m[1], color: isNonMain ? '#686660' : undefined },
@@ -389,8 +381,6 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
       });
 
       // 연마 효과: Element_006.value.Element_001
-      // "<img ...>추가 피해 <FONT COLOR='#CE43FC'>+1.60%</FONT>"
-      // color 가 상중하를 직접 알려줍니다
       const polishEffects: AccessoryPolishEffect[] = [];
       const polishStr: string = tooltip['Element_006']?.value?.Element_001 ?? '';
       polishStr.split(/<br\s*\/?>/i).filter(Boolean).forEach(line => {
@@ -400,12 +390,11 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
         const effectType = detectPolishEffectType(labelText);
         const cv         = toColoredValue(line);
 
-        // color 기반으로 상중하 판별
         polishEffects.push({
           effectType,
           label: { text: labelText, color: undefined },
           value: cv,
-          grade: detectOptionGrade(cv.color),
+          grade: detectOptionGrade(cv.color, effectType, cv.value, true), // ← 수치 기반 fallback 추가
         });
       });
 
@@ -435,7 +424,6 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
   const tooltip    = parseTooltip(bracelet.Tooltip);
   const effectStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
 
-  // 팔찌 효과 라벨 → effectType + isFixed 매핑
   const BRACELET_EFFECT_MAP: Record<string, { effectType: string; isFixed: boolean }> = {
     '신속'            : { effectType: 'SWIFTNESS',      isFixed: true  },
     '특화'            : { effectType: 'SPECIALIZATION', isFixed: true  },
@@ -470,8 +458,7 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
         label  : { text: labelText, color: undefined },
         value  : cv,
         isFixed,
-        // 고정 특성은 등급 없음, 랜덤 옵션은 color 기반 판별
-        grade  : isFixed ? undefined : detectOptionGrade(cv.color),
+        grade  : isFixed ? undefined : detectOptionGrade(cv.color, effectType, cv.value, false), // ← 수치 기반 fallback 추가
       };
     });
 
@@ -506,7 +493,6 @@ export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDispla
     baseAtkBonus = extractPercent(bonusStr);
   }
 
-  // 각인 파싱: "[원한] Lv.1" | "[아드레날린] Lv.3" | "[공격력 감소] Lv.0"
   Object.values(engravingGroup).forEach((item: any) => {
     const content: string = item?.contentStr ?? '';
     const clean   = stripHtml(content);
@@ -516,7 +502,6 @@ export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDispla
     const name  = m[1];
     const level = parseInt(m[2]);
 
-    // 빨간색 = 패널티
     if (content.toLowerCase().includes('#fe2e2e')) {
       penalty = {
         name : { text: name, color: '#FE2E2E' },
@@ -542,13 +527,38 @@ export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDispla
 
 
 // ------------------------------------------------------------
-// 2-7. 아바타
+// 2-7. 보주
+// ------------------------------------------------------------
+
+export const normalizeBoJu = (raw: RawCharacterData): BoJuDisplay | null => {
+  const boju = raw.equipment.find(eq => eq.Type === '보주');
+  if (!boju) return null;
+
+  const tooltip  = parseTooltip(boju.Tooltip);
+  const effectStr: string = tooltip['Element_004']?.value?.Element_001 ?? '';
+
+  // "시즌2 달성 최대 낙원력 : 30431195" 파싱
+  const seasonM  = effectStr.match(/시즌(\d+)\s*달성\s*최대\s*낙원력\s*:\s*([\d,]+)/);
+  const season   = seasonM ? `시즌${seasonM[1]}` : '';
+  const power    = seasonM ? parseInt(seasonM[2].replace(/,/g, '')) : 0;
+
+  return {
+    name        : boju.Name,
+    icon        : boju.Icon,
+    grade       : toGradeColoredText(boju.Grade),
+    seasonLabel : season,
+    paradoxPower: power,
+  };
+};
+
+
+// ------------------------------------------------------------
+// 2-8. 아바타
 // ------------------------------------------------------------
 
 export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
   const targetTypes = ['무기 아바타', '상의 아바타', '하의 아바타'];
 
-  // 부위별로 그룹핑
   const grouped: Record<string, typeof raw.avatars> = {};
   raw.avatars
     .filter(av => targetTypes.includes(av.Type))
@@ -558,7 +568,6 @@ export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
     });
 
   return Object.entries(grouped).map(([type, avatars]) => {
-    // 부위 내 최댓값 적용 (이너 아바타 포함)
     const bonuses = avatars.map(av => {
       const tooltip   = parseTooltip(av.Tooltip);
       const bonusStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
@@ -582,7 +591,7 @@ export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
 
 
 // ------------------------------------------------------------
-// 2-8. 각인
+// 2-9. 각인
 // ------------------------------------------------------------
 
 export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] =>
@@ -592,12 +601,12 @@ export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] =
     level            : eff.Level,
     abilityStoneLevel: eff.AbilityStoneLevel,
     description      : stripHtml(eff.Description),
-    icon             : '', // ⚠️ TODO: ENGRAVINGS_DB 에서 아이콘 매핑 필요
+    icon             : '', // 각인 아이콘은 API가 제공하지 않으므로 빈 문자열 유지
   }));
 
 
 // ------------------------------------------------------------
-// 2-9. 보석
+// 2-10. 보석
 // ------------------------------------------------------------
 
 export const normalizeGems = (raw: RawCharacterData): GemSummaryDisplay => {
@@ -607,8 +616,7 @@ export const normalizeGems = (raw: RawCharacterData): GemSummaryDisplay => {
     const gem  = gemMap[skill.GemSlot];
     const desc = skill.Description[0] ?? '';
 
-    // "피해 36.00% 증가" | "재사용 대기시간 18.00% 감소"
-    const isDmg      = desc.includes('피해');
+    const isDmg       = desc.includes('피해');
     const effectValue = extractPercent(desc);
 
     return {
@@ -633,7 +641,7 @@ export const normalizeGems = (raw: RawCharacterData): GemSummaryDisplay => {
 
 
 // ------------------------------------------------------------
-// 2-10. 카드
+// 2-11. 카드
 // ------------------------------------------------------------
 
 export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => {
@@ -642,11 +650,9 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
   const effect     = raw.cards.Effects[0];
   const totalAwake = raw.cards.Cards.reduce((sum, c) => sum + c.AwakeCount, 0);
 
-  // 세트 이름: "세상을 구하는 빛 6세트 (30각성합계)" → "세상을 구하는 빛"
   const setNameM = effect.Items[0]?.Name.match(/^(.+?)\s+\d+세트/);
   const setName  = setNameM ? setNameM[1] : '';
 
-  // 현재 각성 합계 기준 발동된 효과만 필터링
   const activeItems = effect.Items
     .filter(item => {
       const awakeM = item.Name.match(/\((\d+)각성합계\)/);
@@ -669,7 +675,7 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
 
 
 // ------------------------------------------------------------
-// 2-11. 아크패시브
+// 2-12. 아크패시브
 // ------------------------------------------------------------
 
 export const normalizeArkPassive = (raw: RawCharacterData) => {
@@ -687,14 +693,12 @@ export const normalizeArkPassive = (raw: RawCharacterData) => {
     title    : p.Title,
   };
 
-  // Description 패턴: "진화 2티어 예리한 감각 Lv.2"
   const PATTERN = /(진화|깨달음|도약)\s+(\d+)티어\s+(.+?)\s+Lv\.(\d+)/;
 
   const effects: ArkPassiveEffectDisplay[] = p.Effects.map(eff => {
     const clean  = stripHtml(eff.Description);
     const m      = clean.match(PATTERN);
 
-    // ToolTip JSON Element_002 에서 효과 설명 추출
     const ttJson = parseTooltip(eff.ToolTip);
     const descRaw: string = ttJson['Element_002']?.value ?? '';
     const desc   = stripHtml(descRaw.split('||')[0]);
@@ -716,7 +720,7 @@ export const normalizeArkPassive = (raw: RawCharacterData) => {
 
 
 // ------------------------------------------------------------
-// 2-12. 아크그리드
+// 2-13. 아크그리드
 // ------------------------------------------------------------
 
 export const normalizeArkGrid = (raw: RawCharacterData): ArkGridDisplay => {
@@ -728,7 +732,6 @@ export const normalizeArkGrid = (raw: RawCharacterData): ArkGridDisplay => {
     icon : slot.Icon,
   }));
 
-  // Tooltip: "공격력 <font color='#ffd200'>+1.21%</font>"
   const effects: ArkGridEffectDisplay[] = raw.arkGrid.Effects.map(eff => ({
     label: { text: eff.Name, color: undefined },
     level: eff.Level,
@@ -740,14 +743,12 @@ export const normalizeArkGrid = (raw: RawCharacterData): ArkGridDisplay => {
 
 
 // ------------------------------------------------------------
-// 2-13. 스킬
+// 2-14. 스킬
 // ------------------------------------------------------------
 
 export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
-  // 보석 적용 스킬명 목록 (사용 판별 조건 3)
   const gemSkillNames = raw.gems.Effects.Skills.map(s => s.Name);
 
-  // 스킬 사용 여부 판별 함수
   const isSkillUsed = (skill: typeof raw.skills[0]): boolean => {
     if (skill.SkillType === 100 || skill.SkillType === 101) return true;
     if (skill.Level >= 4 || skill.Rune !== null) return true;
@@ -762,12 +763,10 @@ export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
       const tooltip  = parseTooltip(skill.Tooltip);
       const titleEl  = tooltip['Element_001']?.value ?? {};
 
-      // 스킬 분류: "[발현 스킬]" | "[화신 스킬]" | "[일반 스킬]"
-      const levelStr: string  = titleEl.level ?? '';
-      const categoryM         = levelStr.match(/\[([^\]]+)\]/);
-      const categoryText      = categoryM ? categoryM[1] : '일반 스킬';
+      const levelStr: string = titleEl.level ?? '';
+      const categoryM        = levelStr.match(/\[([^\]]+)\]/);
+      const categoryText     = categoryM ? categoryM[1] : '일반 스킬';
 
-      // 선택된 트라이포드만
       const selectedTripods: SelectedTripodDisplay[] = skill.Tripods
         .filter(t => t.IsSelected)
         .map(t => ({
@@ -777,7 +776,6 @@ export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
           icon: t.Icon,
         }));
 
-      // 룬
       const rune: EquippedRuneDisplay | null = skill.Rune
         ? {
             name : { text: skill.Rune.Name,  color: GRADE_COLORS[skill.Rune.Grade] },
@@ -796,7 +794,7 @@ export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
           text : categoryText,
           color: SKILL_CATEGORY_COLORS[categoryText],
         },
-        isUsed         : true, // filter 통과한 것은 모두 true
+        isUsed         : true,
         selectedTripods,
         rune,
       };
@@ -814,9 +812,9 @@ export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
  *
  * 사용 예시:
  *   const displayData = normalizeCharacter(rawData);
- *   // displayData.profile.name               → "소르가나"
- *   // displayData.accessories[0].polishEffects[0].grade → "MID"
- *   // displayData.arkGrid.effects[0].value.color        → "#ffd200"
+ *   // displayData.profile.name                           → "소르가나"
+ *   // displayData.accessories[0].polishEffects[0].grade  → "MID"
+ *   // displayData.arkGrid.effects[0].value.color         → "#ffd200"
  */
 export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData => ({
   profile     : normalizeProfile(raw),
@@ -825,6 +823,7 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   accessories : normalizeAccessories(raw),
   bracelet    : normalizeBracelet(raw),
   abilityStone: normalizeAbilityStone(raw),
+  boJu        : normalizeBoJu(raw),
   avatars     : normalizeAvatars(raw),
   engravings  : normalizeEngravings(raw),
   gems        : normalizeGems(raw),

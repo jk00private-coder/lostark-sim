@@ -260,6 +260,19 @@ export interface AbilityStoneDisplay {
   } | null;
 }
 
+// ============================================================
+// 보주
+// ============================================================
+
+/** 보주 표시용 */
+export interface BoJuDisplay {
+  name        : string;      // "눈부신 비전의 보주"
+  icon        : string;      // 아이콘 URL
+  grade       : ColoredText; // { text: "유물", color: "#FA5D00" }
+  seasonLabel : string;      // "시즌2"
+  paradoxPower: number;      // 30431195 — 달성 최대 낙원력
+}
+
 
 // ============================================================
 // 아바타
@@ -453,6 +466,7 @@ export interface CharacterDisplayData {
   accessories : AccessoryDisplay[];
   bracelet    : BraceletDisplay | null;
   abilityStone: AbilityStoneDisplay | null;
+  boJu: BoJuDisplay | null;
   avatars     : AvatarDisplay[];
   engravings  : EngravingDisplay[];
   gems        : GemSummaryDisplay;
