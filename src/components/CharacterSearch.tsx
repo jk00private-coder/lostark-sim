@@ -1,79 +1,104 @@
+// @/components/CharacterSearch.tsx
+"use client";
+
 import React, { useState } from 'react';
+import { normalizeCharacter } from '@/utils/data-normalizer';
+import { CharacterDisplayData } from '@/types/character-types';
+import { RawCharacterData } from '@/types/raw-types';
+
+interface CharacterSearchProps {
+  /** 검색 완료 시 정규화된 데이터를 부모로 전달 */
+  onDataLoaded: (data: CharacterDisplayData) => void;
+}
 
 /**
- * 캐릭터 검색 및 Raw JSON 데이터 확인 컴포넌트입니다.
- * 20번 라인 근처: API 응답을 저장할 state와 로딩 상태를 관리합니다.
+ * 캐릭터 검색 컴포넌트
+ *
+ * [역할]
+ *   1. 캐릭터명 입력 → API 호출 (raw 데이터 수집)
+ *   2. normalizeCharacter() 로 변환
+ *   3. onDataLoaded() 콜백으로 부모(store)에 전달
+ *
+ * [변경 이력]
+ *   - raw JSON 표시 기능 제거 (디버깅용이었으므로)
+ *   - normalizeCharacter() 연결
+ *   - onDataLoaded 콜백 추가
  */
-export default function CharacterSearch() {
+export default function CharacterSearch({ onDataLoaded }: CharacterSearchProps) {
   const [characterName, setCharacterName] = useState('');
-  const [rawData, setRawData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading]         = useState(false);
+  const [error, setError]                 = useState<string | null>(null);
+  const [loadedName, setLoadedName]       = useState<string | null>(null);
 
   const handleSearch = async () => {
-    if (!characterName) return;
-    
+    if (!characterName.trim()) return;
+
     setIsLoading(true);
+    setError(null);
+
     try {
-      // 위에서 만든 우리 프로젝트 내부 API 라우트를 호출합니다.
-      const response = await fetch(`/api/lostark/${characterName}`);
-      const data = await response.json();
-      setRawData(data);
-    } catch (error) {
-      console.error('Search error:', error);
+      // 1. API 호출 — raw 데이터 수집
+      const response = await fetch(`/api/lostark/${encodeURIComponent(characterName)}`);
+
+      if (!response.ok) {
+        throw new Error(`API 오류: ${response.status}`);
+      }
+
+      const raw: RawCharacterData = await response.json();
+
+      // API 오류 응답 체크 (route.ts 에서 _isError 플래그 사용)
+      if ((raw as any).error) {
+        throw new Error((raw as any).error);
+      }
+
+      // 2. normalizeCharacter() 로 변환
+      const displayData = normalizeCharacter(raw);
+
+      // 3. 부모(store)에 전달
+      onDataLoaded(displayData);
+      setLoadedName(characterName);
+
+    } catch (err: any) {
+      setError(err.message ?? '알 수 없는 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const copyToClipboard = () => {
-    if (!rawData) return;
-    // JSON Crack에 바로 붙여넣기 좋게 예쁘게 정렬(indent 2)하여 복사합니다.
-    const text = JSON.stringify(rawData, null, 2);
-    document.execCommand('copy'); 
-    // 브라우저 호환성을 위해 execCommand 사용 (iframe 환경 고려)
-    alert('JSON 데이터가 클립보드에 복사되었습니다. JSON Crack 사이트에 붙여넣으세요!');
-  };
-
   return (
-    <div className="flex flex-col gap-4 p-6 bg-slate-900 rounded-xl border border-slate-800">
+    <div className="flex flex-col gap-2 p-4 bg-slate-900 rounded-xl border border-slate-800 mb-4">
       <div className="flex gap-2">
         <input
           type="text"
-          className="flex-1 bg-slate-800 text-white border border-slate-700 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          className="flex-1 bg-slate-800 text-white border border-slate-700 rounded px-4 py-2
+                     focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
           placeholder="캐릭터명을 입력하세요"
           value={characterName}
-          onChange={(e) => setCharacterName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          onChange={e => setCharacterName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSearch()}
         />
         <button
           onClick={handleSearch}
           disabled={isLoading}
-          className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded transition-colors disabled:opacity-50"
+          className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded
+                     transition-colors disabled:opacity-50 text-sm"
         >
           {isLoading ? '검색 중...' : '검색'}
         </button>
       </div>
 
-      {rawData && (
-        <div className="mt-4 flex flex-col gap-2">
-          <div className="flex justify-between items-center">
-            <h3 className="text-cyan-400 font-bold">Raw JSON Data</h3>
-            <button
-              onClick={copyToClipboard}
-              className="text-xs bg-slate-700 hover:bg-slate-600 text-white py-1 px-3 rounded"
-            >
-              전체 복사하기
-            </button>
-          </div>
-          <textarea
-            readOnly
-            className="w-full h-64 bg-black text-green-400 font-mono text-xs p-4 rounded border border-slate-700 overflow-auto"
-            value={JSON.stringify(rawData, null, 2)}
-          />
-          <p className="text-[10px] text-slate-500">
-            * 위 텍스트를 복사하여 <a href="https://jsoncrack.com/editor" target="_blank" className="underline text-cyan-600">JSON Crack</a>에서 확인하세요.
-          </p>
-        </div>
+      {/* 성공 메시지 */}
+      {loadedName && !error && (
+        <p className="text-xs text-cyan-400">
+          ✓ {loadedName} 데이터 로드 완료
+        </p>
+      )}
+
+      {/* 에러 메시지 */}
+      {error && (
+        <p className="text-xs text-red-400">
+          ✗ {error}
+        </p>
       )}
     </div>
   );
