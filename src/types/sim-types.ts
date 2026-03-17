@@ -13,9 +13,11 @@
  *   - CommonEffectTypeId : 모든 직업 공통 효과 타입
  *   - ClassEffectTypeId  : 직업별 특수 효과 타입 유니온 (이 파일에서 관리)
  *   - EffectTypeId       : 위 둘의 유니온 (최종 사용 타입)
- *   - EFFECT_MAP         : 공통 타입만 포함, 직업별은 각 파일에서 정의
- *   - ADD  계열 초기값   : 0
- *   - MULTIPLY 계열 초기값: 1.0
+ *   - EFFECT_MAP         : 공통 타입 → Modifiers 필드 매핑 (연산 방식은 EffectEntry.operation 이 결정)
+ *
+ * [네이밍 컨벤션]
+ *   - C (Constant) : 고정 상수 증가
+ *   - P (Percent)  : 퍼센트 증가
  */
 
 
@@ -39,41 +41,41 @@ export interface CombatStats {
 
 /** 공격력 및 주스탯 보정치 */
 export interface StatModifiers {
-  mainStatStatic  : number;  // 주스탯 고정 증가 (ADD, 초기 0)
-  mainStatPercent : number;  // 주스탯 % 증가 (ADD, 초기 0)
-  weaponAtkStatic : number;  // 무기 공격력 고정 증가 (ADD, 초기 0)
-  weaponAtkPercent: number;  // 무기 공격력 % 증가 (ADD, 초기 0)
-  baseAtkPercent  : number;  // 기본 공격력 % 증가 (ADD, 초기 0)
-  atkStatic       : number;  // 공격력 고정 증가 (ADD, 초기 0)
-  atkPercent      : number;  // 공격력 % 증가 (ADD, 초기 0)
+  mainStatC : number;  // 주스탯 고정 증가 (C: Constant)
+  mainStatP : number;  // 주스탯 % 증가 (P: Percent)
+  weaponAtkC: number;  // 무기 공격력 고정 증가
+  weaponAtkP: number;  // 무기 공격력 % 증가
+  baseAtkP  : number;  // 기본 공격력 % 증가
+  atkC      : number;  // 공격력 고정 증가
+  atkP      : number;  // 공격력 % 증가
 }
 
 /**
  * 데미지 계산용 공통 보정치
+ *
  * 모든 직업에 공통으로 존재하는 수치만 포함합니다.
  * 직업별 특수 수치는 ClassModifiers 에서 관리합니다.
  *
- * MULTIPLY 계열은 초기값이 1.0 입니다.
- * ADD 계열은 초기값이 0 입니다.
+ * [초기값]
+ *   ADD      계열 : 0
+ *   MULTIPLY 계열 : 1.0
  */
 export interface DamageModifiers {
-  // 피해 관련 (MULTIPLY — 독립 곱연산)
-  damageInc    : number;  // 피해 증가 (초기 1.0)
-  critDamageInc: number;  // 치명타시 피해 증가 (초기 1.0)
-  cdr          : number;  // 쿨타임 감소 % (초기 1.0)
+  damageInc    : number;  // 피해 증가
+  evoDamage    : number;  // 진화형 피해
+  addDamage    : number;  // 추가 피해
 
-  // 피해 관련 (ADD — 합연산)
-  evoDamage        : number;  // 진화형 피해 (초기 0)
-  addDamage        : number;  // 추가 피해 (초기 0)
-  critChance       : number;  // 치명타 확률 (초기 0)
-  critDamage       : number;  // 치명타 피해 (초기 0)
-  defPenetration   : number;  // 방어력 관통 (초기 0)
-  targetDamageTaken: number;  // 적이 받는 피해 증가 (초기 0)
+  critChance   : number;  // 치명타 확률
+  critDamage   : number;  // 치명타 피해
+  critDamageInc: number;  // 치명타시 피해 증가
 
-  // 유틸리티 (ADD)
-  atkSpeed: number;  // 공격 속도 증가 (초기 0)
-  movSpeed: number;  // 이동 속도 증가 (초기 0)
-  cdrFlat : number;  // 고정 쿨타임 감소 (초기 0, 단위: 초)
+  defPenetration  : number;  // 방어력 관통
+  enemyDamageTaken: number;  // 적이 받는 피해 증가
+
+  cdrC    : number;  // 쿨타임 고정 감소 (단위: 초)
+  cdrP    : number;  // 쿨타임 % 감소
+  atkSpeed: number;  // 공격 속도 증가
+  movSpeed: number;  // 이동 속도 증가
 }
 
 
@@ -83,94 +85,110 @@ export interface DamageModifiers {
 
 /**
  * 공통 Effect 타입 목록
- * 모든 직업에서 사용 가능한 효과 타입입니다.
+ *
+ * 타입(type)      : 무엇에 관한 수치인가 (의미)
+ * 연산(operation) : 어떻게 계산하는가 (방식) → EffectEntry 에서 결정
+ * 그룹(subGroup)  : 같은 연산 방식 내에서 어떤 단위로 묶는가
  */
 export const COMMON_EFFECT_TYPES = [
-  // 피해 (MULTIPLY)
   'DMG_INC'    ,  // 피해 증가
+  'EVO_DMG'    ,  // 진화형 피해
+  'ADD_DMG'    ,  // 추가 피해
+
+  'CRIT_CHANCE' ,  // 치명타 확률
+  'CRIT_DMG'    ,  // 치명타 피해
   'CRIT_DMG_INC',  // 치명타시 피해 증가
-  'CDR'        ,  // 쿨타임 감소 %
 
-  // 피해 (ADD)
-  'EVO_DMG'        ,  // 진화형 피해
-  'ADD_DMG'        ,  // 추가 피해
-  'CRIT_CHANCE'    ,  // 치명타 확률
-  'CRIT_DMG'       ,  // 치명타 피해
   'DEF_PENETRATION',  // 방어력 관통
-  'TARGET_DMG_TAKEN',  // 적이 받는 피해 증가
+  'ENEMY_DMG_TAKEN',  // 적이 받는 피해 증가
 
-  // 유틸리티 (ADD)
+  'CDR_C'    ,  // 쿨타임 고정 감소
+  'CDR_P'    ,  // 쿨타임 % 감소
   'ATK_SPEED',  // 공격 속도
   'MOV_SPEED',  // 이동 속도
-  'CDR_FLAT' ,  // 고정 쿨타임 감소 (초)
 
-  // 공격력 (ADD)
-  'MAIN_STAT_STATIC'  ,  // 주스탯 고정 증가
-  'MAIN_STAT_PERCENT' ,  // 주스탯 % 증가
-  'WEAPON_ATK_STATIC' ,  // 무기 공격력 고정 증가
-  'WEAPON_ATK_PERCENT',  // 무기 공격력 % 증가
-  'BASE_ATK_PERCENT'  ,  // 기본 공격력 % 증가
-  'ATK_STATIC'        ,  // 공격력 고정 증가
-  'ATK_PERCENT'       ,  // 공격력 % 증가
+  'MAIN_STAT_C' ,  // 주스탯 고정 증가
+  'MAIN_STAT_P' ,  // 주스탯 % 증가
+  'WEAPON_ATK_C',  // 무기 공격력 고정 증가
+  'WEAPON_ATK_P',  // 무기 공격력 % 증가
+  'BASE_ATK_P'  ,  // 기본 공격력 % 증가
+  'ATK_C'       ,  // 공격력 고정 증가
+  'ATK_P'       ,  // 공격력 % 증가
 ] as const;
-
 export type CommonEffectTypeId = (typeof COMMON_EFFECT_TYPES)[number];
 
 /**
  * 직업별 특수 Effect 타입 유니온
- * 새 직업 추가 시 여기에 | NewClassEffectTypeId 를 추가합니다.
- * 각 직업별 타입은 src/types/skills/{직업}-effects.ts 에서 정의합니다.
+ * 새 직업 추가 시: | 'SORC_ARCANE_DMG' 등
  */
-// import { GkEffectTypeId } from './skills/guardian-knight-effects'
 export type ClassEffectTypeId =
   | 'GK_QI_DMG'   // 가디언나이트: 기운 소모당 피해 증가
   | 'GK_QI_COST'; // 가디언나이트: 기운 소모 개수 변경
-  // 새 직업 추가 시: | 'SORC_ARCANE_DMG' 등
 
 /** 최종 EffectTypeId — 공통 + 직업별 유니온 */
 export type EffectTypeId = CommonEffectTypeId | ClassEffectTypeId;
 
 /**
+ * subGroup 식별자 상수
+ *
+ * EffectEntry.subGroup 에 직접 문자열을 쓰는 대신 이 상수를 참조합니다.
+ * 오탈자를 컴파일 에러로 차단할 수 있습니다.
+ *
+ * 새로운 그룹이 필요하면 이 상수에만 추가합니다.
+ *
+ * 사용 예시:
+ *   { type: 'DEF_PENETRATION', value: 0.10, operation: 'ADD', subGroup: SUB_GROUPS.DEF_PEN_A }
+ */
+export const SUB_GROUPS = {
+  // 방어력 관통 그룹
+  DEF_PEN_A: 'defPenA',
+  DEF_PEN_B: 'defPenB',
+  // 적이 받는 피해 증가 그룹
+  ENEMY_DMG_A: 'enemyDmgA',
+  ENEMY_DMG_B: 'enemyDmgB',
+} as const;
+
+/**
  * 적용 대상 분류
  *
- * 모든 필드가 optional 이며 복수 지정 가능합니다.
- * 지정된 조건을 모두 만족하는 스킬에만 적용됩니다.
- * 아무것도 지정하지 않으면 전체 적용입니다.
+ * 모든 필드가 optional
+ * 아무것도 지정하지 않으면 전체 적용
  */
 export interface EffectTarget {
-  attackType?   : AttackTypeId[];   // HEAD_ATK, BACK_ATK, NON_DIRECTIONAL
-  skillCategory?: SkillCategory[];  // ENLIGHTEN, GOD_FORM, BASIC 등
-  skillType?    : SkillTypeId[];    // NORMAL, CHARGE, HOLDING 등
-  skillId?      : string;           // 특정 스킬 ID
-  resource?     : ResourceTypeId;   // QI_EMBERES, MANA 등 (리소스 타입 스킬만)
+  skillIds?     : string[];             // 특정 스킬 ID 배열
+  categories?   : SkillCategory[];      // ENLIGHTEN, GOD_FORM, BASIC 등
+  skillTypes?   : SkillTypeId[];        // NORMAL, CHARGE, HOLDING 등
+  resourceTypes?: ResourceTypeId[];     // 기운, 마나 등
+  hasAttackType?: AttackTypeId[];       // 스킬에 해당 어택타입 태그가 존재하는가
 }
 
 /**
  * 모든 효과의 기본 단위
  *
  * [operation 규칙]
- *   ADD      → 같은 타입끼리 합산 후 최종 계산식에 (1 + 합산값) 으로 적용
- *   MULTIPLY → 각각 독립 곱연산 (1 + value) × (1 + value) × ...
+ *   ADD      → subGroup 없음: 전체 합산 후 (1 + 합산값) 으로 적용
+ *              subGroup 있음: 같은 subGroup끼리 합산 후 그룹 단위로 독립 곱연산
+ *   MULTIPLY → 항상 독립 곱연산 (1 + value), subGroup 무시
  *
  * [target 규칙]
  *   없음 → 전체 적용
  *   있음 → target 조건을 모두 만족하는 스킬에만 적용
  */
 export interface EffectEntry {
-  type     : EffectTypeId;
-  value    : number;
-  operation: 'ADD' | 'MULTIPLY';
-  target?  : EffectTarget;
+  type      : EffectTypeId;
+  value     : number;
+  operation : 'ADD' | 'MULTIPLY';
+  subGroup? : string;   // SUB_GROUPS 상수 사용 권장, operation: 'ADD' 일 때만 유효
+  target?   : EffectTarget;
 }
 
 /**
  * EFFECT_MAP 개별 항목
- * field: AllModifiers 에서 누적할 필드명
- * operation: 해당 타입의 연산 방식
+ *
+ * 연산 방식은 EffectEntry.operation 이 결정하므로 여기서는 필드 매핑만 담당합니다.
  */
 export interface EffectMapEntry {
-  field    : keyof (StatModifiers & DamageModifiers);
-  operation: 'ADD' | 'MULTIPLY';
+  field: keyof (StatModifiers & DamageModifiers);
 }
 
 /**
@@ -182,32 +200,29 @@ export interface EffectMapEntry {
  * 직업별 타입(GK_QI_DMG 등)은 각 직업 파일의 CLASS_EFFECT_MAP 에서 관리합니다.
  */
 export const EFFECT_MAP: Record<CommonEffectTypeId, EffectMapEntry> = {
-  // 피해 (MULTIPLY)
-  DMG_INC      : { field: 'damageInc',     operation: 'MULTIPLY' },
-  CRIT_DMG_INC : { field: 'critDamageInc', operation: 'MULTIPLY' },
-  CDR          : { field: 'cdr',           operation: 'MULTIPLY' },
+  DMG_INC: { field: 'damageInc'     },
+  EVO_DMG: { field: 'evoDamage'     },
+  ADD_DMG: { field: 'addDamage'     },
 
-  // 피해 (ADD)
-  EVO_DMG         : { field: 'evoDamage',         operation: 'ADD' },
-  ADD_DMG         : { field: 'addDamage',          operation: 'ADD' },
-  CRIT_CHANCE     : { field: 'critChance',         operation: 'ADD' },
-  CRIT_DMG        : { field: 'critDamage',         operation: 'ADD' },
-  DEF_PENETRATION : { field: 'defPenetration',     operation: 'ADD' },
-  TARGET_DMG_TAKEN: { field: 'targetDamageTaken',  operation: 'ADD' },
+  CRIT_CHANCE : { field: 'critChance'    },
+  CRIT_DMG    : { field: 'critDamage'    },
+  CRIT_DMG_INC: { field: 'critDamageInc' },
 
-  // 유틸리티 (ADD)
-  ATK_SPEED: { field: 'atkSpeed', operation: 'ADD' },
-  MOV_SPEED: { field: 'movSpeed', operation: 'ADD' },
-  CDR_FLAT : { field: 'cdrFlat',  operation: 'ADD' },
+  DEF_PENETRATION: { field: 'defPenetration'   },
+  ENEMY_DMG_TAKEN: { field: 'enemyDamageTaken' },
 
-  // 공격력 (ADD)
-  MAIN_STAT_STATIC  : { field: 'mainStatStatic',   operation: 'ADD' },
-  MAIN_STAT_PERCENT : { field: 'mainStatPercent',  operation: 'ADD' },
-  WEAPON_ATK_STATIC : { field: 'weaponAtkStatic',  operation: 'ADD' },
-  WEAPON_ATK_PERCENT: { field: 'weaponAtkPercent', operation: 'ADD' },
-  BASE_ATK_PERCENT  : { field: 'baseAtkPercent',   operation: 'ADD' },
-  ATK_STATIC        : { field: 'atkStatic',        operation: 'ADD' },
-  ATK_PERCENT       : { field: 'atkPercent',       operation: 'ADD' },
+  CDR_C    : { field: 'cdrC'     },
+  CDR_P    : { field: 'cdrP'     },
+  ATK_SPEED: { field: 'atkSpeed' },
+  MOV_SPEED: { field: 'movSpeed' },
+
+  MAIN_STAT_C : { field: 'mainStatC'  },
+  MAIN_STAT_P : { field: 'mainStatP'  },
+  WEAPON_ATK_C: { field: 'weaponAtkC' },
+  WEAPON_ATK_P: { field: 'weaponAtkP' },
+  BASE_ATK_P  : { field: 'baseAtkP'   },
+  ATK_C       : { field: 'atkC'       },
+  ATK_P       : { field: 'atkP'       },
 };
 
 

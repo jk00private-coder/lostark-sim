@@ -158,9 +158,9 @@ export default function EngravingSimulator() {
                 <span className="text-cyan-400">
                   {(calcData.damageModifiers.damageInc * 100).toFixed(2)}%
                 </span>
-                <span>atkPercent:</span>
+                <span>atkP:</span>
                 <span className="text-cyan-400">
-                  {(calcData.statModifiers.atkPercent * 100).toFixed(2)}%
+                  {(calcData.statModifiers.atkP * 100).toFixed(2)}%
                 </span>
                 <span>critChance:</span>
                 <span className="text-cyan-400">
@@ -170,9 +170,9 @@ export default function EngravingSimulator() {
                 <span className="text-cyan-400">
                   {(calcData.damageModifiers.critDamage * 100).toFixed(2)}%
                 </span>
-                <span>baseAtkPercent:</span>
+                <span>baseAtkP:</span>
                 <span className="text-cyan-400">
-                  {(calcData.statModifiers.baseAtkPercent * 100).toFixed(2)}%
+                  {(calcData.statModifiers.baseAtkP * 100).toFixed(2)}%
                 </span>
               </div>
             </div>

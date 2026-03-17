@@ -47,9 +47,9 @@ const createEmptyCombatStats = (): CombatStats => ({
 });
 
 const createEmptyStatModifiers = (): StatModifiers => ({
-  mainStatStatic: 0, mainStatPercent: 0,
-  weaponAtkStatic: 0, weaponAtkPercent: 0,
-  baseAtkPercent: 0, atkStatic: 0, atkPercent: 0,
+  mainStatC: 0, mainStatP: 0,
+  weaponAtkC: 0, weaponAtkP: 0,
+  baseAtkP: 0, atkC: 0, atkP: 0,
 });
 
 /**
@@ -58,18 +58,18 @@ const createEmptyStatModifiers = (): StatModifiers => ({
  * ADD 계열은 0
  */
 const createEmptyDamageModifiers = (): DamageModifiers => ({
-  damageInc: 1.0,  // MULTIPLY
-  critDamageInc: 1.0,  // MULTIPLY
-  cdr: 1.0,  // MULTIPLY
+  damageInc: 0.0,
+  critDamageInc: 0.0,
+  cdrC: 0.0,
+  cdrP: 0.0,
   evoDamage: 0,
   addDamage: 0,
   critChance: 0,
   critDamage: 0,
   defPenetration: 0,
-  targetDamageTaken: 0,
+  enemyDamageTaken: 0,
   atkSpeed: 0,
   movSpeed: 0,
-  cdrFlat: 0,
 });
 
 const createEmptyCalcData = (): CalcData => ({
@@ -87,15 +87,15 @@ const createEmptyCalcData = (): CalcData => ({
 /** 카드 효과 → EffectTypeId 매핑 */
 const CARD_EFFECT_MAP: Record<string, CommonEffectTypeId> = {
   '피해': 'DMG_INC',
-  '공격력': 'ATK_PERCENT',
+  '공격력': 'ATK_P',
   '치명타 피해': 'CRIT_DMG',
   '치명타 확률': 'CRIT_CHANCE',
 };
 
 /** 아크그리드 효과명 → EffectTypeId 매핑 */
 const ARK_GRID_EFFECT_MAP: Record<string, CommonEffectTypeId> = {
-  '공격력': 'ATK_PERCENT',
-  '낙인력': 'ATK_PERCENT',
+  '공격력': 'ATK_P',
+  '낙인력': 'ATK_P',
   '보스 피해': 'DMG_INC',
   '추가 피해': 'ADD_DMG',
 };
@@ -125,11 +125,10 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
 
     const allMods = { ...statModifiers, ...damageModifiers } as Record<string, number>;
 
-    if (entry.operation === 'ADD') {
-      allMods[entry.field] += value;
-    } else {
-      allMods[entry.field] *= (1 + value);
-    }
+    // 변경 후 — operation 없이 타입 이름만으로 판단 불가
+    // → Todo: 대신 EFFECT_MAP에 연산 방식을 어떻게 알 수 있는가?
+    allMods[entry.field] += value;
+    // allMods[entry.field] *= (1 + value);
 
     // 변경사항 반영
     Object.assign(statModifiers, allMods);
@@ -143,9 +142,9 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   const applyClassEffect = (type: string, value: number) => {
     const entry = GK_EFFECT_MAP[type as GkEffectTypeId] as ClassEffectMapEntry | undefined;
     if (!entry) return;
-    if (entry.operation === 'ADD') {
+
+    // → Todo: 대신 EFFECT_MAP에 연산 방식을 어떻게 알 수 있는가?
       classModifiers[entry.field] += value;
-    }
   };
 
   const applyEffect = (type: string, value: number) => {
@@ -182,7 +181,7 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   const totalAvatarBonus = display.avatars.reduce(
     (sum, av) => sum + av.mainStatBonus, 0
   );
-  applyEffect('MAIN_STAT_PERCENT', totalAvatarBonus);
+  applyEffect('MAIN_STAT_P', totalAvatarBonus);
 
   // ── 6. 각인 효과 ──────────────────────────────────────────
   display.engravings.forEach(eng => {
@@ -192,7 +191,7 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   });
 
   // ── 7. 보석 공증 ──────────────────────────────────────────
-  applyEffect('BASE_ATK_PERCENT', display.gems.totalBaseAtk.value);
+  applyEffect('BASE_ATK_P', display.gems.totalBaseAtk.value);
 
   // ── 8. 카드 효과 ──────────────────────────────────────────
   display.cards?.activeItems.forEach(item => {

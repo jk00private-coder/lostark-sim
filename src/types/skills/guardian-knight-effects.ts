@@ -19,7 +19,7 @@ import { EffectMapEntry } from '@/types/sim-types';
 // ============================================================
 
 export const GK_EFFECT_TYPES = [
-  'GK_QI_DMG' ,  // 기운 소모당 피해 증가 (ADD)
+  'GK_QI_DMG',  // 기운 소모당 피해 증가 (ADD)
   'GK_QI_COST',  // 기운 소모 개수 변경 (ADD)
 ] as const;
 
@@ -42,12 +42,12 @@ export type GkEffectTypeId = (typeof GK_EFFECT_TYPES)[number];
  *   finalQiCount = skill.resource.value + qiCost (누적)
  */
 export interface GkClassModifiers {
-  qiDmg : number;  // 기운 소모당 피해 증가 누적 (ADD, 초기 0)
+  qiDmg: number;  // 기운 소모당 피해 증가 누적 (ADD, 초기 0)
   qiCost: number;  // 기운 소모 개수 변경 누적 (ADD, 초기 0)
 }
 
 export const createEmptyGkClassModifiers = (): GkClassModifiers => ({
-  qiDmg : 0,
+  qiDmg: 0,
   qiCost: 0,
 });
 
@@ -55,7 +55,7 @@ export const createEmptyGkClassModifiers = (): GkClassModifiers => ({
  * 가디언나이트 특화 계수
  * 화신 스킬의 기운 소모당 피해에 특화×계수 만큼 추가됩니다.
  */
-export const QI_SPECIALIZATION_COEFF = 0.000357;  // TODO: 실제 계수로 교체 필요
+export const QI_SPECIALIZATION_COEFF = 0.00858;
 
 /**
  * 기운 소모당 기본 피해율
@@ -74,11 +74,10 @@ export const QI_BASE_DAMAGE_RATE = 0.10;
  */
 // 이후 — 전용 타입으로 분리
 export interface ClassEffectMapEntry {
-  field    : keyof GkClassModifiers;
-  operation: 'ADD' | 'MULTIPLY';
+  field: keyof GkClassModifiers;
 }
 
 export const GK_EFFECT_MAP: Record<GkEffectTypeId, ClassEffectMapEntry> = {
-  GK_QI_DMG : { field: 'qiDmg',  operation: 'ADD' },
-  GK_QI_COST: { field: 'qiCost', operation: 'ADD' },
+  GK_QI_DMG : { field: 'qiDmg'  },
+  GK_QI_COST: { field: 'qiCost' }, 
 };
