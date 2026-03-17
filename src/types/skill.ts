@@ -1,95 +1,128 @@
-// @/types/skill-types
+/**
+ * @/types/skill.ts
+ * 스킬/트라이포드 데이터 타입을 정의합니다.
+ */
 
 import {
-  BaseSimData, SkillTypeId, AttackTypeId, SuperArmorId, ResourceTypeId,
-  SimEffect, SpecialParam  
-} from './sim-types';
+  BaseSimData, EffectEntry, MemoParam,
+  SkillTypeId, AttackTypeId, SuperArmorId,
+  ResourceTypeId, SkillCategory,
+} from '@/types/sim-types';
 
-export type SkillCategory = 
-  | "BASIC"           // 일반
-  | "ENLIGHTEN"       // 발현
-  | "GOD_FORM"        // 화신
-  | "HYPER_SKILL"     // 초각성스킬
-  | "ULTIMATE"        // 각성기
-  | "HYPER_ULTIMATE"  // 초각성기
 
-export interface SkillResource {
-  isStatic: boolean;  // 레벨 변수 여부
-  typeId: ResourceTypeId;
-  values: number[];   // 레벨별 값(고정이면 index 0만 사용)
+// ============================================================
+// 스킬 레벨 데이터
+// ============================================================
+
+/**
+ * 개별 타격 소스
+ *
+ * [excludeTripods]
+ *   이 피해원에 적용되지 않는 트라이포드 ID 목록입니다.
+ *   블래스터 개틀링건 케이스처럼 피해원마다
+ *   적용 트라이포드가 다른 경우 사용합니다.
+ *
+ *   예: c3 피해원은 b1 트라이포드 효과 제외
+ *   excludeTripods: ['BLASTER_GATLING_B1']
+ */
+export interface DamageSource {
+  name           : string;    // "1타" | "화상" | "폭발" 등
+  isCombined     : boolean;   // true = 메인 딜 합산, false = 별도 표시
+  hits           : number;    // 타수
+  constants      : number[];  // 레벨별 상수
+  coefficients   : number[];  // 레벨별 계수
+  excludeTripods?: string[];  // 이 피해원에 적용 안 되는 트라이포드 ID 목록
 }
 
-export interface SkillLevelData {
-  isStatic?: boolean;            // 레벨 고정 여부
-  damageSources: {
-    name: string;
-    isCombined: boolean;         // 메인 딜 합산 여부
-    hits: number;
-    constants: number[];
-    coefficients: number[];
-  }[];
+/**
+ * 스킬 레벨별 데미지 소스
+ *
+ * isStatic: true  → 레벨 고정, index 0만 사용
+ * isStatic: false → 레벨별, 레벨10=index0 ~ 레벨14=index4
+ */
+export type SkillLevelData =
+  | { isStatic: true;  damageSources: DamageSource[] }
+  | { isStatic: false; damageSources: DamageSource[] };
+
+/**
+ * 스킬 소모 자원
+ *
+ * isStatic: true  → 레벨 무관 고정값 (value 단일 숫자)
+ * isStatic: false → 레벨별 소모량 (values 배열)
+ */
+export type SkillResource =
+  | { typeId: ResourceTypeId; isStatic: true;  value : number   }
+  | { typeId: ResourceTypeId; isStatic: false; values: number[] };
+
+
+// ============================================================
+// 트라이포드 데이터
+// ============================================================
+
+/** 트라이포드로 변경 가능한 스킬 속성 */
+export interface TripodOverride {
+  typeId?      : SkillTypeId;
+  attackId?    : AttackTypeId;
+  destruction? : number;
+  stagger?     : string;
+  superArmorId?: SuperArmorId;
+  hits?        : number;
 }
 
-// 룬 정보 (간소화)
-export interface EquippedRune {
-  runeId: string;   // ex: "GALWIND" (질풍), "BLEED" (출혈)
-  rarity: string;   // ex: "LEGEND", "EPIC"
+/**
+ * 조건부 트라이포드 효과
+ *
+ * 특정 슬롯 조합에서만 발동하는 효과를 정의합니다.
+ * if 조건: s1/s2/s3 에 해당 티어의 선택 index 를 명시
+ * 명시하지 않은 티어는 조건 무관
+ */
+export interface TripodCase {
+  if: {
+    s1?: number;
+    s2?: number;
+    s3?: number;
+  };
+  then: {
+    effects?         : EffectEntry[];
+    addDamageSources?: SkillLevelData;
+    overrides?       : TripodOverride;
+    memo?            : MemoParam[];
+  };
 }
 
-// 보석 정보 (11개 슬롯 관리용)
-export interface EquippedGem {
-  slotIndex: number; // 0 ~ 10
-  gemType: "DMG" | "CDR"; // 멸화(피증) 또는 작열(쿨감)
-  level: number;     // 1 ~ 10레벨
-  targetSkillId: string; // 적용할 스킬 ID (ex: "gk_02")
-}
-
-/* [트라이포드 규격] */
+/**
+ * 트라이포드 데이터
+ *
+ * [effects vs memo]
+ *   effects → 계산 엔진이 처리 (DMG_INC, ADD_DMG, GK_QI_DMG 등)
+ *   memo    → 계산 무관 메모 (시전 속도, 범위 등)
+ */
 export interface TripodData extends BaseSimData {
-  slot: 1 | 2 | 3;
+  slot : 1 | 2 | 3;
   index: 1 | 2 | 3;
-  link?: { slot: number; index: number };
-  
-  cases?: {
-    if: { s1?: number; s2?: number; s3?: number };
-    then: {
-      effects?: SimEffect[];
-      special?: SpecialParam[];
-      overrides?: TripodData['overrides'];
-      addDamageSources?: SkillLevelData;
-    };
-  };
 
+  effects?         : EffectEntry[];
   addDamageSources?: SkillLevelData;
-
-  overrides?: {
-    typeId?: SkillTypeId;
-    attackId?: AttackTypeId;
-    destruction?: number;
-    stagger?: string;
-    superArmorId?: SuperArmorId;
-    hits?: number;
-  };
+  overrides?       : TripodOverride;
+  cases?           : TripodCase[];
+  link?            : { slot: number; index: number };
+  memo?            : MemoParam[];
 }
 
-/* [최종 스킬 데이터 규격] */
+
+// ============================================================
+// 스킬 데이터
+// ============================================================
+
 export interface SkillData extends BaseSimData {
-  category: SkillCategory[];    // 스킬 종류
-  typeId: SkillTypeId;          // 스킬 타입
-  attackId: AttackTypeId;       // 공격 타입
-  resource?: SkillResource;     // 소모 타입
-  destruction: number;          // 부위 파괴
-  stagger: string;              // 무력화
-  superArmorId: SuperArmorId;   // 공격 면역
-  cooldown: number;             // 기본 쿨타임
-  levels: SkillLevelData;     // 레벨별 상수/계수
-  tripods?: TripodData[]; // 트라이포드 규격 포함
+  category    : SkillCategory[];
+  typeId      : SkillTypeId;
+  attackId    : AttackTypeId;
+  resource?   : SkillResource;
+  destruction : number;
+  stagger     : string;
+  superArmorId: SuperArmorId;
+  cooldown    : number;
+  levels      : SkillLevelData;
+  tripods?    : TripodData[];
 }
-
-
-
-
-
-
-
-
