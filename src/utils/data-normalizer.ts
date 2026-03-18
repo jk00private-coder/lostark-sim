@@ -14,6 +14,8 @@
  *   - 장비 세트 판별은 src/data/equipment-sets.ts DB 사용
  */
 
+import { ColoredText, ColoredValue, EffectTypeId, EffectEntry } from '@/types/sim-types';
+
 import {
   RawCharacterData,
 } from '@/types/raw-types';
@@ -31,7 +33,6 @@ import {
   ArkPassivePointDisplay, ArkPassiveEffectDisplay,
   ArkGridDisplay, ArkGridCoreDisplay, ArkGridEffectDisplay,
   SkillDisplay, SelectedTripodDisplay, EquippedRuneDisplay,
-  ColoredText, ColoredValue, EffectEntry,
   OptionGrade,
 } from '@/types/character-types';
 
@@ -324,16 +325,14 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         const add : string = tooltip['Element_008']?.value?.Element_001 ?? '';
         if (base.includes('무기 공격력')) {
           effects.push({
-            effectType: 'WEAPON_ATK_C',
-            label     : { text: '무기 공격력', color: undefined },
-            value     : { value: extractRawNumber(base), color: undefined },
+            type : 'WEAPON_ATK_C',
+            value: { value: extractRawNumber(base) },
           });
         }
         if (add.includes('추가 피해')) {
           effects.push({
-            effectType: 'ADD_DMG',
-            label     : { text: '추가 피해', color: undefined },
-            value     : toColoredValue(add),
+            type : 'ADD_DMG',
+            value: { value: extractRawNumber(add) },
           });
         }
       }
@@ -344,9 +343,8 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         const mainStatM = base.match(/힘\s*\+(\d+)/);
         if (mainStatM) {
           effects.push({
-            effectType: 'MAIN_STAT_C',
-            label     : { text: '힘', color: undefined },
-            value     : { value: parseInt(mainStatM[1]), color: undefined },
+            type : 'MAIN_STAT_C',
+            value: { value: parseInt(mainStatM[1]) },
           });
         }
       }
@@ -417,9 +415,8 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
         }
 
         polishEffects.push({
-          effectType,
-          label: { text: labelText, color: undefined },
-          value: cv,
+          type : effectType as EffectTypeId,
+          value: cv,                         // cv 자체가 ColoredValue
           grade: detectOptionGrade(cv.color, effectType, cv.value, true),
         });
       });
@@ -480,8 +477,7 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
       const cv        = toColoredValue(line);
 
       return {
-        effectType,
-        label  : { text: labelText, color: undefined },
+        type   : effectType as EffectTypeId,
         value  : cv,
         isFixed,
         grade  : isFixed ? undefined : detectOptionGrade(cv.color, effectType, cv.value, false), // ← 수치 기반 fallback 추가

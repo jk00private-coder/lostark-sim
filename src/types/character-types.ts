@@ -7,69 +7,28 @@
  * [설계 원칙]
  *   - UI 컴포넌트가 직접 소비하는 타입
  *   - 수치는 파싱된 number 타입 (문자열 없음)
- *   - 라벨(텍스트)과 수치(숫자)의 색깔은 로아에서 독립적으로 존재하므로
- *     ColoredText / ColoredValue 를 분리해서 사용합니다
- *     예: "공격력(흰색) +1.21%(노랑)" → label: ColoredText, value: ColoredValue
  *   - 영문 ID는 UI 표시 시 src/constants/label-maps.ts 에서 한글 변환
  */
 
+import {ColoredText, ColoredValue, EffectEntry } from '@/types/sim-types';
 
 // ============================================================
 // 공통 유틸 타입
 // ============================================================
 
-/**
- * 숫자 수치 + 색깔
- * API HTML에서 수치에 붙은 color 를 보존합니다.
- *
- * 예시:
- *   "+1.21%" → { value: 0.0121, color: "#FFD200" }
- *   "+390"   → { value: 390,    color: "#FE9600" }
- */
-export interface ColoredValue {
-  value : number;
-  color?: string; // hex 문자열. undefined = 기본색(흰색) 처리
-}
-
-/**
- * 텍스트 + 색깔
- * API HTML에서 텍스트에 붙은 color 를 보존합니다.
- *
- * 예시:
- *   "공격력"     → { text: "공격력",    color: undefined }   // 기본 흰색
- *   "[원한]"     → { text: "원한",      color: "#FFFFAC" }   // 각인명 황금
- *   "[화신 스킬]" → { text: "화신 스킬", color: "#FF0000" }   // 화신 빨강
- */
-export interface ColoredText {
-  text : string;
-  color?: string;
-}
+// ColoredText, ColoredValue 재export — 기존 코드 호환성 유지
+export type { ColoredText, ColoredValue };
 
 /** 상/중/하 옵션 등급 */
 export type OptionGrade = 'HIGH' | 'MID' | 'LOW';
 
 /**
- * 딜 관련 개별 효과 수치
- * effectType 은 sim-types.ts 의 EffectTypeId 와 대응
- *
- * label 과 value 의 색깔이 다른 경우가 현저히 많으므로 분리합니다.
- * 예: "추가 피해(흰색) +1.60%(보라)" → label/value 각각 color 보유
- */
-export interface EffectEntry {
-  effectType: string;       // "DMG_INC" | "ATK_PERCENT" | "CRIT_DMG" 등
-  label     : ColoredText;  // 효과 이름 + 색깔
-  value     : ColoredValue; // 수치 + 색깔
-}
-
-/**
  * 등급이 있는 딜 관련 효과 수치
  * 악세서리/팔찌 연마효과에 사용
- * 등급 기준은 src/data/accessory-option-grades.ts 에서 관리
  */
 export interface GradedEffectEntry extends EffectEntry {
-  grade: OptionGrade; // 수치 기준으로 판별한 상/중/하
+  grade: OptionGrade;
 }
-
 
 // ============================================================
 // 장비 세트 타입

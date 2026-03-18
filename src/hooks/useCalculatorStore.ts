@@ -35,11 +35,10 @@ import {
  * @param operation - 연산 방식 (ADD | MULTIPLY)
  */
 export interface EffectLog {
-  label    : string;
-  type     : string;
-  value    : number;
-  operation: 'ADD' | 'MULTIPLY';
-  subGroup?: string;  // calcFinalAtk 의 그룹핑에 사용
+  label   : string;
+  type    : string;
+  value   : number;   // ColoredValue.value (계산용 순수 수치)
+  subGroup?: string;
 }
 
 
@@ -216,17 +215,13 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
    */
   // 변경 후
   const applyEffect = (
-    label    : string,
-    type     : string,
-    value    : number,
-    operation: 'ADD' | 'MULTIPLY' = 'ADD',
+    label   : string,
+    type    : string,
+    value   : number,   // 항상 ColoredValue.value 를 전달
     subGroup?: string,
   ) => {
-    applyCommonEffect(type, value, operation, subGroup);  // ← subGroup 전달
-    applyClassEffect(type, value, operation);
-    effectLog.push({ label, type, value, operation, subGroup });
+    effectLog.push({ label, type, value, subGroup });
   };
-
 
   // ── 1. 전투 특성 ──────────────────────────────────────────
   // 특성은 applyEffect 를 거치지 않고 직접 할당 (EFFECT_MAP 대상 아님)
@@ -243,24 +238,21 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   display.equipment.forEach(eq =>
     eq.effects.forEach(eff =>
       // label: "무기 무기공격력", "상의 힘" 등
-      applyEffect(`${eq.type} ${eff.label.text}`, eff.effectType, eff.value.value)
+      applyEffect(`${eq.type} ${eff.value.color ?? ''}`, eff.type, eff.value.value, eff.subGroup)
     )
   );
 
   // ── 3. 악세서리 연마효과 ──────────────────────────────────
   display.accessories.forEach(acc =>
-    acc.polishEffects.forEach(eff => {
-      const subGroup = eff.effectType === 'DMG_INC' ? 'accessory' : undefined;
-      applyEffect(`${acc.type} ${eff.label.text}`, eff.effectType, eff.value.value, 'ADD', subGroup);
-    })
+    acc.polishEffects.forEach(eff =>
+      applyEffect(`${acc.type} ${eff.type}`, eff.type, eff.value.value, eff.subGroup)
+    )
   );
 
   // ── 4. 팔찌 효과 (랜덤 옵션만) ───────────────────────────
   display.bracelet?.effects.forEach(eff => {
-    if (!eff.isFixed) {
-      const subGroup = eff.effectType === 'DMG_INC' ? 'bracelet' : undefined;
-      applyEffect(`팔찌 ${eff.label.text}`, eff.effectType, eff.value.value, 'ADD', subGroup);
-    }
+    if (!eff.isFixed)
+      applyEffect(`팔찌 ${eff.type}`, eff.type, eff.value.value, eff.subGroup);
   });
 
   // ── 5. 아바타 주스탯 보너스 ───────────────────────────────
@@ -270,42 +262,19 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   applyEffect('아바타 주스탯', 'MAIN_STAT_P', totalAvatarBonus);
 
   // ── 6. 각인 효과 ──────────────────────────────────────────
-  display.engravings.forEach(eng => {
-    const db = ENGRAVINGS_DB.find(e => e.name === eng.name.text);
-    if (!db?.effects) return;
-    db.effects.forEach(eff =>
-      // label: "원한", "예리한 둔기" 등 — 각인명 그대로 사용
-      applyEffect(eng.name.text, eff.type, eff.value, eff.operation ?? 'ADD')
-    );
-  });
+  db.effects.forEach(eff =>
+    applyEffect(eng.name.text, eff.type, eff.value.value, eff.subGroup)
+  );
 
   // ── 7. 보석 공증 ──────────────────────────────────────────
   applyEffect('보석 공증', 'BASE_ATK_P', display.gems.totalBaseAtk.value);
 
   // ── 8. 카드 효과 ──────────────────────────────────────────
-  display.cards?.activeItems.forEach(item => {
-    if (!item.value) return;
-    for (const [keyword, effectType] of CARD_EFFECT_LIST) {
-      if (item.description.includes(keyword)) {
-        if (effectType !== null) {
-          // 카드 DMG_INC 는 카드끼리 합산(ADD) 후 그룹 단위 1회 곱연산
-          // subGroup: 'card' 로 묶어서 calcFinalMultiplier 에서 그룹 처리
-          const subGroup = effectType === 'DMG_INC' ? 'card' : undefined;
-          applyEffect(`카드 ${keyword}`, effectType, item.value.value, 'ADD', subGroup);
-        }
-        break;
-      }
-    }
-  });
+  const subGroup = effectType === 'DMG_INC' ? SUB_GROUPS.CARD : undefined;
+  applyEffect(`카드 ${keyword}`, effectType, item.value.value, subGroup);
 
   // ── 9. 아크그리드 효과 ────────────────────────────────────
-  display.arkGrid.effects.forEach(eff => {
-    const effectType = ARK_GRID_EFFECT_MAP[eff.label.text];
-    if (effectType) {
-      const subGroup = effectType === 'DMG_INC' ? 'arkGrid' : undefined;
-      applyEffect(`아크그리드 ${eff.label.text}`, effectType, eff.value.value, 'ADD', subGroup);
-    }
-  });
+  applyEffect(`아크그리드 ${eff.label.text}`, effectType, eff.value.value);
 
   // ── 10. subGroup ADD 후처리 ───────────────────────────────
   // subGroup 있는 ADD 효과들: 그룹 내 합산 후 해당 필드에 (1 + 합산) 곱연산
