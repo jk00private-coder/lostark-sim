@@ -149,72 +149,207 @@ export default function EngravingSimulator() {
               <p className="text-xs text-slate-500 mb-2 font-bold">
                 [DEV] calcData 동기화 확인
               </p>
-              <div className="grid grid-cols-2 gap-1 text-xs text-slate-400">
+              <div className="space-y-3 text-xs">
 
-                {/* ── 전투 스탯 ── */}
-                <span className="col-span-2 text-slate-500 mt-1">— 전투 스탯 —</span>
-                <span>baseAtk:</span>
-                <span className="text-cyan-400">
-                  {calcData.combatStats.baseAtk.toLocaleString()}
-                </span>
+                {/* ── 전투 스탯 ───────────────────────────────── */}
+                <div>
+                  <p className="text-slate-500 mb-1">— 전투 스탯 —</p>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-400">
+                    <span>baseAtk:</span>
+                    <span className="text-cyan-400">
+                      {calcData.combatStats.baseAtk.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
 
-                {/* ── StatModifiers ── */}
-                <span className="col-span-2 text-slate-500 mt-1">— 공격력 보정 —</span>
-                <span>atkP:</span>
-                <span className="text-cyan-400">
-                  {(calcData.statModifiers.atkP * 100).toFixed(2)}%
-                </span>
-                <span>atkC:</span>
-                <span className="text-cyan-400">
-                  {calcData.statModifiers.atkC.toLocaleString()}
-                </span>
-                <span>weaponAtkC:</span>
-                <span className="text-cyan-400">
-                  {calcData.statModifiers.weaponAtkC.toLocaleString()}
-                </span>
-                <span>weaponAtkP:</span>
-                <span className="text-cyan-400">
-                  {(calcData.statModifiers.weaponAtkP * 100).toFixed(2)}%
-                </span>
-                <span>baseAtkP:</span>
-                <span className="text-cyan-400">
-                  {(calcData.statModifiers.baseAtkP * 100).toFixed(2)}%
-                </span>
+                {/* ── 공격력 보정 ─────────────────────────────── */}
+                <div>
+                  <p className="text-slate-500 mb-1">— 공격력 보정 —</p>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-400">
 
-                {/* ── DamageModifiers ── */}
-                <span className="col-span-2 text-slate-500 mt-1">— 피해 보정 —</span>
-                <span>dmgInc (×배율):</span>
-                <span className="text-yellow-400">
-                  ×{calcData.damageModifiers.damageInc.toFixed(4)}
-                </span>
-                <span>evoDamage:</span>
-                <span className="text-cyan-400">
-                  {(calcData.damageModifiers.evoDamage * 100).toFixed(2)}%
-                </span>
-                <span>addDamage:</span>
-                <span className="text-cyan-400">
-                  {(calcData.damageModifiers.addDamage * 100).toFixed(2)}%
-                </span>
-                <span>critChance:</span>
-                <span className="text-cyan-400">
-                  {(calcData.damageModifiers.critChance * 100).toFixed(2)}%
-                </span>
-                <span>critDamage:</span>
-                <span className="text-cyan-400">
-                  {(calcData.damageModifiers.critDamage * 100).toFixed(2)}%
-                </span>
-                <span>critDmgInc (×배율):</span>
-                <span className="text-yellow-400">
-                  ×{calcData.damageModifiers.critDamageInc.toFixed(4)}
-                </span>
-                <span>defPenetration:</span>
-                <span className="text-cyan-400">
-                  {(calcData.damageModifiers.defPenetration * 100).toFixed(2)}%
-                </span>
-                <span>enemyDmgTaken:</span>
-                <span className="text-cyan-400">
-                  {(calcData.damageModifiers.enemyDamageTaken * 100).toFixed(2)}%
-                </span>
+                    {/* weaponAtkC */}
+                    <span>weaponAtkC:</span>
+                    <span className="text-cyan-400">
+                      {calcData.statModifiers.weaponAtkC.toLocaleString()}
+                    </span>
+                    {/* weaponAtkC 출처 내역 */}
+                    {calcData.effectLog
+                      .filter(l => l.type === 'WEAPON_ATK_C')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{l.value.toLocaleString()}
+                        </span>
+                      ))}
+
+                    {/* weaponAtkP */}
+                    <span>weaponAtkP:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.statModifiers.weaponAtkP * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'WEAPON_ATK_P')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                    {/* baseAtkP */}
+                    <span>baseAtkP:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.statModifiers.baseAtkP * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'BASE_ATK_P')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                    {/* atkP */}
+                    <span>atkP:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.statModifiers.atkP * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'ATK_P')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                    {/* atkC */}
+                    <span>atkC:</span>
+                    <span className="text-cyan-400">
+                      {calcData.statModifiers.atkC.toLocaleString()}
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'ATK_C')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{l.value.toLocaleString()}
+                        </span>
+                      ))}
+
+                  </div>
+                </div>
+
+                {/* ── 피해 보정 ────────────────────────────────── */}
+                <div>
+                  <p className="text-slate-500 mb-1">— 피해 보정 —</p>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-400">
+
+                    {/* dmgInc (MULTIPLY) */}
+                    <span>dmgInc (×배율):</span>
+                    <span className="text-yellow-400">
+                      ×{calcData.damageModifiers.damageInc.toFixed(4)}
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'DMG_INC')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: {l.operation === 'MULTIPLY'
+                            ? `×${(1 + l.value).toFixed(4)}`
+                            : `+${(l.value * 100).toFixed(2)}%`}
+                        </span>
+                      ))}
+
+                    {/* evoDamage */}
+                    <span>evoDamage:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.damageModifiers.evoDamage * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'EVO_DMG')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                    {/* addDamage */}
+                    <span>addDamage:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.damageModifiers.addDamage * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'ADD_DMG')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                    {/* critChance */}
+                    <span>critChance:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.damageModifiers.critChance * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'CRIT_CHANCE')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                    {/* critDamage */}
+                    <span>critDamage:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.damageModifiers.critDamage * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'CRIT_DMG')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                    {/* critDamageInc (MULTIPLY) */}
+                    <span>critDmgInc (×배율):</span>
+                    <span className="text-yellow-400">
+                      ×{calcData.damageModifiers.critDamageInc.toFixed(4)}
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'CRIT_DMG_INC')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: ×{(1 + l.value).toFixed(4)}
+                        </span>
+                      ))}
+
+                    {/* defPenetration */}
+                    <span>defPenetration:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.damageModifiers.defPenetration * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'DEF_PENETRATION')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                    {/* enemyDamageTaken */}
+                    <span>enemyDmgTaken:</span>
+                    <span className="text-cyan-400">
+                      {(calcData.damageModifiers.enemyDamageTaken * 100).toFixed(2)}%
+                    </span>
+                    {calcData.effectLog
+                      .filter(l => l.type === 'ENEMY_DMG_TAKEN')
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                        </span>
+                      ))}
+
+                  </div>
+                </div>
+
               </div>
             </div>
 
