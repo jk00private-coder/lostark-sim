@@ -166,22 +166,23 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
     type     : string,
     value    : number,
     operation: 'ADD' | 'MULTIPLY',
+    subGroup?: string,
   ) => {
     const entry = EFFECT_MAP[type as CommonEffectTypeId];
     if (!entry) return;
 
-    // unknown 을 경유해서 Record<string, number> 로 캐스팅
-    // StatModifiers / DamageModifiers 모두 number 필드만 가지므로 안전
+    // subGroup 있는 ADD → effectLog 에만 기록, 여기서는 누적 안 함
+    // extractCalcData 마지막의 후처리에서 그룹별 합산 후 곱연산으로 반영
+    if (operation === 'ADD' && subGroup) return;
+
     const statMod   = statModifiers   as unknown as Record<string, number>;
     const damageMod = damageModifiers as unknown as Record<string, number>;
-
-    // 해당 필드가 StatModifiers 에 있으면 statMod, 아니면 damageMod 에 적용
-    const targetMod = (entry.field in statModifiers) ? statMod : damageMod;
+    const targetMod = Object.prototype.hasOwnProperty.call(statModifiers, entry.field)
+      ? statMod : damageMod;
 
     if (operation === 'ADD') {
       targetMod[entry.field] += value;
     } else {
-      // MULTIPLY: 초기값 1.0 기준 독립 곱연산
       targetMod[entry.field] *= (1 + value);
     }
   };
@@ -219,11 +220,10 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
     type     : string,
     value    : number,
     operation: 'ADD' | 'MULTIPLY' = 'ADD',
-    subGroup?: string,              // ATK_P 독립 곱연산 그룹 식별자
+    subGroup?: string,
   ) => {
-    applyCommonEffect(type, value, operation);
+    applyCommonEffect(type, value, operation, subGroup);  // ← subGroup 전달
     applyClassEffect(type, value, operation);
-    // subGroup 포함하여 로그 기록
     effectLog.push({ label, type, value, operation, subGroup });
   };
 
@@ -249,17 +249,18 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
 
   // ── 3. 악세서리 연마효과 ──────────────────────────────────
   display.accessories.forEach(acc =>
-    acc.polishEffects.forEach(eff =>
-      // label: "목걸이 추가피해", "반지 치명타피해" 등
-      applyEffect(`${acc.type} ${eff.label.text}`, eff.effectType, eff.value.value)
-    )
+    acc.polishEffects.forEach(eff => {
+      const subGroup = eff.effectType === 'DMG_INC' ? 'accessory' : undefined;
+      applyEffect(`${acc.type} ${eff.label.text}`, eff.effectType, eff.value.value, 'ADD', subGroup);
+    })
   );
 
   // ── 4. 팔찌 효과 (랜덤 옵션만) ───────────────────────────
   display.bracelet?.effects.forEach(eff => {
-    if (!eff.isFixed)
-      // label: "팔찌 치명타피해", "팔찌 추가피해" 등
-      applyEffect(`팔찌 ${eff.label.text}`, eff.effectType, eff.value.value);
+    if (!eff.isFixed) {
+      const subGroup = eff.effectType === 'DMG_INC' ? 'bracelet' : undefined;
+      applyEffect(`팔찌 ${eff.label.text}`, eff.effectType, eff.value.value, 'ADD', subGroup);
+    }
   });
 
   // ── 5. 아바타 주스탯 보너스 ───────────────────────────────
@@ -300,8 +301,44 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   // ── 9. 아크그리드 효과 ────────────────────────────────────
   display.arkGrid.effects.forEach(eff => {
     const effectType = ARK_GRID_EFFECT_MAP[eff.label.text];
-    if (effectType)
-      applyEffect(`아크그리드 ${eff.label.text}`, effectType, eff.value.value);
+    if (effectType) {
+      const subGroup = effectType === 'DMG_INC' ? 'arkGrid' : undefined;
+      applyEffect(`아크그리드 ${eff.label.text}`, effectType, eff.value.value, 'ADD', subGroup);
+    }
+  });
+
+  // ── 10. subGroup ADD 후처리 ───────────────────────────────
+  // subGroup 있는 ADD 효과들: 그룹 내 합산 후 해당 필드에 (1 + 합산) 곱연산
+  // effectLog 에서 subGroup 있는 ADD 항목만 추출 → 필드별 그룹핑 → 곱연산
+  const subGroupLogs = effectLog.filter(l => l.operation === 'ADD' && l.subGroup);
+
+  // { fieldName: { groupKey: number[] } } 구조로 집계
+  const subGroupMap: Record<string, Record<string, number[]>> = {};
+
+  subGroupLogs.forEach(log => {
+    const entry = EFFECT_MAP[log.type as CommonEffectTypeId];
+    if (!entry) return;
+
+    const field    = entry.field;
+    const groupKey = log.subGroup!;
+
+    if (!subGroupMap[field]) subGroupMap[field] = {};
+    if (!subGroupMap[field][groupKey]) subGroupMap[field][groupKey] = [];
+    subGroupMap[field][groupKey].push(log.value);
+  });
+
+  // 필드별로: 각 그룹의 합산값을 (1 + 합산) 으로 독립 곱연산
+  const damageMod = damageModifiers as unknown as Record<string, number>;
+  const statMod   = statModifiers   as unknown as Record<string, number>;
+
+  Object.entries(subGroupMap).forEach(([field, groups]) => {
+    const targetMod = Object.prototype.hasOwnProperty.call(statModifiers, field)
+      ? statMod : damageMod;
+
+    Object.values(groups).forEach(values => {
+      const groupSum = values.reduce((s, v) => s + v, 0);
+      targetMod[field] *= (1 + groupSum);
+    });
   });
 
   // ── 10. 공격력 3종 계산 ───────────────────────────────────

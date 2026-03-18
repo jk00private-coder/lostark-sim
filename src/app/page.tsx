@@ -267,13 +267,46 @@ export default function EngravingSimulator() {
                     <span className="text-yellow-400">
                       ×{calcData.damageModifiers.damageInc.toFixed(4)}
                     </span>
+                    {/* MULTIPLY 항목: 각각 표시 */}
                     {calcData.effectLog
-                      .filter(l => l.type === 'DMG_INC')
+                      .filter(l => l.type === 'DMG_INC' && l.operation === 'MULTIPLY')
                       .map((l, i) => (
                         <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: {l.operation === 'MULTIPLY'
-                            ? `×${(1 + l.value).toFixed(4)}`
-                            : `+${(l.value * 100).toFixed(2)}%`}
+                          └ {l.label}: ×{(1 + l.value).toFixed(4)}
+                        </span>
+                      ))}
+                    {/* ADD subGroup 항목: 그룹별로 합산해서 표시 */}
+                    {(() => {
+                      // subGroup 있는 DMG_INC ADD 항목을 그룹별로 묶어서 표시
+                      const addLogs = calcData.effectLog.filter(
+                        l => l.type === 'DMG_INC' && l.operation === 'ADD' && l.subGroup
+                      );
+                      const groups: Record<string, typeof addLogs> = {};
+                      addLogs.forEach(l => {
+                        const key = l.subGroup!;
+                        if (!groups[key]) groups[key] = [];
+                        groups[key].push(l);
+                      });
+                      return Object.entries(groups).map(([groupKey, logs]) => {
+                        const sum = logs.reduce((s, l) => s + l.value, 0);
+                        return (
+                          <span key={groupKey} className="col-span-2 pl-3 text-slate-500">
+                            └ [{groupKey}합산] ×{(1 + sum).toFixed(4)}
+                            {logs.map((l, i) => (
+                              <span key={i} className="block pl-4 text-slate-600">
+                                └ {l.label}: +{(l.value * 100).toFixed(2)}%
+                              </span>
+                            ))}
+                          </span>
+                        );
+                      });
+                    })()}
+                    {/* ADD subGroup 없는 항목 (일반 ADD) */}
+                    {calcData.effectLog
+                      .filter(l => l.type === 'DMG_INC' && l.operation === 'ADD' && !l.subGroup)
+                      .map((l, i) => (
+                        <span key={i} className="col-span-2 pl-3 text-slate-500">
+                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
                         </span>
                       ))}
 
