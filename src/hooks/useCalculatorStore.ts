@@ -170,17 +170,20 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
     const entry = EFFECT_MAP[type as CommonEffectTypeId];
     if (!entry) return;
 
-    const allMods = { ...statModifiers, ...damageModifiers } as Record<string, number>;
+    // unknown 을 경유해서 Record<string, number> 로 캐스팅
+    // StatModifiers / DamageModifiers 모두 number 필드만 가지므로 안전
+    const statMod   = statModifiers   as unknown as Record<string, number>;
+    const damageMod = damageModifiers as unknown as Record<string, number>;
+
+    // 해당 필드가 StatModifiers 에 있으면 statMod, 아니면 damageMod 에 적용
+    const targetMod = (entry.field in statModifiers) ? statMod : damageMod;
 
     if (operation === 'ADD') {
-      allMods[entry.field] += value;
+      targetMod[entry.field] += value;
     } else {
-      // MULTIPLY: 독립 곱연산
-      allMods[entry.field] *= (1 + value);
+      // MULTIPLY: 초기값 1.0 기준 독립 곱연산
+      targetMod[entry.field] *= (1 + value);
     }
-
-    Object.assign(statModifiers, allMods);
-    Object.assign(damageModifiers, allMods);
   };
 
 
@@ -283,11 +286,13 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
     if (!item.value) return;
     for (const [keyword, effectType] of CARD_EFFECT_LIST) {
       if (item.description.includes(keyword)) {
-        // effectType 이 null 이면 딜 계산 무관 효과 → 무시
         if (effectType !== null) {
-          applyEffect(`카드 ${keyword}`, effectType, item.value.value);
+          // 카드 DMG_INC 는 카드끼리 합산(ADD) 후 그룹 단위 1회 곱연산
+          // subGroup: 'card' 로 묶어서 calcFinalMultiplier 에서 그룹 처리
+          const subGroup = effectType === 'DMG_INC' ? 'card' : undefined;
+          applyEffect(`카드 ${keyword}`, effectType, item.value.value, 'ADD', subGroup);
         }
-        break;  // 첫 번째 매칭에서 종료
+        break;
       }
     }
   });
