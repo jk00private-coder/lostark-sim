@@ -58,14 +58,14 @@ const createEmptyStatModifiers = (): StatModifiers => ({
  * ADD 계열은 0
  */
 const createEmptyDamageModifiers = (): DamageModifiers => ({
-  damageInc: 0.0,
-  critDamageInc: 0.0,
+  damageInc: 1.0,
+  critDamageInc: 1.0,
   cdrC: 0.0,
   cdrP: 0.0,
   evoDamage: 0,
   addDamage: 0,
   critChance: 0,
-  critDamage: 0,
+  critDamage: 2.0,
   defPenetration: 0,
   enemyDamageTaken: 0,
   atkSpeed: 0,
@@ -119,18 +119,18 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
    * ADD      → += value
    * MULTIPLY → *= (1 + value)  (초기값 1.0 기준)
    */
-  const applyCommonEffect = (type: string, value: number) => {
+  const applyCommonEffect = (type: string, value: number, operation: 'ADD' | 'MULTIPLY') => {
     const entry = EFFECT_MAP[type as CommonEffectTypeId];
     if (!entry) return;
 
     const allMods = { ...statModifiers, ...damageModifiers } as Record<string, number>;
 
-    // 변경 후 — operation 없이 타입 이름만으로 판단 불가
-    // → Todo: 대신 EFFECT_MAP에 연산 방식을 어떻게 알 수 있는가?
-    allMods[entry.field] += value;
-    // allMods[entry.field] *= (1 + value);
+    if (operation === 'ADD') {
+      allMods[entry.field] += value;
+    } else {
+      allMods[entry.field] *= (1 + value);
+    }
 
-    // 변경사항 반영
     Object.assign(statModifiers, allMods);
     Object.assign(damageModifiers, allMods);
   };
@@ -139,17 +139,18 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
    * 직업 특수 Effect 누적 (가디언나이트)
    * GK_EFFECT_MAP 에 있는 타입만 처리합니다.
    */
-  const applyClassEffect = (type: string, value: number) => {
+  const applyClassEffect = (type: string, value: number, operation: 'ADD' | 'MULTIPLY') => {
     const entry = GK_EFFECT_MAP[type as GkEffectTypeId] as ClassEffectMapEntry | undefined;
     if (!entry) return;
-
-    // → Todo: 대신 EFFECT_MAP에 연산 방식을 어떻게 알 수 있는가?
+    if (operation === 'ADD') {
       classModifiers[entry.field] += value;
+    }
   };
 
-  const applyEffect = (type: string, value: number) => {
-    applyCommonEffect(type, value);
-    applyClassEffect(type, value);
+  const applyEffect = (type: string, value: number, operation: 'ADD' | 'MULTIPLY' = 'ADD') => {
+    // operation 기본값 'ADD': 기존 호출부(operation 미지정)가 모두 합산으로 동작
+    applyCommonEffect(type, value, operation);
+    applyClassEffect(type, value, operation);
   };
 
   // ── 1. 전투 특성 ──────────────────────────────────────────

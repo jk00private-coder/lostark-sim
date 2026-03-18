@@ -150,29 +150,70 @@ export default function EngravingSimulator() {
                 [DEV] calcData 동기화 확인
               </p>
               <div className="grid grid-cols-2 gap-1 text-xs text-slate-400">
+
+                {/* ── 전투 스탯 ── */}
+                <span className="col-span-2 text-slate-500 mt-1">— 전투 스탯 —</span>
                 <span>baseAtk:</span>
                 <span className="text-cyan-400">
                   {calcData.combatStats.baseAtk.toLocaleString()}
                 </span>
-                <span>dmgInc:</span>
-                <span className="text-cyan-400">
-                  {(calcData.damageModifiers.damageInc * 100).toFixed(2)}%
-                </span>
+
+                {/* ── StatModifiers ── */}
+                <span className="col-span-2 text-slate-500 mt-1">— 공격력 보정 —</span>
                 <span>atkP:</span>
                 <span className="text-cyan-400">
                   {(calcData.statModifiers.atkP * 100).toFixed(2)}%
+                </span>
+                <span>atkC:</span>
+                <span className="text-cyan-400">
+                  {calcData.statModifiers.atkC.toLocaleString()}
+                </span>
+                <span>weaponAtkC:</span>
+                <span className="text-cyan-400">
+                  {calcData.statModifiers.weaponAtkC.toLocaleString()}
+                </span>
+                <span>weaponAtkP:</span>
+                <span className="text-cyan-400">
+                  {(calcData.statModifiers.weaponAtkP * 100).toFixed(2)}%
+                </span>
+                <span>baseAtkP:</span>
+                <span className="text-cyan-400">
+                  {(calcData.statModifiers.baseAtkP * 100).toFixed(2)}%
+                </span>
+
+                {/* ── DamageModifiers ── */}
+                <span className="col-span-2 text-slate-500 mt-1">— 피해 보정 —</span>
+                <span>dmgInc (×배율):</span>
+                <span className="text-yellow-400">
+                  ×{calcData.damageModifiers.damageInc.toFixed(4)}
+                </span>
+                <span>evoDamage:</span>
+                <span className="text-cyan-400">
+                  {(calcData.damageModifiers.evoDamage * 100).toFixed(2)}%
+                </span>
+                <span>addDamage:</span>
+                <span className="text-cyan-400">
+                  {(calcData.damageModifiers.addDamage * 100).toFixed(2)}%
                 </span>
                 <span>critChance:</span>
                 <span className="text-cyan-400">
                   {(calcData.damageModifiers.critChance * 100).toFixed(2)}%
                 </span>
-                <span>critDmg:</span>
+                <span>critDamage:</span>
                 <span className="text-cyan-400">
                   {(calcData.damageModifiers.critDamage * 100).toFixed(2)}%
                 </span>
-                <span>baseAtkP:</span>
+                <span>critDmgInc (×배율):</span>
+                <span className="text-yellow-400">
+                  ×{calcData.damageModifiers.critDamageInc.toFixed(4)}
+                </span>
+                <span>defPenetration:</span>
                 <span className="text-cyan-400">
-                  {(calcData.statModifiers.baseAtkP * 100).toFixed(2)}%
+                  {(calcData.damageModifiers.defPenetration * 100).toFixed(2)}%
+                </span>
+                <span>enemyDmgTaken:</span>
+                <span className="text-cyan-400">
+                  {(calcData.damageModifiers.enemyDamageTaken * 100).toFixed(2)}%
                 </span>
               </div>
             </div>
