@@ -10,7 +10,7 @@ export const ENGRAVINGS_DB: EngravingData[] = [
     source: 'ENGRAVING',
     id: ID.KEEN_BLUNT_WEAPON,
     name: NAME[ID.KEEN_BLUNT_WEAPON],
-    effects: [{ type: 'CRIT_DMG', value: 0.44, operation: 'MULTIPLY' }],
+    effects: [{ type: 'CRIT_DMG', value: 0.44, operation: 'ADD' }],
     iconPath: '',
     bonus: {
       relic: { type: 'CRIT_DMG', values: [0.02, 0.04, 0.06, 0.08] },
@@ -22,8 +22,8 @@ export const ENGRAVINGS_DB: EngravingData[] = [
     id: ID.ADRENALINE,
     name: NAME[ID.ADRENALINE],
     effects: [
-      { type: 'ATK_P', value: 0.054, operation: 'MULTIPLY' },
-      { type: 'CRIT_CHANCE', value: 0.14, operation: 'MULTIPLY' }
+      { type: 'ATK_P', value: 0.054, operation: 'ADD' },
+      { type: 'CRIT_CHANCE', value: 0.14, operation: 'ADD' }
     ],
     iconPath: '',
     bonus: {
