@@ -269,7 +269,7 @@ export default function EngravingSimulator() {
                     </span>
                     {/* MULTIPLY 항목: 각각 표시 */}
                     {calcData.effectLog
-                      .filter(l => l.type === 'DMG_INC' && l.operation === 'MULTIPLY')
+                      .filter(l => l.type === 'DMG_INC')
                       .map((l, i) => (
                         <span key={i} className="col-span-2 pl-3 text-slate-500">
                           └ {l.label}: ×{(1 + l.value).toFixed(4)}
@@ -279,7 +279,7 @@ export default function EngravingSimulator() {
                     {(() => {
                       // subGroup 있는 DMG_INC ADD 항목을 그룹별로 묶어서 표시
                       const addLogs = calcData.effectLog.filter(
-                        l => l.type === 'DMG_INC' && l.operation === 'ADD' && l.subGroup
+                        l => l.type === 'DMG_INC' && l.subGroup
                       );
                       const groups: Record<string, typeof addLogs> = {};
                       addLogs.forEach(l => {
@@ -303,7 +303,7 @@ export default function EngravingSimulator() {
                     })()}
                     {/* ADD subGroup 없는 항목 (일반 ADD) */}
                     {calcData.effectLog
-                      .filter(l => l.type === 'DMG_INC' && l.operation === 'ADD' && !l.subGroup)
+                      .filter(l => l.type === 'DMG_INC' && !l.subGroup)
                       .map((l, i) => (
                         <span key={i} className="col-span-2 pl-3 text-slate-500">
                           └ {l.label}: +{(l.value * 100).toFixed(2)}%
@@ -484,7 +484,7 @@ export default function EngravingSimulator() {
                         {acc.polishEffects.map((eff, j) => (
                           <p key={j} className="text-[10px]"
                             style={{ color: eff.value.color }}>
-                            {eff.label.text} +{
+                            {eff.value.value} +{
                               eff.value.value < 1
                                 ? `${(eff.value.value * 100).toFixed(2)}%`
                                 : eff.value.value
@@ -515,7 +515,7 @@ export default function EngravingSimulator() {
                         {displayData.bracelet.effects.map((eff, j) => (
                           <p key={j} className="text-[10px]"
                             style={{ color: eff.value.color }}>
-                            {eff.label.text} +{
+                            {eff.value.value} +{
                               eff.value.value < 1
                                 ? `${(eff.value.value * 100).toFixed(2)}%`
                                 : eff.value.value

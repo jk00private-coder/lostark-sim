@@ -175,12 +175,10 @@ export interface AccessoryDisplay {
  *   초록(#99ff99) = 조건부 효과 (치명타 시 피해 증가 등)
  *   보라(#CE43FC) = % 랜덤 옵션 (연마효과와 동일 계열)
  */
-export interface BraceletEffect {
-  effectType: string;       // sim-types EffectTypeId 대응
-  label     : ColoredText;  // 효과 이름 + 색깔
-  value     : ColoredValue; // 수치 + 색깔
-  isFixed   : boolean;      // true = 고정 특성(신속/특화), false = 랜덤 옵션
-  grade?    : OptionGrade;  // 랜덤 옵션일 때만 상/중/하 판별
+// 변경 후 — EffectEntry 상속으로 통일
+export interface BraceletEffect extends EffectEntry {
+  isFixed: boolean;
+  grade? : OptionGrade;
 }
 
 /** 팔찌 표시용 */

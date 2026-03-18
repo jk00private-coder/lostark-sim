@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { CharacterDisplayData } from '@/types/character-types';
 import {
   CombatStats, StatModifiers, DamageModifiers,
-  CommonEffectTypeId, EFFECT_MAP,
+  CommonEffectTypeId, EFFECT_MAP, SUB_GROUPS,
 } from '@/types/sim-types';
 import {
   GkClassModifiers, GkEffectTypeId, GK_EFFECT_MAP,
@@ -41,6 +41,52 @@ export interface EffectLog {
   subGroup?: string;
 }
 
+// calcModifiersFromLog
+const calcModifiersFromLog = (
+  logs      : EffectLog[],
+  statMods  : StatModifiers,
+  damageMods: DamageModifiers,
+  classMods : GkClassModifiers,
+) => {
+  // type별 그룹핑
+  const typeMap: Record<string, EffectLog[]> = {};
+  logs.forEach(log => {
+    if (!typeMap[log.type]) typeMap[log.type] = [];
+    typeMap[log.type].push(log);
+  });
+
+  Object.entries(typeMap).forEach(([type, typeLogs]) => {
+    const entry = EFFECT_MAP[type as CommonEffectTypeId];
+    if (!entry) return;
+
+    const statMod   = statMods   as unknown as Record<string, number>;
+    const damageMod = damageMods as unknown as Record<string, number>;
+    const targetMod = Object.prototype.hasOwnProperty.call(statMods, entry.field)
+      ? statMod : damageMod;
+
+    // subGroup별 재그룹핑
+    // subGroup 없음 → 각 항목 인덱스를 키로 사용 (독립 곱연산)
+    const groupMap: Record<string, number[]> = {};
+    typeLogs.forEach((log, idx) => {
+      const key = log.subGroup ?? `__solo_${idx}`;
+      if (!groupMap[key]) groupMap[key] = [];
+      groupMap[key].push(log.value);
+    });
+
+    // 그룹별 합산 후 독립 곱연산
+    Object.values(groupMap).forEach(values => {
+      const groupSum = values.reduce((s, v) => s + v, 0);
+      targetMod[entry.field] *= (1 + groupSum);
+    });
+  });
+
+  // GK 직업 특수 타입
+  logs.forEach(log => {
+    const entry = GK_EFFECT_MAP[log.type as GkEffectTypeId] as ClassEffectMapEntry | undefined;
+    if (!entry) return;
+    classMods[entry.field] += log.value;
+  });
+};
 
 // ============================================================
 // CalcData 타입
@@ -151,80 +197,19 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   const statModifiers   = createEmptyStatModifiers();
   const damageModifiers = createEmptyDamageModifiers();
   const classModifiers  = createEmptyGkClassModifiers();
-  const effectLog       : EffectLog[] = [];  // ← 로그 배열
+  const effectLog       : EffectLog[] = [];
 
-
-  // ------------------------------------------------------------
-  // applyCommonEffect: EFFECT_MAP 기반 공통 효과 누적
-  // ------------------------------------------------------------
-  /**
-   * MULTIPLY 계열: *= (1 + value)  초기값 1.0 기준
-   * ADD 계열     : += value
-   */
-  const applyCommonEffect = (
-    type     : string,
-    value    : number,
-    operation: 'ADD' | 'MULTIPLY',
-    subGroup?: string,
-  ) => {
-    const entry = EFFECT_MAP[type as CommonEffectTypeId];
-    if (!entry) return;
-
-    // subGroup 있는 ADD → effectLog 에만 기록, 여기서는 누적 안 함
-    // extractCalcData 마지막의 후처리에서 그룹별 합산 후 곱연산으로 반영
-    if (operation === 'ADD' && subGroup) return;
-
-    const statMod   = statModifiers   as unknown as Record<string, number>;
-    const damageMod = damageModifiers as unknown as Record<string, number>;
-    const targetMod = Object.prototype.hasOwnProperty.call(statModifiers, entry.field)
-      ? statMod : damageMod;
-
-    if (operation === 'ADD') {
-      targetMod[entry.field] += value;
-    } else {
-      targetMod[entry.field] *= (1 + value);
-    }
-  };
-
-
-  // ------------------------------------------------------------
-  // applyClassEffect: GK_EFFECT_MAP 기반 직업 특수 효과 누적
-  // ------------------------------------------------------------
-  const applyClassEffect = (
-    type     : string,
-    value    : number,
-    operation: 'ADD' | 'MULTIPLY',
-  ) => {
-    const entry = GK_EFFECT_MAP[type as GkEffectTypeId] as ClassEffectMapEntry | undefined;
-    if (!entry) return;
-    // GK 계열은 현재 ADD만 존재 — operation 파라미터는 미래 확장용
-    if (operation === 'ADD') {
-      classModifiers[entry.field] += value;
-    }
-  };
-
-
-  // ------------------------------------------------------------
-  // applyEffect: 공통 진입점 (로그 기록 포함)
-  // ------------------------------------------------------------
-  /**
-   * @param label     - 디버그 패널에 표시될 출처 이름 (예: "원한", "목걸이 추가피해")
-   * @param type      - EffectTypeId
-   * @param value     - 수치 (소수)
-   * @param operation - 연산 방식 (기본값 'ADD')
-   */
-  // 변경 후
+  // ── 단순 로그 수집 (즉시 누적 없음, 마지막에 일괄 계산) ──
   const applyEffect = (
     label   : string,
     type    : string,
-    value   : number,   // 항상 ColoredValue.value 를 전달
+    value   : number,
     subGroup?: string,
   ) => {
     effectLog.push({ label, type, value, subGroup });
   };
 
   // ── 1. 전투 특성 ──────────────────────────────────────────
-  // 특성은 applyEffect 를 거치지 않고 직접 할당 (EFFECT_MAP 대상 아님)
   combatStats.critical       = display.combatStats.critical;
   combatStats.specialization = display.combatStats.specialization;
   combatStats.swiftness      = display.combatStats.swiftness;
@@ -236,9 +221,8 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
 
   // ── 2. 장비 효과 ──────────────────────────────────────────
   display.equipment.forEach(eq =>
-    eq.effects.forEach(eff =>
-      // label: "무기 무기공격력", "상의 힘" 등
-      applyEffect(`${eq.type} ${eff.value.color ?? ''}`, eff.type, eff.value.value, eff.subGroup)
+    eq.effects?.forEach(eff =>
+      applyEffect(`${eq.type} ${eff.type}`, eff.type, eff.value.value, eff.subGroup)
     )
   );
 
@@ -262,70 +246,52 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   applyEffect('아바타 주스탯', 'MAIN_STAT_P', totalAvatarBonus);
 
   // ── 6. 각인 효과 ──────────────────────────────────────────
-  db.effects.forEach(eff =>
-    applyEffect(eng.name.text, eff.type, eff.value.value, eff.subGroup)
-  );
+  display.engravings.forEach(eng => {
+    const db = ENGRAVINGS_DB.find(e => e.name.text === eng.name.text);
+    if (!db?.effects) return;
+    db.effects.forEach(eff =>
+      applyEffect(eng.name.text, eff.type, eff.value.value, eff.subGroup)
+    );
+  });
 
   // ── 7. 보석 공증 ──────────────────────────────────────────
   applyEffect('보석 공증', 'BASE_ATK_P', display.gems.totalBaseAtk.value);
 
   // ── 8. 카드 효과 ──────────────────────────────────────────
-  const subGroup = effectType === 'DMG_INC' ? SUB_GROUPS.CARD : undefined;
-  applyEffect(`카드 ${keyword}`, effectType, item.value.value, subGroup);
+  display.cards?.activeItems.forEach(item => {
+    if (!item.value) return;
+    for (const [keyword, effectType] of CARD_EFFECT_LIST) {
+      if (item.description.includes(keyword)) {
+        if (effectType !== null) {
+          // 카드 DMG_INC 는 subGroup: 'card' 로 합산
+          const subGroup = effectType === 'DMG_INC' ? SUB_GROUPS.CARD : undefined;
+          applyEffect(`카드 ${keyword}`, effectType, item.value.value, subGroup);
+        }
+        break;
+      }
+    }
+  });
 
   // ── 9. 아크그리드 효과 ────────────────────────────────────
-  applyEffect(`아크그리드 ${eff.label.text}`, effectType, eff.value.value);
-
-  // ── 10. subGroup ADD 후처리 ───────────────────────────────
-  // subGroup 있는 ADD 효과들: 그룹 내 합산 후 해당 필드에 (1 + 합산) 곱연산
-  // effectLog 에서 subGroup 있는 ADD 항목만 추출 → 필드별 그룹핑 → 곱연산
-  const subGroupLogs = effectLog.filter(l => l.operation === 'ADD' && l.subGroup);
-
-  // { fieldName: { groupKey: number[] } } 구조로 집계
-  const subGroupMap: Record<string, Record<string, number[]>> = {};
-
-  subGroupLogs.forEach(log => {
-    const entry = EFFECT_MAP[log.type as CommonEffectTypeId];
-    if (!entry) return;
-
-    const field    = entry.field;
-    const groupKey = log.subGroup!;
-
-    if (!subGroupMap[field]) subGroupMap[field] = {};
-    if (!subGroupMap[field][groupKey]) subGroupMap[field][groupKey] = [];
-    subGroupMap[field][groupKey].push(log.value);
+  display.arkGrid.effects.forEach(eff => {
+    const effectType = ARK_GRID_EFFECT_MAP[eff.label.text];
+    if (effectType)
+      applyEffect(`아크그리드 ${eff.label.text}`, effectType, eff.value.value);
   });
 
-  // 필드별로: 각 그룹의 합산값을 (1 + 합산) 으로 독립 곱연산
-  const damageMod = damageModifiers as unknown as Record<string, number>;
-  const statMod   = statModifiers   as unknown as Record<string, number>;
+  // ── 10. effectLog → Modifiers 일괄 계산 ──────────────────
+  calcModifiersFromLog(effectLog, statModifiers, damageModifiers, classModifiers);
 
-  Object.entries(subGroupMap).forEach(([field, groups]) => {
-    const targetMod = Object.prototype.hasOwnProperty.call(statModifiers, field)
-      ? statMod : damageMod;
-
-    Object.values(groups).forEach(values => {
-      const groupSum = values.reduce((s, v) => s + v, 0);
-      targetMod[field] *= (1 + groupSum);
-    });
-  });
-
-  // ── 10. 공격력 3종 계산 ───────────────────────────────────
-  // weaponAtk: 무기 공격력 고정 × (1 + 무기 공격력 % 합산)
+  // ── 11. 공격력 3종 계산 ───────────────────────────────────
   combatStats.weaponAtk = calcWeaponAtk(
     statModifiers.weaponAtkC,
     statModifiers.weaponAtkP,
   );
-
-  // mainStat: baseAtk / baseAtkP 보정 제거 후 역산
   combatStats.mainStat = calcMainStat(
     combatStats.baseAtk,
     statModifiers.baseAtkP,
     combatStats.weaponAtk,
   );
-
-  // finalAtk: (baseAtk + atkC) × ATK_P subGroup 독립 곱연산
-  // ATK_P 로그만 꺼내서 calcFinalAtk 에 전달
   const atkPLogs = effectLog.filter(l => l.type === 'ATK_P');
   combatStats.finalAtk = calcFinalAtk(
     combatStats.baseAtk,
