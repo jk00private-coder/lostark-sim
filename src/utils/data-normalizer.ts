@@ -168,18 +168,34 @@ const SKILL_CATEGORY_COLORS: Record<string, string> = {
 
 /**
  * 악세서리 연마효과 텍스트에서 EffectTypeId 를 추출합니다.
+ * ⚠️ 순서 중요: '무기 공격력'을 '공격력'보다 먼저 배치해야 오매칭 방지
+ * detectPolishEffectType 은 첫 번째 매칭에서 반환하므로
+ * '무기 공격력' → WEAPON_ATK_P 가 먼저 걸려야 '공격력' → ATK_P 와 구분됨
  */
 const POLISH_EFFECT_TYPE_MAP: Record<string, string> = {
   '적에게 주는 피해': 'DMG_INC',
   '추가 피해'       : 'ADD_DMG',
-  '공격력'          : 'ATK_PERCENT',
-  '무기 공격력'     : 'WEAPON_ATK_PERCENT',
+  '무기 공격력'     : 'WEAPON_ATK_P',
+  '공격력'          : 'ATK_P',
   '치명타 피해'     : 'CRIT_DMG',
   '치명타 적중률'   : 'CRIT_CHANCE',
 };
 
+/**
+ * Record → 순서 보장 배열로 변경
+ * '무기 공격력'이 '공격력'보다 반드시 먼저 검사되어야 함
+ */
+const POLISH_EFFECT_TYPE_LIST: Array<[string, string]> = [
+  ['적에게 주는 피해', 'DMG_INC'     ],
+  ['추가 피해'       , 'ADD_DMG'     ],
+  ['무기 공격력'     , 'WEAPON_ATK_P'],  // ← '공격력' 보다 먼저
+  ['공격력'          , 'ATK_P'       ],
+  ['치명타 피해'     , 'CRIT_DMG'    ],
+  ['치명타 적중률'   , 'CRIT_CHANCE' ],
+];
+
 const detectPolishEffectType = (label: string): string => {
-  for (const [key, typeId] of Object.entries(POLISH_EFFECT_TYPE_MAP)) {
+  for (const [key, typeId] of POLISH_EFFECT_TYPE_LIST) {
     if (label.includes(key)) return typeId;
   }
   return 'UNKNOWN';
@@ -308,7 +324,7 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         const add : string = tooltip['Element_008']?.value?.Element_001 ?? '';
         if (base.includes('무기 공격력')) {
           effects.push({
-            effectType: 'WEAPON_ATK_STATIC',
+            effectType: 'WEAPON_ATK_C',
             label     : { text: '무기 공격력', color: undefined },
             value     : { value: extractRawNumber(base), color: undefined },
           });
@@ -328,7 +344,7 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         const mainStatM = base.match(/힘\s*\+(\d+)/);
         if (mainStatM) {
           effects.push({
-            effectType: 'MAIN_STAT_STATIC',
+            effectType: 'MAIN_STAT_C',
             label     : { text: '힘', color: undefined },
             value     : { value: parseInt(mainStatM[1]), color: undefined },
           });
@@ -387,14 +403,24 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
         const clean      = stripHtml(line);
         const labelM     = clean.match(/^([가-힣\s]+)/);
         const labelText  = labelM ? labelM[1].trim() : clean;
-        const effectType = detectPolishEffectType(labelText);
         const cv         = toColoredValue(line);
+
+        // '공격력' 라벨의 ATK_C / ATK_P 구분:
+        //   % 포함 여부로 판단 — 색깔은 상/중/하 등급 구분용이므로 사용하지 않음
+        //   공격력 +390   (% 없음) → ATK_C (고정 상수)
+        //   공격력 +1.55% (% 있음) → ATK_P (퍼센트)
+        let effectType: string;
+        if (labelText.includes('공격력') && !line.includes('%')) {
+          effectType = 'ATK_C';  // 고정 공격력 상수
+        } else {
+          effectType = detectPolishEffectType(labelText);
+        }
 
         polishEffects.push({
           effectType,
           label: { text: labelText, color: undefined },
           value: cv,
-          grade: detectOptionGrade(cv.color, effectType, cv.value, true), // ← 수치 기반 fallback 추가
+          grade: detectOptionGrade(cv.color, effectType, cv.value, true),
         });
       });
 

@@ -10,7 +10,7 @@ export const ENGRAVINGS_DB: EngravingData[] = [
     source: 'ENGRAVING',
     id: ID.KEEN_BLUNT_WEAPON,
     name: NAME[ID.KEEN_BLUNT_WEAPON],
-    effects: [{ type: 'CRIT_DMG', value: 0.44, target: 'ALL' }],
+    effects: [{ type: 'CRIT_DMG', value: 0.44, operation: 'MULTIPLY' }],
     iconPath: '',
     bonus: {
       relic: { type: 'CRIT_DMG', values: [0.02, 0.04, 0.06, 0.08] },
@@ -22,20 +22,20 @@ export const ENGRAVINGS_DB: EngravingData[] = [
     id: ID.ADRENALINE,
     name: NAME[ID.ADRENALINE],
     effects: [
-      { type: 'ATK_PERCENT', value: 0.054, target: 'ALL' },
-      { type: 'CRIT_CHANCE', value: 0.14, target: 'ALL' }
+      { type: 'ATK_P', value: 0.054, operation: 'MULTIPLY' },
+      { type: 'CRIT_CHANCE', value: 0.14, operation: 'MULTIPLY' }
     ],
     iconPath: '',
     bonus: {
       relic: { type: 'CRIT_CHANCE', values: [0.015, 0.03, 0.045, 0.06] },
-      ability: { type: 'ATK_PERCENT', values: [0.0288, 0.036, 0.0498, 0.057] }
+      ability: { type: 'ATK_P', values: [0.0288, 0.036, 0.0498, 0.057] }
     }
   },
   {
     source: 'ENGRAVING',
     id: ID.GRUDGE,
     name: NAME[ID.GRUDGE],
-    effects: [{ type: 'DMG_INC', value: 0.18, target: 'ALL' }],
+    effects: [{ type: 'DMG_INC', value: 0.18, operation: 'MULTIPLY' }],
     iconPath: '',
     bonus: {
       relic: { type: 'DMG_INC', values: [0.0075, 0.015, 0.0225, 0.03] },
@@ -46,7 +46,7 @@ export const ENGRAVINGS_DB: EngravingData[] = [
     source: 'ENGRAVING',
     id: ID.CURSED_DOLL,
     name: NAME[ID.CURSED_DOLL],
-    effects: [{ type: 'DMG_INC', value: 0.14, target: 'ALL' }],
+    effects: [{ type: 'DMG_INC', value: 0.14, operation: 'MULTIPLY' }],
     iconPath: '',
     bonus: {
       relic: { type: 'DMG_INC', values: [0.0075, 0.015, 0.0225, 0.03] },
@@ -57,7 +57,10 @@ export const ENGRAVINGS_DB: EngravingData[] = [
     source: 'ENGRAVING',
     id: ID.HIT_MASTER,
     name: NAME[ID.HIT_MASTER],
-    effects: [{ type: 'DMG_INC', value: 0.14, target: 'NON_DIRECTIONAL' }],
+    effects: [{
+      type: 'DMG_INC', value: 0.14, operation: 'MULTIPLY',
+      target:{ hasAttackType:['NON_DIRECTIONAL'] }
+    }],
     iconPath: '',
     bonus: {
       relic: { type: 'DMG_INC', values: [0.0075, 0.015, 0.0225, 0.03] },

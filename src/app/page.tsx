@@ -44,13 +44,13 @@ export default function EngravingSimulator() {
                   </p>
                   <div className="text-sm text-slate-400 pt-2">
                     {[
-                      ['서버',   displayData.profile.serverName],
-                      ['길드',   displayData.profile.guildName],
-                      ['직업',   displayData.profile.className],
-                      ['칭호',   displayData.profile.title],
-                      ['명예',   String(displayData.profile.honorLevel)],
+                      ['서버', displayData.profile.serverName],
+                      ['길드', displayData.profile.guildName],
+                      ['직업', displayData.profile.className],
+                      ['칭호', displayData.profile.title],
+                      ['명예', String(displayData.profile.honorLevel)],
                       ['원정대', String(displayData.profile.expeditionLevel)],
-                      ['영지',   displayData.profile.townName],
+                      ['영지', displayData.profile.townName],
                     ].map(([label, value]) => (
                       <p key={label}>
                         <span className="inline-block w-11">{label}</span>
@@ -74,14 +74,14 @@ export default function EngravingSimulator() {
             <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
               <div className="grid grid-cols-2 gap-x-6 text-sm">
                 {[
-                  ['공격력',   displayData.combatStats.attackPower.toLocaleString()],
+                  ['공격력', displayData.combatStats.attackPower.toLocaleString()],
                   ['최대생명력', displayData.combatStats.maxHp.toLocaleString()],
-                  ['치명',     displayData.combatStats.critical.toLocaleString()],
-                  ['제압',     displayData.combatStats.domination.toLocaleString()],
-                  ['특화',     displayData.combatStats.specialization.toLocaleString()],
-                  ['인내',     displayData.combatStats.endurance.toLocaleString()],
-                  ['신속',     displayData.combatStats.swiftness.toLocaleString()],
-                  ['숙련',     displayData.combatStats.expertise.toLocaleString()],
+                  ['치명', displayData.combatStats.critical.toLocaleString()],
+                  ['제압', displayData.combatStats.domination.toLocaleString()],
+                  ['특화', displayData.combatStats.specialization.toLocaleString()],
+                  ['인내', displayData.combatStats.endurance.toLocaleString()],
+                  ['신속', displayData.combatStats.swiftness.toLocaleString()],
+                  ['숙련', displayData.combatStats.expertise.toLocaleString()],
                 ].map(([label, val]) => (
                   <div key={label} className="flex justify-between pb-1">
                     <span className="text-slate-400 text-xs">{label}</span>
@@ -108,7 +108,7 @@ export default function EngravingSimulator() {
                     <span
                       className="text-xs px-2 py-0.5 rounded border"
                       style={{
-                        color      : eng.grade.color,
+                        color: eng.grade.color,
                         borderColor: eng.grade.color ? `${eng.grade.color}50` : undefined,
                       }}
                     >
@@ -155,10 +155,31 @@ export default function EngravingSimulator() {
                 <div>
                   <p className="text-slate-500 mb-1">— 전투 스탯 —</p>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-400">
-                    <span>baseAtk:</span>
+
+                    {/* API 원본 공격력 */}
+                    <span>baseAtk (API):</span>
                     <span className="text-cyan-400">
                       {calcData.combatStats.baseAtk.toLocaleString()}
                     </span>
+
+                    {/* 계산된 무기 공격력 */}
+                    <span>weaponAtk:</span>
+                    <span className="text-cyan-400">
+                      {Math.round(calcData.combatStats.weaponAtk).toLocaleString()}
+                    </span>
+
+                    {/* 역산된 주스탯 */}
+                    <span>mainStat (역산):</span>
+                    <span className="text-cyan-400">
+                      {Math.round(calcData.combatStats.mainStat).toLocaleString()}
+                    </span>
+
+                    {/* 최종 공격력 — 계산 엔진 입력값 */}
+                    <span className="text-green-400 font-bold">finalAtk:</span>
+                    <span className="text-green-400 font-bold">
+                      {Math.round(calcData.combatStats.finalAtk).toLocaleString()}
+                    </span>
+
                   </div>
                 </div>
 
@@ -367,48 +388,48 @@ export default function EngravingSimulator() {
                 {/* 전투 장비 */}
                 <div className="space-y-2">
                   <p className="text-[10px] text-slate-500 mb-2 underline">전투 장비</p>
-                    {['투구', '어깨', '상의', '하의', '장갑', '무기'].map(type => {
-                      const eq = displayData.equipment.find(e => e.type === type);
-                      if (!eq) return null;
-                      return (
-                        <div key={type}
-                            className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
+                  {['투구', '어깨', '상의', '하의', '장갑', '무기'].map(type => {
+                    const eq = displayData.equipment.find(e => e.type === type);
+                    if (!eq) return null;
+                    return (
+                      <div key={type}
+                        className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
                                         border border-slate-700/50">
-                          <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
-                            <img src={eq.icon} alt={eq.name}
-                                className="w-full h-full object-cover" />
-                          </div>
-                          <div>
-                            <p className="text-xs" style={{ color: eq.grade.color }}>
-                              {eq.name}
-                            </p>
-                            <p className="text-[10px] text-slate-500">
-                              {eq.setType !== 'UNKNOWN' ? eq.setType : ''} 티어{eq.itemTier}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* 보주 — 무기 아래 */}
-                    {displayData.boJu && (
-                      <div className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
-                                      border border-slate-700/50">
                         <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
-                          <img src={displayData.boJu.icon} alt={displayData.boJu.name}
-                              className="w-full h-full object-cover" />
+                          <img src={eq.icon} alt={eq.name}
+                            className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <p className="text-xs" style={{ color: displayData.boJu.grade.color }}>
-                            {displayData.boJu.name}
+                          <p className="text-xs" style={{ color: eq.grade.color }}>
+                            {eq.name}
                           </p>
                           <p className="text-[10px] text-slate-500">
-                            {displayData.boJu.seasonLabel} 최대 낙원력{' '}
-                            {displayData.boJu.paradoxPower.toLocaleString()}
+                            {eq.setType !== 'UNKNOWN' ? eq.setType : ''} 티어{eq.itemTier}
                           </p>
                         </div>
                       </div>
-                    )}
+                    );
+                  })}
+
+                  {/* 보주 — 무기 아래 */}
+                  {displayData.boJu && (
+                    <div className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
+                                      border border-slate-700/50">
+                      <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
+                        <img src={displayData.boJu.icon} alt={displayData.boJu.name}
+                          className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                        <p className="text-xs" style={{ color: displayData.boJu.grade.color }}>
+                          {displayData.boJu.name}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {displayData.boJu.seasonLabel} 최대 낙원력{' '}
+                          {displayData.boJu.paradoxPower.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 장신구 */}
@@ -416,11 +437,11 @@ export default function EngravingSimulator() {
                   <p className="text-[10px] text-slate-500 mb-2 underline">장신구</p>
                   {displayData.accessories.map((acc, i) => (
                     <div key={i}
-                         className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
+                      className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
                                     border border-slate-700/50">
                       <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
                         <img src={acc.icon} alt={acc.name}
-                             className="w-full h-full object-cover" />
+                          className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1">
                         <p className="text-xs" style={{ color: acc.grade.color }}>
@@ -429,7 +450,7 @@ export default function EngravingSimulator() {
                         {/* 연마효과 */}
                         {acc.polishEffects.map((eff, j) => (
                           <p key={j} className="text-[10px]"
-                             style={{ color: eff.value.color }}>
+                            style={{ color: eff.value.color }}>
                             {eff.label.text} +{
                               eff.value.value < 1
                                 ? `${(eff.value.value * 100).toFixed(2)}%`
@@ -450,17 +471,17 @@ export default function EngravingSimulator() {
                                     border border-slate-700/50">
                       <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
                         <img src={displayData.bracelet.icon}
-                             alt={displayData.bracelet.name}
-                             className="w-full h-full object-cover" />
+                          alt={displayData.bracelet.name}
+                          className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1">
                         <p className="text-xs"
-                           style={{ color: displayData.bracelet.grade.color }}>
+                          style={{ color: displayData.bracelet.grade.color }}>
                           {displayData.bracelet.name}
                         </p>
                         {displayData.bracelet.effects.map((eff, j) => (
                           <p key={j} className="text-[10px]"
-                             style={{ color: eff.value.color }}>
+                            style={{ color: eff.value.color }}>
                             {eff.label.text} +{
                               eff.value.value < 1
                                 ? `${(eff.value.value * 100).toFixed(2)}%`
@@ -478,8 +499,8 @@ export default function EngravingSimulator() {
                                     border border-slate-700/50">
                       <div className="w-10 h-10 bg-slate-700 rounded overflow-hidden flex-shrink-0">
                         <img src={displayData.abilityStone.icon}
-                            alt={displayData.abilityStone.name}
-                            className="w-full h-full object-cover" />
+                          alt={displayData.abilityStone.name}
+                          className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1">
                         <p className="text-xs" style={{ color: displayData.abilityStone.grade.color }}>
@@ -518,13 +539,13 @@ export default function EngravingSimulator() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {displayData.gems.gems.map((gem, i) => (
                   <div key={i}
-                       className="flex items-center justify-between p-2 bg-slate-800/20
+                    className="flex items-center justify-between p-2 bg-slate-800/20
                                   rounded text-[11px] border border-slate-800">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full border border-slate-600
                                       overflow-hidden flex-shrink-0">
                         <img src={gem.icon} alt=""
-                             className="w-full h-full object-cover" />
+                          className="w-full h-full object-cover" />
                       </div>
                       <span style={{ color: gem.skillName.color }}>
                         {gem.skillName.text}
@@ -546,9 +567,9 @@ export default function EngravingSimulator() {
               </h2>
               <div className="grid grid-cols-3 gap-4 mb-4">
                 {[
-                  { key: 'evolution', label: '진화',   color: '#F1D594' },
-                  { key: 'insight',   label: '깨달음', color: '#83E9FF' },
-                  { key: 'leap',      label: '도약',   color: '#C2EA55' },
+                  { key: 'evolution', label: '진화', color: '#F1D594' },
+                  { key: 'insight', label: '깨달음', color: '#83E9FF' },
+                  { key: 'leap', label: '도약', color: '#C2EA55' },
                 ].map(({ key, label, color }) => {
                   const pt = displayData.arkPassive.points[
                     key as keyof typeof displayData.arkPassive.points
@@ -556,7 +577,7 @@ export default function EngravingSimulator() {
                   if (typeof pt === 'string') return null;
                   return (
                     <div key={key}
-                         className="p-4 bg-slate-800/50 rounded-lg text-center
+                      className="p-4 bg-slate-800/50 rounded-lg text-center
                                     border border-slate-700">
                       <p className="text-xs mb-1" style={{ color }}>{label}</p>
                       <p className="text-lg font-bold text-white">
@@ -588,7 +609,7 @@ export default function EngravingSimulator() {
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   {displayData.arkGrid.cores.map((core, i) => (
                     <div key={i}
-                         className="flex items-center gap-2 bg-slate-800/40 p-2 rounded">
+                      className="flex items-center gap-2 bg-slate-800/40 p-2 rounded">
                       <div className="w-4 h-4 rounded-full bg-slate-600 overflow-hidden">
                         <img src={core.icon} alt="" className="w-full h-full object-cover" />
                       </div>
@@ -624,11 +645,11 @@ export default function EngravingSimulator() {
               <div className="space-y-2">
                 {displayData.skills.map((skill, i) => (
                   <div key={i}
-                       className="flex items-center gap-3 p-2 bg-slate-800/20 rounded
+                    className="flex items-center gap-3 p-2 bg-slate-800/20 rounded
                                   border border-slate-800">
                     <div className="w-8 h-8 rounded bg-slate-700 overflow-hidden flex-shrink-0">
                       <img src={skill.icon} alt={skill.name}
-                           className="w-full h-full object-cover" />
+                        className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -636,7 +657,7 @@ export default function EngravingSimulator() {
                           {skill.name}
                         </span>
                         <span className="text-[10px]"
-                              style={{ color: skill.category.color }}>
+                          style={{ color: skill.category.color }}>
                           {skill.category.text}
                         </span>
                         <span className="text-[10px] text-slate-500">
@@ -647,7 +668,7 @@ export default function EngravingSimulator() {
                       <div className="flex gap-1 mt-0.5">
                         {skill.selectedTripods.map((t, j) => (
                           <span key={j} className="text-[10px]"
-                                style={{ color: t.name.color }}>
+                            style={{ color: t.name.color }}>
                             {t.name.text}
                           </span>
                         ))}
@@ -656,7 +677,7 @@ export default function EngravingSimulator() {
                     {/* 룬 */}
                     {skill.rune && (
                       <span className="text-[10px]"
-                            style={{ color: skill.rune.grade.color }}>
+                        style={{ color: skill.rune.grade.color }}>
                         {skill.rune.name.text}
                       </span>
                     )}

@@ -30,6 +30,7 @@ export interface CombatStats {
   baseAtk       : number;  // 기본 공격력
   mainStat      : number;  // 주스탯 (힘/민첩/지능)
   weaponAtk     : number;  // 무기 공격력
+  finalAtk      : number;  // 최종 공격력 (계산 엔진 입력값)
   critical      : number;  // 치명
   specialization: number;  // 특화
   swiftness     : number;  // 신속

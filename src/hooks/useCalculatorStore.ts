@@ -12,6 +12,11 @@ import {
   ClassEffectMapEntry, createEmptyGkClassModifiers,
 } from '@/types/skills/guardian-knight-effects';
 import { ENGRAVINGS_DB } from '@/data/engravings';
+import {
+  calcWeaponAtk,
+  calcMainStat,
+  calcFinalAtk,
+} from '@/utils/atk-calculator';
 
 
 // ============================================================
@@ -34,6 +39,7 @@ export interface EffectLog {
   type     : string;
   value    : number;
   operation: 'ADD' | 'MULTIPLY';
+  subGroup?: string;  // calcFinalAtk 의 그룹핑에 사용
 }
 
 
@@ -65,7 +71,7 @@ export interface CalcData {
 // ============================================================
 
 const createEmptyCombatStats = (): CombatStats => ({
-  baseAtk: 0, mainStat: 0, weaponAtk: 0,
+  baseAtk: 0, mainStat: 0, weaponAtk: 0, finalAtk: 0,
   critical: 0, specialization: 0, swiftness: 0,
   hp: 0, domination: 0, endurance: 0, expertise: 0,
 });
@@ -110,18 +116,23 @@ const createEmptyCalcData = (): CalcData => ({
 // extractCalcData
 // ============================================================
 
-/** 카드 효과 키워드 → EffectTypeId 매핑 */
-const CARD_EFFECT_MAP: Record<string, CommonEffectTypeId> = {
-  '피해'      : 'DMG_INC',
-  '공격력'    : 'ATK_P',
-  '치명타 피해': 'CRIT_DMG',
-  '치명타 확률': 'CRIT_CHANCE',
-};
+/** 
+ * Record → 순서 보장 배열로 변경
+ * '피해 감소'를 '피해'보다 먼저 검사해서 오매칭 방지
+ * 속성명(성/암/화 등)이 앞에 붙어도 키워드 포함 여부로 판단하므로
+ * '피해 감소' 먼저 체크 → 매칭 시 스킵, 이후 '피해' 체크
+ */
+const CARD_EFFECT_LIST: Array<[string, CommonEffectTypeId | null]> = [
+  ['피해 감소'  , null          ],  // null = 딜 계산 무관, 무시
+  ['피해'       , 'DMG_INC'    ],
+  ['공격력'     , 'ATK_P'      ],
+  ['치명타 피해', 'CRIT_DMG'   ],
+  ['치명타 확률', 'CRIT_CHANCE'],
+];
 
 /** 아크그리드 효과명 → EffectTypeId 매핑 */
 const ARK_GRID_EFFECT_MAP: Record<string, CommonEffectTypeId> = {
   '공격력': 'ATK_P',
-  '낙인력': 'ATK_P',
   '보스 피해': 'DMG_INC',
   '추가 피해': 'ADD_DMG',
 };
@@ -199,17 +210,18 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
    * @param value     - 수치 (소수)
    * @param operation - 연산 방식 (기본값 'ADD')
    */
+  // 변경 후
   const applyEffect = (
     label    : string,
     type     : string,
     value    : number,
     operation: 'ADD' | 'MULTIPLY' = 'ADD',
+    subGroup?: string,              // ATK_P 독립 곱연산 그룹 식별자
   ) => {
     applyCommonEffect(type, value, operation);
     applyClassEffect(type, value, operation);
-
-    // 효과 로그 기록
-    effectLog.push({ label, type, value, operation });
+    // subGroup 포함하여 로그 기록
+    effectLog.push({ label, type, value, operation, subGroup });
   };
 
 
@@ -269,11 +281,13 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   // ── 8. 카드 효과 ──────────────────────────────────────────
   display.cards?.activeItems.forEach(item => {
     if (!item.value) return;
-    for (const [keyword, effectType] of Object.entries(CARD_EFFECT_MAP)) {
+    for (const [keyword, effectType] of CARD_EFFECT_LIST) {
       if (item.description.includes(keyword)) {
-        // label: "카드 피해", "카드 치명타피해" 등
-        applyEffect(`카드 ${keyword}`, effectType, item.value.value);
-        break;
+        // effectType 이 null 이면 딜 계산 무관 효과 → 무시
+        if (effectType !== null) {
+          applyEffect(`카드 ${keyword}`, effectType, item.value.value);
+        }
+        break;  // 첫 번째 매칭에서 종료
       }
     }
   });
@@ -282,9 +296,31 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   display.arkGrid.effects.forEach(eff => {
     const effectType = ARK_GRID_EFFECT_MAP[eff.label.text];
     if (effectType)
-      // label: "아크그리드 공격력", "아크그리드 추가피해" 등
       applyEffect(`아크그리드 ${eff.label.text}`, effectType, eff.value.value);
   });
+
+  // ── 10. 공격력 3종 계산 ───────────────────────────────────
+  // weaponAtk: 무기 공격력 고정 × (1 + 무기 공격력 % 합산)
+  combatStats.weaponAtk = calcWeaponAtk(
+    statModifiers.weaponAtkC,
+    statModifiers.weaponAtkP,
+  );
+
+  // mainStat: baseAtk / baseAtkP 보정 제거 후 역산
+  combatStats.mainStat = calcMainStat(
+    combatStats.baseAtk,
+    statModifiers.baseAtkP,
+    combatStats.weaponAtk,
+  );
+
+  // finalAtk: (baseAtk + atkC) × ATK_P subGroup 독립 곱연산
+  // ATK_P 로그만 꺼내서 calcFinalAtk 에 전달
+  const atkPLogs = effectLog.filter(l => l.type === 'ATK_P');
+  combatStats.finalAtk = calcFinalAtk(
+    combatStats.baseAtk,
+    statModifiers.atkC,
+    atkPLogs,
+  );
 
   return { combatStats, statModifiers, damageModifiers, classModifiers, effectLog };
 };
