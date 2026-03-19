@@ -140,7 +140,7 @@ export type EffectTypeId = CommonEffectTypeId | ClassEffectTypeId;
  *   subGroup 있음 → 같은 그룹끼리 합산 후 1회 곱연산
  *
  * [명시 위치]
- *   DB 파일에서만 정의
+ *   DB 파일에서만 정의\
  *   data-normalizer 에서는 명시하지 않음
  *
  * 필요한 경우에만 추가합니다.
@@ -158,7 +158,7 @@ export interface EffectTarget {
   categories?   : SkillCategory[];
   skillTypes?   : SkillTypeId[];
   resourceTypes?: ResourceTypeId[];
-  hasAttackType?: AttackTypeId[];
+  attackType?: AttackTypeId[];
 }
 
 /**
@@ -175,10 +175,10 @@ export interface EffectTarget {
  *   DB 작성 시 color 없으면 생략 가능: { value: 0.18 }
  */
 export interface EffectEntry {
-  type    : EffectTypeId;
-  value   : ColoredValue;  // { value: 0.18 } or { value: 0.18, color: '#FF0' }
-  subGroup?: string;       // SUB_GROUPS 상수 사용 권장
-  target? : EffectTarget;
+  type     : EffectTypeId;
+  value    : ColoredValue;
+  subGroup?: string;
+  target?  : EffectTarget;
 }
 
 /**
@@ -214,7 +214,48 @@ export const EFFECT_MAP: Record<CommonEffectTypeId, EffectMapEntry> = {
 
 
 // ============================================================
-// 4. 공통 데이터 구조
+// 4. 시뮬레이션 시나리오 구조
+// ============================================================
+
+interface SimNode {
+  id: string;
+  category: SystemSourceId;
+  name: string;
+  
+  // 상황에 따라 선택적으로 사용하는 수치들 (Optional)
+  level?: number;      // 레벨 (강화, 아크패시브 등)
+  rank?: number;       // 랭크 (카르마, 장비랭크 등)
+  grade?: string;      // 등급 (고대, 유물 등)
+  
+  // 사용자 직접 입력 수치 (악세 주스탯, 상재 등)
+  customValue?: number; 
+  
+}
+
+interface CalculatedDamage {
+  totalCycleDamage : number; // 한 사이클 총 피해량
+  totalWeightDamage: number; // 비중 기반 총 피해량
+  skillDamageList  : {       // 스킬별 상세 (그래프용)
+    skillName    : string;
+    damage       : number;  // 1회 사용 시 데미지
+    countPerCycle: number;  // 1사이클 당 사용 횟수 (커스텀)
+    weight       : number;  // 전체 딜 비중 (%) (커스텀)
+    dps          : number;  // 스킬 단일 DPS
+  }[];
+}
+
+// 하나의 완성된 시나리오 세트
+interface SimScenario {
+  id           : string;            // "base", "compare-1" 등
+  title        : string;            // "현재 세팅", "진화2단계 테스트" 등
+  nodes        : SimNode[];         // 아크패시브/각인/보석 등의 상태 리스트
+  calcDmgResult: CalculatedDamage;  // 계산 엔진에 의해 산출된 최종 딜량
+}
+
+
+
+// ============================================================
+// 5. 공통 데이터 구조
 // ============================================================
 
 /**
@@ -248,7 +289,7 @@ export interface MemoParam {
 export interface BaseSimData {
   source  : SystemSourceId;
   id      : string;
-  name    : ColoredText;  // { text: '원한' } or { text: '원한', color: '#FFFFAC' }
+  name    : ColoredText;
   iconPath: string;
   effects?: EffectEntry[];
   memo?   : MemoParam[];
