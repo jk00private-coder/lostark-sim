@@ -86,8 +86,8 @@ export interface DamageModifiers {
   enemyDamageTaken: number;  // 적이 받는 피해 증가
   cdrC    : number;  // 쿨타임 고정 감소
   cdrP    : number;  // 쿨타임 % 감소
-  atkSpeed: number;  // 공격 속도 증가
-  movSpeed: number;  // 이동 속도 증가
+  spdAtk: number;  // 공격 속도 증가
+  spdMov: number;  // 이동 속도 증가
 }
 
 
@@ -109,8 +109,8 @@ export const COMMON_EFFECT_TYPES = [
   'ENEMY_DMG_TAKEN',  // 적이 받는 피해 증가
   'CDR_C'          ,  // 쿨타임 고정 감소
   'CDR_P'          ,  // 쿨타임 % 감소
-  'ATK_SPEED'      ,  // 공격 속도
-  'MOV_SPEED'      ,  // 이동 속도
+  'SPEED_ATK'      ,  // 공격 속도
+  'SPEED_MOV'      ,  // 이동 속도
   'MAIN_STAT_C'    ,  // 주스탯 고정 증가
   'MAIN_STAT_P'    ,  // 주스탯 % 증가
   'WEAPON_ATK_C'   ,  // 무기 공격력 고정 증가
@@ -201,8 +201,8 @@ export const EFFECT_MAP: Record<CommonEffectTypeId, EffectMapEntry> = {
   ENEMY_DMG_TAKEN : { field: 'enemyDamageTaken' },
   CDR_C           : { field: 'cdrC'      },
   CDR_P           : { field: 'cdrP'      },
-  ATK_SPEED       : { field: 'atkSpeed'  },
-  MOV_SPEED       : { field: 'movSpeed'  },
+  SPEED_ATK       : { field: 'spdAtk'  },
+  SPEED_MOV       : { field: 'spdMov'  },
   MAIN_STAT_C     : { field: 'mainStatC'  },
   MAIN_STAT_P     : { field: 'mainStatP'  },
   WEAPON_ATK_C    : { field: 'weaponAtkC' },
@@ -263,14 +263,14 @@ interface SimScenario {
  * DEV 패널에서 출처별 그룹핑에 활용
  */
 export type SystemSourceId =
-  | 'ENGRAVING'
-  | 'GEAR'
-  | 'GEM'
-  | 'CARD'
-  | 'ARK_PASSIVE'
-  | 'ARK_GRID'
+  | 'EQUIIPMENT'
+  | 'AVATAR'
   | 'SKILL'
-  | 'TRIPOD';
+  | 'ENGRAVING'
+  | 'CARD'
+  | 'GEM'
+  | 'ARK_PASSIVE'
+  | 'ARK_GRID';
 
 /**
  * 계산 무관 메모용 파라미터
@@ -287,8 +287,7 @@ export interface MemoParam {
  * API 데이터 + DB 데이터 모두 이 규격으로 통일
  */
 export interface BaseSimData {
-  source  : SystemSourceId;
-  id      : string;
+  id      : number;
   name    : ColoredText;
   iconPath: string;
   effects?: EffectEntry[];
@@ -314,7 +313,8 @@ export type SkillTypeId =
   | 'COMBO'
   | 'CHARGE'
   | 'POINT'
-  | 'TOGGLE';
+  | 'TOGGLE'
+  | 'CASTING';
 
 /** 스킬 카테고리 */
 export type SkillCategory =

@@ -8,9 +8,8 @@ export interface EngravingBonus {
 }
 
 export interface EngravingData extends BaseSimData {
-  iconPath: string;
   bonus?: {
-    relic  ?: EngravingBonus;
+    relic?  : EngravingBonus;
     ability?: EngravingBonus;
   };
   
