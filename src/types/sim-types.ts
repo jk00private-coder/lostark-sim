@@ -43,7 +43,7 @@ export interface ColoredText {
 
 /** 전투 스탯 기본 수치 */
 export interface CombatStats {
-  baseAtk       : number;  // API 공격력 (보정 전)
+  baseAtk       : number;  // 기본 공격력
   mainStat      : number;  // 주스탯 역산값
   weaponAtk     : number;  // 계산된 무기 공격력
   finalAtk      : number;  // 최종 공격력
@@ -273,6 +273,15 @@ export type SystemSourceId =
   | 'ARK_GRID';
 
 /**
+ * 레벨 기반 효과
+ * 각인, 아크패시브 등에서 사용
+ */
+export interface LeveledEffect {
+  type  : EffectTypeId;
+  values: number[];  // 인덱스 = 레벨-1
+}
+
+/**
  * 계산 무관 메모용 파라미터
  * ⚠️ 계산에 반영되어야 하는 수치는 반드시 EffectEntry 사용
  */
@@ -328,10 +337,9 @@ export type SkillCategory =
 /** 슈퍼 아머 ID */
 export type SuperArmorId =
   | 'NONE'
-  | 'STIFF_IMMUNE'
-  | 'PUSH_IMMUNE'
-  | 'DEBUFF_IMMUNE'
-  | 'ALL_IMMUNE';
+  | 'STIFF_IMMUNE'   // 경직 면역
+  | 'PUSH_IMMUNE'    // 피격 면역
+  | 'DEBUFF_IMMUNE'; // 상태 이상 면역
 
 /** 소모 자원 ID */
 export type ResourceTypeId =

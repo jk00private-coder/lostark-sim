@@ -37,8 +37,8 @@ export interface DamageSource {
 /**
  * 스킬 레벨별 데미지 소스
  *
- * isStatic: true  → 레벨 고정, index 0만 사용
- * isStatic: false → 레벨별, 레벨10=index0 ~ 레벨14=index4
+ * isStatic: true  → 레벨 고정, index 0만 사용 (레벨 무관 고정)
+ * isStatic: false → 레벨별, index 0(Lv.1) ~ index 13(Lv.14)
  */
 export type SkillLevelData =
   | { isStatic: true;  damageSources: DamageSource[] }
@@ -92,10 +92,12 @@ export interface TripodCase {
 
 /**
  * 트라이포드 데이터
- *
- * [effects vs memo]
- *   effects → 계산 엔진이 처리 (DMG_INC, ADD_DMG, GK_QI_DMG 등)
- *   memo    → 계산 무관 메모 (시전 속도, 범위 등)
+ * effects   → 계산 엔진이 처리 (DMG_INC, ADD_DMG, GK_QI_DMG 등)
+ * memo      → 계산 무관 메모 (시전 속도, 범위 등)
+ * overrides → 스킬 특성 변경 옵션 (ex 홀딩스킬 변경, 헤드어택 변경 등)
+ * addDamageSources → 데미지 소스가 추가될 때(ex 화상)
+ * case → 특정 트포의 데미지 증가가 적용 안될 때
+ * link → 특정트포끼리 연동되어있을 때(ex 가디언나이트 발현/화신 스킬) 
  */
 export interface TripodData extends BaseSimData {
   slot : 1 | 2 | 3;

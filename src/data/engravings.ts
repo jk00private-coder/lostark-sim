@@ -3,7 +3,7 @@
 import { EngravingData } from '../types/engraving';
 import { ID_AA, ID_BB, ID_CC } from '@/constants/id-config';
 
-const BASE = (ID_AA.ENGRAVING * 1000000) + (ID_BB.ENGRAVE_COMBAT * 10000) + (ID_CC.ENGRAVE_COMBAT * 100);
+const BASE = (ID_AA.ENGRAVING * 1000000) + (ID_BB.COMMON * 10000) + (ID_CC.NONE * 100);
 
 export const NAMES = {
   [BASE + 1] : "각성",      [BASE + 4] : "결투의 대가",   [BASE + 5] : "구슬동자",
