@@ -35,16 +35,6 @@ export interface DamageSource {
 }
 
 /**
- * 스킬 레벨별 데미지 소스
- *
- * isStatic: true  → 레벨 고정, index 0만 사용 (레벨 무관 고정)
- * isStatic: false → 레벨별, index 0(Lv.1) ~ index 13(Lv.14)
- */
-export type SkillLevelData =
-  | { isStatic: true;  damageSources: DamageSource[] }
-  | { isStatic: false; damageSources: DamageSource[] };
-
-/**
  * 스킬 소모 자원
  *
  * isStatic: true  → 레벨 무관 고정값 (value 단일 숫자)
@@ -84,7 +74,7 @@ export interface TripodCase {
   };
   then: {
     effects?         : EffectEntry[];
-    addDamageSources?: SkillLevelData;
+    addDamageSources?: DamageSource[];
     overrides?       : TripodOverride;
     memo?            : MemoParam[];
   };
@@ -104,7 +94,7 @@ export interface TripodData extends BaseSimData {
   index: 1 | 2 | 3;
 
   effects?         : EffectEntry[];
-  addDamageSources?: SkillLevelData;
+  addDamageSources?: DamageSource[];
   overrides?       : TripodOverride;
   cases?           : TripodCase[];
   link?            : { slot: number; index: number };
@@ -125,6 +115,6 @@ export interface SkillData extends BaseSimData {
   stagger     : string;
   superArmorId: SuperArmorId;
   cooldown    : number;
-  levels      : SkillLevelData;
+  levels      : DamageSource[];
   tripods?    : TripodData[];
 }

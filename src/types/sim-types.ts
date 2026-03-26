@@ -27,14 +27,6 @@
 /**
  * color 없으면 기본색(흰색) 처리
  */
-export interface ColoredValue {
-  value : number;
-  color?: string;
-}
-export interface ColoredText {
-  text : string;
-  color?: string;
-}
 
 
 // ============================================================
@@ -43,28 +35,36 @@ export interface ColoredText {
 
 /** 전투 스탯 기본 수치 */
 export interface CombatStats {
-  baseAtk       : number;  // 기본 공격력
-  mainStat      : number;  // 주스탯 역산값
-  weaponAtk     : number;  // 계산된 무기 공격력
-  finalAtk      : number;  // 최종 공격력
-  critical      : number;  // 치명
+  baseAtk: number;  // 기본 공격력
+  mainStat: number;  // 주스탯 역산값
+  weaponAtk: number;  // 계산된 무기 공격력
+  finalAtk: number;  // 최종 공격력
+  critical: number;  // 치명
   specialization: number;  // 특화
-  swiftness     : number;  // 신속
-  hp            : number;  // 최대 생명력
-  domination    : number;  // 제압
-  endurance     : number;  // 인내
-  expertise     : number;  // 숙련
+  swiftness: number;  // 신속
+  hp: number;  // 최대 생명력
+  domination: number;  // 제압
+  endurance: number;  // 인내
+  expertise: number;  // 숙련
 }
 
 /** 공격력 및 주스탯 보정치 */
 export interface StatModifiers {
-  mainStatC : number;  // 주스탯 고정 증가
-  mainStatP : number;  // 주스탯 % 증가
+  mainStatC: number;  // 주스탯 고정 증가
+  mainStatP: number;  // 주스탯 % 증가
   weaponAtkC: number;  // 무기 공격력 고정 증가
   weaponAtkP: number;  // 무기 공격력 % 증가
-  baseAtkP  : number;  // 기본 공격력 % 증가
-  atkC      : number;  // 공격력 고정 증가
-  atkP      : number;  // 공격력 % 증가
+  baseAtkP: number;  // 기본 공격력 % 증가
+  atkC: number;  // 공격력 고정 증가
+  atkP: number;  // 공격력 % 증가
+  critC: number;  // 치명스탯 증가
+  specC: number;  // 특화스탯 증가
+  swiftC: number;  // 신속스탯 증가
+  domC: number;  // 제압스탯 증가
+  endC: number;  // 인내스탯 증가
+  expC: number;  // 숙련스탯 증가
+  hpC: number;  // 생명력 고정 증가
+  hpP: number;  // 생명력 % 증가
 }
 
 /**
@@ -76,16 +76,16 @@ export interface StatModifiers {
  *   critDamage: 2.0 (기본 치명타 피해 200%)
  */
 export interface DamageModifiers {
-  damageInc    : number;  // 피해 증가 (초기 1.0)
-  evoDamage    : number;  // 진화형 피해
-  addDamage    : number;  // 추가 피해
-  critChance   : number;  // 치명타 확률
-  critDamage   : number;  // 치명타 피해 (초기 2.0)
+  damageInc: number;  // 피해 증가 (초기 1.0)
+  evoDamage: number;  // 진화형 피해
+  addDamage: number;  // 추가 피해
+  critChance: number;  // 치명타 확률
+  critDamage: number;  // 치명타 피해 (초기 2.0)
   critDamageInc: number;  // 치명타시 피해 증가 (초기 1.0)
-  defPenetration  : number;  // 방어력 관통
+  defPenetration: number;  // 방어력 관통
   enemyDamageTaken: number;  // 적이 받는 피해 증가
-  cdrC    : number;  // 쿨타임 고정 감소
-  cdrP    : number;  // 쿨타임 % 감소
+  cdrC: number;  // 쿨타임 고정 감소
+  cdrP: number;  // 쿨타임 % 감소
   spdAtk: number;  // 공격 속도 증가
   spdMov: number;  // 이동 속도 증가
 }
@@ -99,25 +99,34 @@ export interface DamageModifiers {
  * 공통 Effect 타입 목록
  */
 export const COMMON_EFFECT_TYPES = [
-  'DMG_INC'        ,  // 피해 증가
-  'EVO_DMG'        ,  // 진화형 피해
-  'ADD_DMG'        ,  // 추가 피해
-  'CRIT_CHANCE'    ,  // 치명타 확률
-  'CRIT_DMG'       ,  // 치명타 피해
-  'CRIT_DMG_INC'   ,  // 치명타시 피해 증가
+  'DMG_INC',  // 피해 증가
+  'EVO_DMG',  // 진화형 피해
+  'ADD_DMG',  // 추가 피해
+  'CRIT_CHANCE',  // 치명타 확률
+  'CRIT_DMG',  // 치명타 피해
+  'CRIT_DMG_INC',  // 치명타시 피해 증가
   'DEF_PENETRATION',  // 방어력 관통
   'ENEMY_DMG_TAKEN',  // 적이 받는 피해 증가
-  'CDR_C'          ,  // 쿨타임 고정 감소
-  'CDR_P'          ,  // 쿨타임 % 감소
-  'SPEED_ATK'      ,  // 공격 속도
-  'SPEED_MOV'      ,  // 이동 속도
-  'MAIN_STAT_C'    ,  // 주스탯 고정 증가
-  'MAIN_STAT_P'    ,  // 주스탯 % 증가
-  'WEAPON_ATK_C'   ,  // 무기 공격력 고정 증가
-  'WEAPON_ATK_P'   ,  // 무기 공격력 % 증가
-  'BASE_ATK_P'     ,  // 기본 공격력 % 증가
-  'ATK_C'          ,  // 공격력 고정 증가
-  'ATK_P'          ,  // 공격력 % 증가
+  'CDR_C',  // 쿨타임 고정 감소
+  'CDR_P',  // 쿨타임 % 감소
+  'SPEED_ATK',  // 공격 속도
+  'SPEED_MOV',  // 이동 속도
+  'MAIN_STAT_C',  // 주스탯 고정 증가
+  'MAIN_STAT_P',  // 주스탯 % 증가
+  'WEAPON_ATK_C',  // 무기 공격력 고정 증가
+  'WEAPON_ATK_P',  // 무기 공격력 % 증가
+  'BASE_ATK_P',  // 기본 공격력 % 증가
+  'ATK_C',  // 공격력 고정 증가
+  'ATK_P',  // 공격력 % 증가
+
+  'STAT_CRIT',      // 치명 (고정치)
+  'STAT_SPEC',      // 특화 (고정치)
+  'STAT_SWIFT',     // 신속 (고정치)
+  'STAT_DOM',       // 제압 (고정치)
+  'STAT_END',       // 인내 (고정치)
+  'STAT_EXP',       // 숙련 (고정치)
+  'STAT_HP_C',      // 생명력 고정 증가
+  'STAT_HP_P',      // 생명력 % 증가
 ] as const;
 export type CommonEffectTypeId = (typeof COMMON_EFFECT_TYPES)[number];
 
@@ -154,9 +163,9 @@ export const SUB_GROUPS = {
  * 아무것도 지정하지 않으면 전체 적용
  */
 export interface EffectTarget {
-  skillIds?     : string[];
-  categories?   : SkillCategory[];
-  skillTypes?   : SkillTypeId[];
+  skillIds?: string[];
+  categories?: SkillCategory[];
+  skillTypes?: SkillTypeId[];
   resourceTypes?: ResourceTypeId[];
   attackType?: AttackTypeId[];
 }
@@ -175,43 +184,56 @@ export interface EffectTarget {
  *   DB 작성 시 color 없으면 생략 가능: { value: 0.18 }
  */
 export interface EffectEntry {
-  type     : EffectTypeId;
-  value    : ColoredValue;
+  type: EffectTypeId;
+  value: number[];
+  valueColor?: string;
   subGroup?: string;
-  target?  : EffectTarget;
+  target?: EffectTarget;
 }
+
+
 
 /**
  * EFFECT_MAP 개별 항목
  * 연산 방식은 subGroup으로 결정되므로 필드 매핑만 담당
  */
 export interface EffectMapEntry {
-  field: keyof (StatModifiers & DamageModifiers);
+  field: keyof (StatModifiers & DamageModifiers & CombatStats);
 }
 
 /** 공통 Effect → Modifiers 필드 매핑 */
 export const EFFECT_MAP: Record<CommonEffectTypeId, EffectMapEntry> = {
-  DMG_INC         : { field: 'damageInc'      },
-  EVO_DMG         : { field: 'evoDamage'      },
-  ADD_DMG         : { field: 'addDamage'      },
-  CRIT_CHANCE     : { field: 'critChance'     },
-  CRIT_DMG        : { field: 'critDamage'     },
-  CRIT_DMG_INC    : { field: 'critDamageInc'  },
-  DEF_PENETRATION : { field: 'defPenetration' },
-  ENEMY_DMG_TAKEN : { field: 'enemyDamageTaken' },
-  CDR_C           : { field: 'cdrC'      },
-  CDR_P           : { field: 'cdrP'      },
-  SPEED_ATK       : { field: 'spdAtk'  },
-  SPEED_MOV       : { field: 'spdMov'  },
-  MAIN_STAT_C     : { field: 'mainStatC'  },
-  MAIN_STAT_P     : { field: 'mainStatP'  },
-  WEAPON_ATK_C    : { field: 'weaponAtkC' },
-  WEAPON_ATK_P    : { field: 'weaponAtkP' },
-  BASE_ATK_P      : { field: 'baseAtkP'   },
-  ATK_C           : { field: 'atkC' },
-  ATK_P           : { field: 'atkP' },
-};
+  // --- 기존 피해/유틸 관련 ---
+  DMG_INC        : { field: 'damageInc' },
+  EVO_DMG        : { field: 'evoDamage' },
+  ADD_DMG        : { field: 'addDamage' },
+  CRIT_CHANCE    : { field: 'critChance' },
+  CRIT_DMG       : { field: 'critDamage' },
+  CRIT_DMG_INC   : { field: 'critDamageInc' },
+  DEF_PENETRATION: { field: 'defPenetration' },
+  ENEMY_DMG_TAKEN: { field: 'enemyDamageTaken' },
+  CDR_C          : { field: 'cdrC' },
+  CDR_P          : { field: 'cdrP' },
+  SPEED_ATK      : { field: 'spdAtk' },
+  SPEED_MOV      : { field: 'spdMov' },
+  MAIN_STAT_C    : { field: 'mainStatC' },
+  MAIN_STAT_P    : { field: 'mainStatP' },
+  WEAPON_ATK_C   : { field: 'weaponAtkC' },
+  WEAPON_ATK_P   : { field: 'weaponAtkP' },
+  BASE_ATK_P     : { field: 'baseAtkP' },
+  ATK_C          : { field: 'atkC' },
+  ATK_P          : { field: 'atkP' },
 
+  // --- 추가: 전투 특성(CombatStats) 직접 매핑 ---
+  STAT_CRIT : { field: 'critC' },
+  STAT_SPEC : { field: 'specC' },
+  STAT_SWIFT: { field: 'swiftC' },
+  STAT_DOM  : { field: 'domC' },
+  STAT_END  : { field: 'endC' },
+  STAT_EXP  : { field: 'expC' },
+  STAT_HP_C : { field: 'hpC' },
+  STAT_HP_P : { field: 'hpP' }
+};
 
 // ============================================================
 // 4. 시뮬레이션 시나리오 구조
@@ -221,34 +243,34 @@ interface SimNode {
   id: string;
   category: SystemSourceId;
   name: string;
-  
+
   // 상황에 따라 선택적으로 사용하는 수치들 (Optional)
   level?: number;      // 레벨 (강화, 아크패시브 등)
   rank?: number;       // 랭크 (카르마, 장비랭크 등)
   grade?: string;      // 등급 (고대, 유물 등)
-  
+
   // 사용자 직접 입력 수치 (악세 주스탯, 상재 등)
-  customValue?: number; 
-  
+  customValue?: number;
+
 }
 
 interface CalculatedDamage {
-  totalCycleDamage : number; // 한 사이클 총 피해량
+  totalCycleDamage: number; // 한 사이클 총 피해량
   totalWeightDamage: number; // 비중 기반 총 피해량
-  skillDamageList  : {       // 스킬별 상세 (그래프용)
-    skillName    : string;
-    damage       : number;  // 1회 사용 시 데미지
+  skillDamageList: {       // 스킬별 상세 (그래프용)
+    skillName: string;
+    damage: number;  // 1회 사용 시 데미지
     countPerCycle: number;  // 1사이클 당 사용 횟수 (커스텀)
-    weight       : number;  // 전체 딜 비중 (%) (커스텀)
-    dps          : number;  // 스킬 단일 DPS
+    weight: number;  // 전체 딜 비중 (%) (커스텀)
+    dps: number;  // 스킬 단일 DPS
   }[];
 }
 
 // 하나의 완성된 시나리오 세트
 interface SimScenario {
-  id           : string;            // "base", "compare-1" 등
-  title        : string;            // "현재 세팅", "진화2단계 테스트" 등
-  nodes        : SimNode[];         // 아크패시브/각인/보석 등의 상태 리스트
+  id: string;            // "base", "compare-1" 등
+  title: string;            // "현재 세팅", "진화2단계 테스트" 등
+  nodes: SimNode[];         // 아크패시브/각인/보석 등의 상태 리스트
   calcDmgResult: CalculatedDamage;  // 계산 엔진에 의해 산출된 최종 딜량
 }
 
@@ -273,21 +295,12 @@ export type SystemSourceId =
   | 'ARK_GRID';
 
 /**
- * 레벨 기반 효과
- * 각인, 아크패시브 등에서 사용
- */
-export interface LeveledEffect {
-  type  : EffectTypeId;
-  values: number[];  // 인덱스 = 레벨-1
-}
-
-/**
  * 계산 무관 메모용 파라미터
  * ⚠️ 계산에 반영되어야 하는 수치는 반드시 EffectEntry 사용
  */
 export interface MemoParam {
-  type   : string;
-  value  : number;
+  type: string;
+  value: number;
   target?: string;
 }
 
@@ -296,13 +309,13 @@ export interface MemoParam {
  * API 데이터 + DB 데이터 모두 이 규격으로 통일
  */
 export interface BaseSimData {
-  id      : number;
-  name    : ColoredText;
+  id: number;
+  name: string;
+  nameColor?: string;
   iconPath: string;
   effects?: EffectEntry[];
-  memo?   : MemoParam[];
+  memo?: MemoParam[];
 }
-
 
 // ============================================================
 // 5. 스킬 관련 타입 ID

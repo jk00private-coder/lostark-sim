@@ -1,11 +1,11 @@
 // @/types/engraving.ts
 
-import { BaseSimData, LeveledEffect } from './sim-types';
+import { BaseSimData, EffectEntry } from './sim-types';
 
 export interface EngravingData extends BaseSimData {
   bonus?: {
-    relic?  : LeveledEffect;
-    ability?: LeveledEffect;
+    relic?  : EffectEntry;
+    ability?: EffectEntry;
   };
   
 }
