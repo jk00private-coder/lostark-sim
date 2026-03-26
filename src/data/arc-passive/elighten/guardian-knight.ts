@@ -13,7 +13,7 @@ import { ArkPassiveSectionData } from '@/types/ark-passive';
 import { ID_AA, ID_BB, ID_CC } from '@/constants/id-config';
 
 // ============================================================
-// 아크패시브-진화 ID 상수
+// 아크패시브 깨달음(가디언나이트) ID 상수
 // ============================================================
 
 // 공통 Base ID (7081 2000)
@@ -36,7 +36,7 @@ export const NAMES = {
     [ID.T4_1]: '잔불', [ID.T4_2]: '완전 융화', [ID.T4_3]: '한계 초월', [ID.T4_4]: '할버드의 대가',
 } as const;
 
-export const EVOLUTION_DATA: ArkPassiveSectionData = {
+export const ELIGHTEN_GUARDIAN_KNIGHT_DATA: ArkPassiveSectionData = {
     tierMeta: { 1: 24, 2: 24, 3: 34, 4: 34 },
     karma: {
         levelBonus: { type: 'WEAPON_ATK_P', value: Array.from({ length: 30 }, (_, i) => (i + 1) * 0.001) }

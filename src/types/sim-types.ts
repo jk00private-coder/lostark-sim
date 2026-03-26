@@ -179,9 +179,7 @@ export interface EffectTarget {
  *   다른 type 끼리            → 곱연산 (디폴트)
  *
  * [value]
- *   계산 엔진: value.value 사용
- *   UI 표시: value.color 활용
- *   DB 작성 시 color 없으면 생략 가능: { value: 0.18 }
+ *   DB 작성 시 color 없으면 생략 가능
  */
 export interface EffectEntry {
   type: EffectTypeId;

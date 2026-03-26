@@ -262,7 +262,7 @@ export const NAMES = {
  * 
  * 마법/물리 데미지 적용 여부 검토
  */
-export const GUARDIAN_KNIGHT_SKILLS_DB: SkillData[] = [
+export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
   // ────── 클리브 ────────────────────────────────────
   {
     id: ID.CLEAVE.BODY,
