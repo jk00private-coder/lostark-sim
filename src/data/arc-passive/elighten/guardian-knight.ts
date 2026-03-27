@@ -10,18 +10,18 @@
  */
 
 import { ArkPassiveSectionData } from '@/types/ark-passive';
-import { ID_AA, ID_BB, ID_CC } from '@/constants/id-config';
+import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
 
 // ============================================================
 // 아크패시브 깨달음(가디언나이트) ID 상수
 // ============================================================
 
-// 공통 Base ID (7081 2000)
-const BASE = (ID_AA.ARK_PASSIVE * 1000000) + (ID_BB.GUARDIANKNIGHT * 10000) + (ID_CC.ARK_ENLIGHTEN * 100);
+// 공통 Base ID (7081 2 0 00)
+const BASE = (ID_AA.ARK_PASSIVE * 1000000) + (ID_BB.GUARDIANKNIGHT * 10000) + (ID_C.ARK_ENLIGHTEN * 1000);
 
 // 스킬별 ID
-// CC : 첫번째 C: 2(꺠달음), 두번째 C: 티어(1,2,3,4,5)
-// DD : 해당 티어의 노드
+// D: 티어(1,2,3,4)
+// EE: 해당 티어의 노드
 export const ID = {
     T1_1: BASE + 101, T1_2: BASE + 102,
     T2_1: BASE + 201, T2_2: BASE + 202,

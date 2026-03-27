@@ -4,12 +4,13 @@
  * ID 규격 정의
  *
  * [설계 원칙]
- *   - 규격: 8자리 숫자 (AA BB CC DD)
+ *   - 규격: 8자리 숫자 (AA BB C D EE)
  *   - 왼쪽부터 채우기(0은 무시 가능성 있음)
  *   - AA (2자리): 대분류 (Source / Category)
  *   - BB (2자리): 중분류 (Root Class)
- *   - CC (2자리): 소분류 (...)
- *   - DD (2자리): 고유 인덱스 (Index)가 직접 소비하는 타입
+ *   - C  (1자리) : 소분류1 (...)
+ *   - D  (1자리) : 소분류2 (...)
+ *   - EE (2자리): 고유 인덱스 (Index)가 직접 소비하는 타입
  */
 
 export const ID_AA = {
@@ -78,21 +79,16 @@ export const ID_BB = {
   GUARDIANKNIGHT: 81, // 가디언나이트
 } as const;
 
-//
-export const ID_CC = {
-  // 기본값
-  NONE: 10,
+export const ID_C = {
+  // 10. EQUIPMENT 소분류
+  EQ_COMBAT: 1,     // 전투 장비 (머리, 어깨, 상의, 하의, 장갑, 무기)
+  EQ_ACCESSORY: 2,  // 악세서리 (목걸이, 귀걸이, 반지)
+  EQ_STONE: 3,      // 어빌리티 스톤
+  EQ_BRACELET: 4,   // 팔찌
+  EQ_ORB: 5,        // 보주 (엘릭서/초월 등 특수 장비 포함 가능)
 
-  // 10. EQUIPMENT 중분류
-  EQ_ARMOR: 10,      // 방어구 (머리, 어깨, 상의, 하의, 장갑)
-  EQ_WEAPON: 11,     // 무기
-  EQ_ACCESSORY: 20,  // 악세서리 (목걸이, 귀걸이, 반지)
-  EQ_STONE: 30,      // 어빌리티 스톤
-  EQ_BRACELET: 40,   // 팔찌
-  EQ_ORB: 50,        // 보주 (엘릭서/초월 등 특수 장비 포함 가능)
-
-  // 70. ARK_PASSIVE 중분류
-  ARK_EVOLUTION: 10,  // 진화
-  ARK_ENLIGHTEN: 20,  // 깨달음
-  ARK_LEAP: 30,       // 도약
+  // 70. ARK_PASSIVE 소분류
+  ARK_EVOLUTION: 1,  // 진화
+  ARK_ENLIGHTEN: 2,  // 깨달음
+  ARK_LEAP: 3,       // 도약
 } as const;

@@ -181,14 +181,35 @@ export interface EffectTarget {
  * [value]
  *   DB 작성 시 color 없으면 생략 가능
  */
-export interface EffectEntry {
-  type: EffectTypeId;
-  value: number[];
-  valueColor?: string;
-  subGroup?: string;
-  target?: EffectTarget;
-}
 
+// ── OptionGrades (공통) ─────────────────────────────────
+// 상중하 범위가 필요한 효과에 사용 (팔찌, 악세서리 등)
+// grade: 장비 등급에 따른 수치 작성
+// 인덱스 0: 최솟값, 인덱스 1: 최댓값
+// 특수효과형은 min === max 로 작성
+// ex) 추가피해 하: [0.025, 0.025]
+export interface OptionGrades {
+  low : [number, number];
+  mid : [number, number];
+  high: [number, number];
+
+}
+// 상중하 등급 색깔 — 게임 내 고정값
+export const OPTION_GRADE_COLORS = {
+  low : '#00B5FF',  // 파랑
+  mid : '#CE43FC',  // 보라
+  high: '#FE9600',  // 주황
+} as const;
+
+export type EffectEntry = {
+  type       : EffectTypeId;
+  valueColor?: string;
+  subGroup?  : string;
+  target?    : EffectTarget;
+} & (
+  | { value: number[]; grades?: never   }  // 단순 수치 — value만 사용
+  | { grades: OptionGrades; value?: never }  // 범위 수치 — grades만 사용
+);
 
 
 /**
@@ -308,9 +329,9 @@ export interface MemoParam {
  */
 export interface BaseSimData {
   id: number;
-  name: string;
+  name?: string;
   nameColor?: string;
-  iconPath: string;
+  iconPath?: string;
   effects?: EffectEntry[];
   memo?: MemoParam[];
 }

@@ -10,18 +10,18 @@
  */
 
 import { ArkPassiveSectionData } from '@/types/ark-passive';
-import { ID_AA, ID_BB, ID_CC } from '@/constants/id-config';
+import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
 
 // ============================================================
 // 아크패시브-도약 ID 상수
 // ============================================================
 
-// 공통 Base ID (7010 3000)
-const BASE = (ID_AA.ARK_PASSIVE * 1000000) + (ID_BB.COMMON * 10000) + (ID_CC.ARK_LEAP * 100);
+// 공통 Base ID (7010 3 0 00)
+const BASE = (ID_AA.ARK_PASSIVE * 1000000) + (ID_BB.COMMON * 10000) + (ID_C.ARK_LEAP * 1000);
 
 // 스킬별 ID
-// CC : 첫번째 C: 3(도약), 두번째 C: 티어(1,2,3,4,5)
-// DD : 해당 티어의 노드
+// D: 티어(1,2), 2티어는 직업별로 작성
+// EE: 해당 티어의 노드
 export const ID = {
     T1_1: BASE + 101, T1_2: BASE + 102, T1_3: BASE + 103, T1_4: BASE + 104, T1_5: BASE + 105, T1_6: BASE + 106,
 };
