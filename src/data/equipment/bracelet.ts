@@ -1,4 +1,4 @@
-// @/types/bracelet-types.ts
+// @/data/equipment/bracelet.ts
 
 import { BaseSimData } from '@/types/sim-types';
 import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
@@ -6,8 +6,7 @@ import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
 // 공통 Base ID (10 10 4 0 00)
 const BASE = (ID_AA.EQUIPMENT * 1000000) + (ID_BB.COMMON * 10000) + (ID_C.EQ_BRACELET * 1000);
 
-// 스킬별 ID
-// D: 1(4티어 유물), 2(4티어 고대)
+// D: 1(4티어 유물,R), 2(4티어 고대,A)
 // EE: 11~19(기본 효과), 21~29(전투 특성), 31~(특수 효과)
 export const ID = {
   // ── 등급: 유물 ──────────────────────────────────
