@@ -11,6 +11,7 @@
 
 import { ArkPassiveNodeData } from '@/types/ark-passive';
 import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
+import { ID as SK_ID } from '@/data/skills/guardian-knight-skills';
 
 // ============================================================
 // 아크패시브-도약 ID 상수
@@ -39,7 +40,7 @@ export const LEAP_GUARDIAN_KNIGHT_DATA: ArkPassiveNodeData[] = [
         //todo: 4개 노드 상호 배타적 조건, 트포에있는 오버라이드 필요함
         // exclusiveWith: [ID.T2_2, ID.T2_3, ID.T2_4],
         effects: [
-            { type: 'DMG_INC', value: [0.15, 0.34, 0.53], target: {skillIds: ['소울 디바이드']} }
+            { type: 'DMG_INC', value: [0.15, 0.34, 0.53], target: {skillIds: [SK_ID.SOUL_DIVIDE.BODY]} }
         ]
     },
     { // 파멸의 피
@@ -49,7 +50,7 @@ export const LEAP_GUARDIAN_KNIGHT_DATA: ArkPassiveNodeData[] = [
         pointCost: 10,
         // exclusiveWith: [ID.T2_1, ID.T2_3, ID.T2_4],
         effects: [
-            { type: 'DMG_INC', value: [0.2, 0.4, 0.6], target: {skillIds: ['소울 디바이드']} }
+            { type: 'DMG_INC', value: [0.2, 0.4, 0.6], target: {skillIds: [SK_ID.SOUL_DIVIDE.BODY]} }
         ]
     },
     { // 궤도 충돌
@@ -59,7 +60,7 @@ export const LEAP_GUARDIAN_KNIGHT_DATA: ArkPassiveNodeData[] = [
         pointCost: 10,
         // exclusiveWith: [ID.T2_1, ID.T2_2, ID.T2_4],
         effects: [
-            { type: 'DMG_INC', value: [0.32, 0.49, 0.66], target: {skillIds: ['딥 임팩트']} }
+            { type: 'DMG_INC', value: [0.32, 0.49, 0.66], target: {skillIds: [SK_ID.DEEP_IMPACT.BODY]} }
         ]
     },
     { // 대강하
@@ -69,8 +70,8 @@ export const LEAP_GUARDIAN_KNIGHT_DATA: ArkPassiveNodeData[] = [
         pointCost: 10,
         // exclusiveWith: [ID.T2_1, ID.T2_2, ID.T2_3],
         effects: [
-            { type: 'DMG_INC', value: [0.0, 0.16, 0.32], target: {skillIds: ['딥 임팩트']} },
-            { type: 'GK_QI_COST', value: [4], target: {skillIds: ['딥 임팩트']} }
+            { type: 'DMG_INC', value: [0.0, 0.16, 0.32], target: {skillIds: [SK_ID.DEEP_IMPACT.BODY]} },
+            { type: 'GK_QI_COST', value: [4], target: {skillIds: [SK_ID.DEEP_IMPACT.BODY]} }
         ]
     }
 ]

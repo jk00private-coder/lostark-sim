@@ -7,23 +7,23 @@ import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
 const BASE = (ID_AA.EQUIPMENT * 1000000) + (ID_BB.COMMON * 10000) + (ID_C.EQ_ACCESSORY * 1000);
 
 // D: 1(4티어 유물,R), 2(4티어 고대,A)
-// EE: 11~29(목걸이,N), 31~49(귀걸이,E), 51~69(반지,R)
+// EE: 01~19(목걸이,N), 21~39(귀걸이,E), 41~59(반지,R)
 // EE: 각 항에서 1,2번은 기본효과, 나머지는 연마 효과
 export const ID = {
   // ── 등급: 유물 ──────────────────────────────────
 
   // ── 등급: 고대 ──────────────────────────────────
-  AN_1: BASE + 211, AN_2: BASE + 212,
-  AN_3: BASE + 213, AN_4: BASE + 214, AN_8: BASE + 218,
-  AN_9: BASE + 219,
+  AN_1: BASE + 201, AN_2: BASE + 202,
+  AN_3: BASE + 203, AN_4: BASE + 204, AN_8: BASE + 208,
+  AN_9: BASE + 209,
 
-  AE_1: BASE + 231, AE_2: BASE + 232,
-  AE_3: BASE + 233, AE_4: BASE + 234, AE_8: BASE + 238,
-  AE_9: BASE + 239,
+  AE_1: BASE + 221, AE_2: BASE + 222,
+  AE_3: BASE + 223, AE_4: BASE + 224, AE_8: BASE + 228,
+  AE_9: BASE + 229,
 
-  AR_1: BASE + 251, AR_2: BASE + 252,
-  AR_3: BASE + 253, AR_4: BASE + 254, AR_8: BASE + 258,
-  AR_9: BASE + 259,
+  AR_1: BASE + 241, AR_2: BASE + 242,
+  AR_3: BASE + 243, AR_4: BASE + 244, AR_8: BASE + 248,
+  AR_9: BASE + 249,
 };
 
 //todo: 목걸이는 colorValue가 상중하로 안나뉘고 5개의 범위로 나뉜다.

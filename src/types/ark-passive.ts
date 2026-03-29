@@ -18,7 +18,6 @@ export interface KarmaData {
  */
 export interface ArkPassiveNodeData extends BaseSimData {
   pointCost: number;       // 레벨당 포인트 차감량 (노드마다 다름)
-  effects? : EffectEntry[]; // 고정 효과 (활성화 시 항상 적용)
 }
 
 /**

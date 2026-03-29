@@ -90,5 +90,6 @@ export const ID_C = {
   // 70. ARK_PASSIVE 소분류
   ARK_EVOLUTION: 1,  // 진화
   ARK_ENLIGHTEN: 2,  // 깨달음
-  ARK_LEAP: 3,       // 도약
+  ARK_LEAP     : 3,  // 도약
+  
 } as const;

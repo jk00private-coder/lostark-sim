@@ -154,8 +154,11 @@ export type EffectTypeId = CommonEffectTypeId | ClassEffectTypeId;
  *
  * 필요한 경우에만 추가합니다.
  */
+// todo: 섭그룹이 생길때마다 여기에 작성해야 하는지 검토
 export const SUB_GROUPS = {
-  CARD: 'card',  // 카드 피해 — 카드끼리 합산 후 1회 곱연산
+  CARD  : 'card',   // 카드 피해 — 카드끼리 합산 후 1회 곱연산
+  SHN_03: 'snh03',  // 업화 해3 14p, 17p
+  SND_03: 'snd03',  // 드레드 해3 14p, 17p
 } as const;
 
 /**
@@ -163,7 +166,7 @@ export const SUB_GROUPS = {
  * 아무것도 지정하지 않으면 전체 적용
  */
 export interface EffectTarget {
-  skillIds?: string[];
+  skillIds?: number[];
   categories?: SkillCategory[];
   skillTypes?: SkillTypeId[];
   resourceTypes?: ResourceTypeId[];
@@ -201,14 +204,18 @@ export const OPTION_GRADE_COLORS = {
   high: '#FE9600',  // 주황
 } as const;
 
+export type GradeValue = [number, number];
+
 export type EffectEntry = {
   type       : EffectTypeId;
   valueColor?: string;
   subGroup?  : string;
   target?    : EffectTarget;
 } & (
-  | { value: number[]; grades?: never   }  // 단순 수치 — value만 사용
-  | { grades: OptionGrades; value?: never }  // 범위 수치 — grades만 사용
+  | { value: number[]; grades?: never; multiValues?: never }  // 1. 일반 (기존)
+  | { grades: OptionGrades; value?: never; multiValues?: never } // 2. 범위형 단일 등급 (기존)
+  | { multiValues: GradeValue; value?: never; grades?: never } // 3. 등급별 고정치 (아크그리드용)
+  | { multiGrades: { relic: OptionGrades; ancient: OptionGrades }; value?: never; grades?: never } // 4. 등급별 범위치 (팔찌 리팩토링용)
 );
 
 

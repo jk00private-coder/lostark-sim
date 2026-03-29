@@ -247,6 +247,10 @@ export const NAMES = {
   [ID.GUARDIAN_FEAR.BODY]: '가디언 피어'
 } as const;
 
+// todo: 나중에 모든 직업의 ID를 불러올때 이런식으로 작성해서 모아놓는 index파일을 만들자.
+export const GK_ID = ID;
+export const GK_NAMES = NAMES;
+
 // ============================================================
 // 스킬 DB
 // ============================================================
@@ -263,8 +267,8 @@ export const NAMES = {
  * 마법/물리 데미지 적용 여부 검토
  */
 export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
-  // ────── 클리브 ────────────────────────────────────
-  {
+// ── [일반 스킬, category: 'BASIC'] ──────────────────────────────────
+  { // ────── 클리브 ────────────────────────────────────
     id: ID.CLEAVE.BODY,
     name: NAMES[ID.CLEAVE.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.CLEAVE.BODY}.webp`,
@@ -308,7 +312,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         iconPath: `/images/skills/guardian-knight/${ID.CLEAVE.T2_1}.webp`,
         slot: 2, index: 1,
         effects: [{
-          type: 'DMG_INC', value: [0.4], target: { skillIds: [ NAMES[ID.CLEAVE.BODY] ] }
+          type: 'DMG_INC', value: [0.4], target: { skillIds: [ID.CLEAVE.BODY] }
         }],
         memo: [{ type: '기운 추가 회복', value: 1 }]
       },
@@ -323,7 +327,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         iconPath: `/images/skills/guardian-knight/${ID.CLEAVE.T2_3}.webp`,
         slot: 2, index: 3,
         effects: [{
-          type: 'DMG_INC', value: [0.6], target: { skillIds: [ NAMES[ID.CLEAVE.BODY] ] }
+          type: 'DMG_INC', value: [0.6], target: { skillIds: [ID.CLEAVE.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -332,7 +336,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         iconPath: `/images/skills/guardian-knight/${ID.CLEAVE.T3_1}.webp`,
         slot: 3, index: 1,
         effects: [{
-          type: 'DMG_INC', value: [0.6], target: { skillIds: [ NAMES[ID.CLEAVE.BODY] ] }
+          type: 'DMG_INC', value: [0.6], target: { skillIds: [ID.CLEAVE.BODY] }
         }],
         addDamageSources: [{
           name: '화상', isCombined: false, hits: 6,
@@ -345,15 +349,13 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         iconPath: `/images/skills/guardian-knight/${ID.CLEAVE.T3_2}.webp`,
         slot: 3, index: 2,
         effects: [{
-          type: 'DMG_INC', value: [0.7], target: { skillIds: [ NAMES[ID.CLEAVE.BODY] ] }
+          type: 'DMG_INC', value: [0.7], target: { skillIds: [ID.CLEAVE.BODY] }
         }],
         memo: [{ type: '공격 범위 증가', value: 0.3 }]
       }
     ]
   },
-
-  // ────── 와일드 어퍼 ────────────────────────────────────
-  {
+  { // ────── 와일드 어퍼 ────────────────────────────────────
     id: ID.WILD_UPPERCUT.BODY,
     name: NAMES[ID.WILD_UPPERCUT.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.WILD_UPPERCUT.BODY}.webp`,
@@ -404,7 +406,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         iconPath: `/images/skills/guardian-knight/${ID.WILD_UPPERCUT.T2_1}.webp`,
         slot: 2, index: 1,
         effects: [{
-          type: 'DMG_INC', value: [0.4], target: { skillIds: [ NAMES[ID.WILD_UPPERCUT.BODY] ] }
+          type: 'DMG_INC', value: [0.4], target: { skillIds: [ID.WILD_UPPERCUT.BODY] }
         }],
         memo: [{ type: '돌진 거리', value: 4 }]
       },
@@ -413,7 +415,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         iconPath: `/images/skills/guardian-knight/${ID.WILD_UPPERCUT.T2_2}.webp`,
         slot: 2, index: 2,
         effects: [{
-          type: 'DMG_INC', value: [0.33], target: { skillIds: [ NAMES[ID.WILD_UPPERCUT.BODY] ] }
+          type: 'DMG_INC', value: [0.33], target: { skillIds: [ID.WILD_UPPERCUT.BODY] }
         }],
         overrides: { typeId: 'NORMAL' }
       },
@@ -422,7 +424,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         iconPath: `/images/skills/guardian-knight/${ID.WILD_UPPERCUT.T2_3}.webp`,
         slot: 2, index: 3,
         effects: [{
-          type: 'DMG_INC', value: [0.9], target: { skillIds: [ NAMES[ID.WILD_UPPERCUT.BODY] ] }
+          type: 'DMG_INC', value: [0.9], target: { skillIds: [ID.WILD_UPPERCUT.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -431,7 +433,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         iconPath: `/images/skills/guardian-knight/${ID.WILD_UPPERCUT.T3_1}.webp`,
         slot: 3, index: 1,
         effects: [{
-          type: 'DMG_INC', value: [0.8], target: { skillIds: [ NAMES[ID.WILD_UPPERCUT.BODY] ] }
+          type: 'DMG_INC', value: [0.8], target: { skillIds: [ID.WILD_UPPERCUT.BODY] }
         }],
       },
       {
@@ -442,9 +444,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
       }
     ]
   },
-
-  // ────── 쓰러스트 ────────────────────────────────────
-  {
+  { // ────── 쓰러스트 ────────────────────────────────────
     id: ID.THRUST.BODY,
     name: NAMES[ID.THRUST.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.THRUST.BODY}.webp`,
@@ -498,7 +498,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.4],
-          target: { skillIds: [ NAMES[ID.THRUST.BODY] ] }
+          target: { skillIds: [ID.THRUST.BODY] }
         }]
       },
       {
@@ -507,7 +507,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 3,
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.THRUST.BODY] ] }
+          target: { skillIds: [ID.THRUST.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -517,7 +517,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 1,
         effects: [{
           type: 'DMG_INC', value: [1.1],
-          target: { skillIds: [ NAMES[ID.THRUST.BODY] ] }
+          target: { skillIds: [ID.THRUST.BODY] }
         }]
       },
       {
@@ -526,14 +526,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.9],
-          target: { skillIds: [ NAMES[ID.THRUST.BODY] ] }
+          target: { skillIds: [ID.THRUST.BODY] }
         }]
       }
     ]
   },
-  
-  // ────── 길로틴 스핀 ────────────────────────────────────
-  {
+  { // ────── 길로틴 스핀 ────────────────────────────────────
     id: ID.GUILLOTINE_SPIN.BODY,
     name: NAMES[ID.GUILLOTINE_SPIN.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.GUILLOTINE_SPIN.BODY}.webp`,
@@ -572,7 +570,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.35],
-          target: { skillIds: [ NAMES[ID.GUILLOTINE_SPIN.BODY] ] }
+          target: { skillIds: [ID.GUILLOTINE_SPIN.BODY] }
         }]
       },
       {
@@ -588,7 +586,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.8],
-          target: { skillIds: [ NAMES[ID.GUILLOTINE_SPIN.BODY] ] }
+          target: { skillIds: [ID.GUILLOTINE_SPIN.BODY] }
         }]
       },
       {
@@ -597,7 +595,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.65],
-          target: { skillIds: [ NAMES[ID.GUILLOTINE_SPIN.BODY] ] }
+          target: { skillIds: [ID.GUILLOTINE_SPIN.BODY] }
         }],
         overrides: { superArmorId: 'PUSH_IMMUNE' }
       },
@@ -607,7 +605,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 3,
         effects: [{
           type: 'DMG_INC', value: [0.55],
-          target: { skillIds: [ NAMES[ID.GUILLOTINE_SPIN.BODY] ] }
+          target: { skillIds: [ID.GUILLOTINE_SPIN.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -623,15 +621,13 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 2,
         effects: [{
           type: 'DMG_INC', value: [1.2],
-          target: { skillIds: [ NAMES[ID.GUILLOTINE_SPIN.BODY] ] }
+          target: { skillIds: [ID.GUILLOTINE_SPIN.BODY] }
         }],
         memo: [{ type: '기운 추가 회복', value: -1 }]
       }
     ]
   },
-  
-  // ────── 임페일 쇼크 ────────────────────────────────────
-  {
+  { // ────── 임페일 쇼크 ────────────────────────────────────
     id: ID.PIERCING_SHOCK.BODY,
     name: NAMES[ID.PIERCING_SHOCK.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.PIERCING_SHOCK.BODY}.webp`,
@@ -684,7 +680,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { typeId: 'CHARGE' },
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.PIERCING_SHOCK.BODY] ] }
+          target: { skillIds: [ID.PIERCING_SHOCK.BODY] }
         }]
       },
       {
@@ -694,11 +690,11 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         effects: [
           {
             type: 'DMG_INC', value: [1.4],
-            target: { skillIds: [ NAMES[ID.PIERCING_SHOCK.BODY] ] }
+            target: { skillIds: [ID.PIERCING_SHOCK.BODY] }
           },
           {
             type: 'CDR_C', value: [6],
-            target: { skillIds: [ NAMES[ID.PIERCING_SHOCK.BODY] ] }
+            target: { skillIds: [ID.PIERCING_SHOCK.BODY] }
           }
         ]
       },
@@ -708,7 +704,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 3,
         effects: [{
           type: 'DMG_INC', value: [0.9],
-          target: { skillIds: [ NAMES[ID.PIERCING_SHOCK.BODY] ] }
+          target: { skillIds: [ID.PIERCING_SHOCK.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -718,7 +714,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 1,
         effects: [{
           type: 'DMG_INC', value: [1.2],
-          target: { skillIds: [ NAMES[ID.PIERCING_SHOCK.BODY] ] }
+          target: { skillIds: [ID.PIERCING_SHOCK.BODY] }
         }],
         memo: [{ type: '게이지 회복량 감소', value: 0.5 }]
       },
@@ -728,14 +724,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.9],
-          target: { skillIds: [ NAMES[ID.PIERCING_SHOCK.BODY] ] }
+          target: { skillIds: [ID.PIERCING_SHOCK.BODY] }
         }]
       }
     ]
   },
-  
-  // ────── 미티어 크래시 ────────────────────────────────────
-  {
+  { // ────── 미티어 크래시 ────────────────────────────────────
     id: ID.METEOR_CRASH.BODY,
     name: NAMES[ID.METEOR_CRASH.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.METEOR_CRASH.BODY}.webp`,
@@ -782,7 +776,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.3],
-          target: { skillIds: [ NAMES[ID.METEOR_CRASH.BODY] ] }
+          target: { skillIds: [ID.METEOR_CRASH.BODY] }
         }]
       },
       {
@@ -791,7 +785,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.4],
-          target: { skillIds: [ NAMES[ID.METEOR_CRASH.BODY] ] }
+          target: { skillIds: [ID.METEOR_CRASH.BODY] }
         }],
         addDamageSources: [{
           name: '화상', isCombined: false, hits: 6,
@@ -805,7 +799,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 3,
         effects: [{
           type: 'DMG_INC', value: [0.45],
-          target: { skillIds: [ NAMES[ID.METEOR_CRASH.BODY] ] }
+          target: { skillIds: [ID.METEOR_CRASH.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -815,7 +809,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.65],
-          target: { skillIds: [ NAMES[ID.METEOR_CRASH.BODY] ] }
+          target: { skillIds: [ID.METEOR_CRASH.BODY] }
         }],
         memo: [{ type: '공격 범위 증가', value: 0.5 }]
       },
@@ -825,15 +819,13 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.55],
-          target: { skillIds: [ NAMES[ID.METEOR_CRASH.BODY] ] }
+          target: { skillIds: [ID.METEOR_CRASH.BODY] }
         }],
         memo: [{ type: '사용 거리 증가', value: 5 }]
       }
     ]
   },
-  
-  // ────── 퀘이크 스매시 ────────────────────────────────────
-  {
+  { // ────── 퀘이크 스매시 ────────────────────────────────────
     id: ID.QUAKE_SMASH.BODY,
     name: NAMES[ID.QUAKE_SMASH.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.QUAKE_SMASH.BODY}.webp`,
@@ -881,7 +873,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { typeId: 'NORMAL' },
         effects: [{
           type: 'DMG_INC', value: [0.8],
-          target: { skillIds: [ NAMES[ID.QUAKE_SMASH.BODY] ] }
+          target: { skillIds: [ID.QUAKE_SMASH.BODY] }
         }],
         memo: [{ type: '기운 추가 회복', value: 2 }]
       },
@@ -892,7 +884,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { typeId: 'CHARGE' },
         effects: [{
           type: 'DMG_INC', value: [1.85],
-          target: { skillIds: [ NAMES[ID.QUAKE_SMASH.BODY] ] }
+          target: { skillIds: [ID.QUAKE_SMASH.BODY] }
         }]
       },
       {
@@ -901,7 +893,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 3,
         effects: [{
           type: 'DMG_INC', value: [0.9],
-          target: { skillIds: [ NAMES[ID.QUAKE_SMASH.BODY] ] }
+          target: { skillIds: [ID.QUAKE_SMASH.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -911,7 +903,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 1,
         effects: [{
           type: 'DMG_INC', value: [1.2],
-          target: { skillIds: [ NAMES[ID.QUAKE_SMASH.BODY] ] }
+          target: { skillIds: [ID.QUAKE_SMASH.BODY] }
         }],
         memo: [{ type: '게이지 회복량 감소', value: 0.5 }]
       },
@@ -922,14 +914,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { superArmorId: 'PUSH_IMMUNE' },
         effects: [{
           type: 'DMG_INC', value: [0.95],
-          target: { skillIds: [ NAMES[ID.QUAKE_SMASH.BODY] ] }
+          target: { skillIds: [ID.QUAKE_SMASH.BODY] }
         }]
       }
     ]
   },
-  
-  // ────── 프렌지 스윕 ────────────────────────────────────
-  {
+  { // ────── 프렌지 스윕 ────────────────────────────────────
     id: ID.FRENZY_SWEEP.BODY,
     name: NAMES[ID.FRENZY_SWEEP.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.FRENZY_SWEEP.BODY}.webp`,
@@ -981,7 +971,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [1.755],
-          target: { skillIds: [ NAMES[ID.FRENZY_SWEEP.BODY] ] }
+          target: { skillIds: [ID.FRENZY_SWEEP.BODY] }
         }]
       },
       {
@@ -990,7 +980,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [1.44],
-          target: { skillIds: [ NAMES[ID.FRENZY_SWEEP.BODY] ] }
+          target: { skillIds: [ID.FRENZY_SWEEP.BODY] }
         }]
       },
       {
@@ -999,7 +989,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 3,
         effects: [{
           type: 'DMG_INC', value: [0.8],
-          target: { skillIds: [ NAMES[ID.FRENZY_SWEEP.BODY] ] }
+          target: { skillIds: [ID.FRENZY_SWEEP.BODY] }
         }],
         memo: [{ type: '게이지 회복량 감소', value: 0.5 }]
       },
@@ -1010,7 +1000,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.84],
-          target: { skillIds: [ NAMES[ID.FRENZY_SWEEP.BODY] ] }
+          target: { skillIds: [ID.FRENZY_SWEEP.BODY] }
         }]
       },
       {
@@ -1019,7 +1009,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 3, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.8],
-          target: { skillIds: [ NAMES[ID.FRENZY_SWEEP.BODY] ] }
+          target: { skillIds: [ID.FRENZY_SWEEP.BODY] }
         }],
         addDamageSources: [{
           name: '화상', isCombined: false, hits: 6,
@@ -1029,9 +1019,9 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
       }
     ]
   },
-  
-  // ────── 리벤지 블로우 ────────────────────────────────────
-  {
+
+  // ── [발현/화신 스킬, category: 'ENLIGHTEN'/'GOD_FORM'] ──────────────────────────────────  
+  { // ────── 리벤지 블로우 ────────────────────────────────────
     id: ID.VENGEFUL_BLOW.BODY,
     name: NAMES[ID.VENGEFUL_BLOW.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.VENGEFUL_BLOW.BODY}.webp`,
@@ -1060,7 +1050,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 1,
         effects: [{
           type: 'GK_QI_DMG', value: [0.05],
-          target: { skillIds: [ NAMES[ID.VENGEFUL_BLOW.BODY] ] }
+          target: { skillIds: [ID.VENGEFUL_BLOW.BODY] }
         }]
       },
       {
@@ -1070,7 +1060,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { attackId: 'NON_DIRECTIONAL' },
         effects: [{
           type: 'DMG_INC', value: [0.15],
-          target: { skillIds: [ NAMES[ID.VENGEFUL_BLOW.BODY] ] }
+          target: { skillIds: [ID.VENGEFUL_BLOW.BODY] }
         }]
       },
       {
@@ -1086,7 +1076,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.45],
-          target: { skillIds: [ NAMES[ID.VENGEFUL_BLOW.BODY] ] }
+          target: { skillIds: [ID.VENGEFUL_BLOW.BODY] }
         }],
         memo: [{ type: '보호막 수치 증가', value: 0.2 }]
       },
@@ -1096,7 +1086,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'CDR_C', value: [6],
-          target: { skillIds: [ NAMES[ID.VENGEFUL_BLOW.BODY] ] }
+          target: { skillIds: [ID.VENGEFUL_BLOW.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -1114,14 +1104,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 2 },
         effects: [{
           type: 'DMG_INC', value: [0.8],
-          target: { skillIds: [ NAMES[ID.VENGEFUL_BLOW.BODY] ] }
+          target: { skillIds: [ID.VENGEFUL_BLOW.BODY] }
         }]
       }
     ]
   },
-  
-  // ────── 리벤지 스피어 ────────────────────────────────────
-  {
+  { // ────── 리벤지 스피어 ────────────────────────────────────
     id: ID.AVENGING_SPEAR.BODY,
     name: NAMES[ID.AVENGING_SPEAR.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.AVENGING_SPEAR.BODY}.webp`,
@@ -1161,7 +1149,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 2,
         effects: [{
           type: 'GK_QI_DMG', value: [0.1],
-          target: { skillIds: [ NAMES[ID.AVENGING_SPEAR.BODY] ] }
+          target: { skillIds: [ID.AVENGING_SPEAR.BODY] }
         }]
       },
       {
@@ -1176,7 +1164,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.55],
-          target: { skillIds: [ NAMES[ID.AVENGING_SPEAR.BODY] ] }
+          target: { skillIds: [ID.AVENGING_SPEAR.BODY] }
         }]
       },
       {
@@ -1185,7 +1173,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.45],
-          target: { skillIds: [ NAMES[ID.AVENGING_SPEAR.BODY] ] }
+          target: { skillIds: [ID.AVENGING_SPEAR.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -1196,7 +1184,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 1 },
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.AVENGING_SPEAR.BODY] ] }
+          target: { skillIds: [ID.AVENGING_SPEAR.BODY] }
         }],
         memo: [{ type: '공격 중 이동 속도 증가', value: 0.4 }]
       },
@@ -1207,14 +1195,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 2 },
         effects: [{
           type: 'DMG_INC', value: [2.8],
-          target: { skillIds: [ NAMES[ID.AVENGING_SPEAR.BODY] ] }
+          target: { skillIds: [ID.AVENGING_SPEAR.BODY] }
         }],
       }
     ]
   },
-
-  // ────── 스피닝 플레임 ────────────────────────────────────
-  {
+  { // ────── 스피닝 플레임 ────────────────────────────────────
     id: ID.SPINNING_FLAME.BODY,
     name: NAMES[ID.SPINNING_FLAME.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.SPINNING_FLAME.BODY}.webp`,
@@ -1260,7 +1246,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 3,
         effects: [{
           type: 'GK_QI_DMG', value: [0.05],
-          target: { skillIds: [ NAMES[ID.SPINNING_FLAME.BODY] ] }
+          target: { skillIds: [ID.SPINNING_FLAME.BODY] }
         }]
       },
       // ── 2티어 ─────────────────────────────────────────────
@@ -1270,7 +1256,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.35],
-          target: { skillIds: [ NAMES[ID.SPINNING_FLAME.BODY] ] }
+          target: { skillIds: [ID.SPINNING_FLAME.BODY] }
         }]
       },
       {
@@ -1279,7 +1265,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.5],
-          target: { skillIds: [ NAMES[ID.SPINNING_FLAME.BODY] ] }
+          target: { skillIds: [ID.SPINNING_FLAME.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -1290,7 +1276,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 1 },
         effects: [{
           type: 'DMG_INC', value: [0.8],
-          target: { skillIds: [ NAMES[ID.SPINNING_FLAME.BODY] ] }
+          target: { skillIds: [ID.SPINNING_FLAME.BODY] }
         }]
       },
       {
@@ -1300,14 +1286,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 2 },
         effects: [{
           type: 'DMG_INC', value: [0.9],
-          target: { skillIds: [ NAMES[ID.SPINNING_FLAME.BODY] ] }
+          target: { skillIds: [ID.SPINNING_FLAME.BODY] }
         }]
       }
     ]
   },
-
-  // ────── 아바돈 플레임 ────────────────────────────────────
-  {
+  { // ────── 아바돈 플레임 ────────────────────────────────────
     id: ID.ABADDON_FLAME.BODY,
     name: NAMES[ID.ABADDON_FLAME.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.ABADDON_FLAME.BODY}.webp`,
@@ -1342,7 +1326,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 2,
         effects: [{
           type: 'GK_QI_COST', value: [2],
-          target: { skillIds: [ NAMES[ID.ABADDON_FLAME.BODY] ] }
+          target: { skillIds: [ID.ABADDON_FLAME.BODY] }
         }]
       },
       {
@@ -1351,7 +1335,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 3,
         effects: [{
           type: 'GK_QI_DMG', value: [0.1],
-          target: { skillIds: [ NAMES[ID.ABADDON_FLAME.BODY] ] }
+          target: { skillIds: [ID.ABADDON_FLAME.BODY] }
         }]
       },
       // ── 2티어 ─────────────────────────────────────────────
@@ -1361,7 +1345,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.4],
-          target: { skillIds: [ NAMES[ID.ABADDON_FLAME.BODY] ] }
+          target: { skillIds: [ID.ABADDON_FLAME.BODY] }
         }]
       },
       {
@@ -1370,7 +1354,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.6],
-          target: { skillIds: [ NAMES[ID.ABADDON_FLAME.BODY] ] }
+          target: { skillIds: [ID.ABADDON_FLAME.BODY] }
         }],
         memo: [{ type: '시전 거리 증가', value: 4 }]
       },
@@ -1382,7 +1366,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 1 },
         effects: [{
           type: 'DMG_INC', value: [0.92],
-          target: { skillIds: [ NAMES[ID.ABADDON_FLAME.BODY] ] }
+          target: { skillIds: [ID.ABADDON_FLAME.BODY] }
         }]
       },
       {
@@ -1392,14 +1376,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 2 },
         effects: [{
           type: 'DMG_INC', value: [1.8],
-          target: { skillIds: [ NAMES[ID.ABADDON_FLAME.BODY] ] }
+          target: { skillIds: [ID.ABADDON_FLAME.BODY] }
         }]
       }
     ]
   },
-
-  // ────── 윙 스팅어 ────────────────────────────────────
-  {
+  { // ────── 윙 스팅어 ────────────────────────────────────
     id: ID.SOARING_STRIKE.BODY,
     name: NAMES[ID.SOARING_STRIKE.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.SOARING_STRIKE.BODY}.webp`,
@@ -1440,7 +1422,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 3,
         effects: [{
           type: 'GK_QI_DMG', value: [0.05],
-          target: { skillIds: [ NAMES[ID.SOARING_STRIKE.BODY] ] }
+          target: { skillIds: [ID.SOARING_STRIKE.BODY] }
         }]
       },
       // ── 2티어 ─────────────────────────────────────────────
@@ -1450,7 +1432,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.65],
-          target: { skillIds: [ NAMES[ID.SOARING_STRIKE.BODY] ] }
+          target: { skillIds: [ID.SOARING_STRIKE.BODY] }
         }]
       },
       {
@@ -1460,7 +1442,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { typeId: 'CHARGE' },
         effects: [{
           type: 'DMG_INC', value: [0.8],
-          target: { skillIds: [ NAMES[ID.SOARING_STRIKE.BODY] ] }
+          target: { skillIds: [ID.SOARING_STRIKE.BODY] }
         }],
         memo: [{ type: '미차지 시 피해 감소', value: 0.5 }]
       },
@@ -1472,7 +1454,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 1 },
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.SOARING_STRIKE.BODY] ] }
+          target: { skillIds: [ID.SOARING_STRIKE.BODY] }
         }],
         memo: [{ type: '공격 거리 증가', value: 0.4 }]
       },
@@ -1484,14 +1466,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { superArmorId: 'PUSH_IMMUNE' },
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.SOARING_STRIKE.BODY] ] }
+          target: { skillIds: [ID.SOARING_STRIKE.BODY] }
         }]
       }
     ]
   },
-
-  // ────── 윙 래시 ────────────────────────────────────
-  {
+  { // ────── 윙 래시 ────────────────────────────────────
     id: ID.WING_LASH.BODY,
     name: NAMES[ID.WING_LASH.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.WING_LASH.BODY}.webp`,
@@ -1526,7 +1506,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 2,
         effects: [{
           type: 'GK_QI_COST', value: [2],
-          target: { skillIds: [ NAMES[ID.WING_LASH.BODY] ] }
+          target: { skillIds: [ID.WING_LASH.BODY] }
         }]
       },
       {
@@ -1535,7 +1515,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 1, index: 3,
         effects: [{
           type: 'GK_QI_DMG', value: [0.1],
-          target: { skillIds: [ NAMES[ID.WING_LASH.BODY] ] }
+          target: { skillIds: [ID.WING_LASH.BODY] }
         }]
       },
       // ── 2티어 ─────────────────────────────────────────────
@@ -1545,7 +1525,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.6],
-          target: { skillIds: [ NAMES[ID.WING_LASH.BODY] ] }
+          target: { skillIds: [ID.WING_LASH.BODY] }
         }]
       },
       {
@@ -1554,7 +1534,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.4],
-          target: { skillIds: [ NAMES[ID.WING_LASH.BODY] ] }
+          target: { skillIds: [ID.WING_LASH.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -1565,7 +1545,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 1 },
         effects: [{
           type: 'DMG_INC', value: [0.9],
-          target: { skillIds: [ NAMES[ID.WING_LASH.BODY] ] }
+          target: { skillIds: [ID.WING_LASH.BODY] }
         }]
       },
       {
@@ -1576,14 +1556,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { typeId: 'COMBO' },
         effects: [{
           type: 'DMG_INC', value: [1.0],
-          target: { skillIds: [ NAMES[ID.WING_LASH.BODY] ] }
+          target: { skillIds: [ID.WING_LASH.BODY] }
         }]
       }
     ]
   },
-
-  // ────── 블레이즈 스윕 ────────────────────────────────────
-  {
+  { // ────── 블레이즈 스윕 ────────────────────────────────────
     id: ID.BLAZE_SWEEP.BODY,
     name: NAMES[ID.BLAZE_SWEEP.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.BLAZE_SWEEP.BODY}.webp`,
@@ -1630,7 +1608,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { attackId: 'NON_DIRECTIONAL' },
         effects: [{
           type: 'DMG_INC', value: [0.15],
-          target: { skillIds: [ NAMES[ID.BLAZE_SWEEP.BODY] ] }
+          target: { skillIds: [ID.BLAZE_SWEEP.BODY] }
         }]
       },
       // ── 2티어 ─────────────────────────────────────────────
@@ -1640,7 +1618,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.96],
-          target: { skillIds: [ NAMES[ID.BLAZE_SWEEP.BODY] ] }
+          target: { skillIds: [ID.BLAZE_SWEEP.BODY] }
         }]
       },
       {
@@ -1649,7 +1627,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.BLAZE_SWEEP.BODY] ] }
+          target: { skillIds: [ID.BLAZE_SWEEP.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -1660,7 +1638,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 1 },
         effects: [{
           type: 'DMG_INC', value: [1.8],
-          target: { skillIds: [ NAMES[ID.BLAZE_SWEEP.BODY] ] }
+          target: { skillIds: [ID.BLAZE_SWEEP.BODY] }
         }]
       },
       {
@@ -1671,19 +1649,17 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         effects: [
           {
             type: 'DMG_INC', value: [0.6],
-            target: { skillIds: [ NAMES[ID.BLAZE_SWEEP.BODY] ] }
+            target: { skillIds: [ID.BLAZE_SWEEP.BODY] }
           },
           {
             type: 'CDR_C', value: [6],
-            target: { skillIds: [ NAMES[ID.BLAZE_SWEEP.BODY] ] }
+            target: { skillIds: [ID.BLAZE_SWEEP.BODY] }
           }
         ]
       }
     ]
   },
-
-  // ────── 블레이즈 플래시 ──────────────────────────────────
-  {
+  { // ────── 블레이즈 플래시 ──────────────────────────────────
     id: ID.BLAZE_FLASH.BODY,
     name: NAMES[ID.BLAZE_FLASH.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.BLAZE_FLASH.BODY}.webp`,
@@ -1736,7 +1712,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 1,
         effects: [{
           type: 'DMG_INC', value: [0.6],
-          target: { skillIds: [ NAMES[ID.BLAZE_FLASH.BODY] ] }
+          target: { skillIds: [ID.BLAZE_FLASH.BODY] }
         }]
       },
       {
@@ -1746,11 +1722,11 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         effects: [
           {
             type: 'DMG_INC', value: [0.4],
-            target: { skillIds: [ NAMES[ID.BLAZE_FLASH.BODY] ] }
+            target: { skillIds: [ID.BLAZE_FLASH.BODY] }
           },
           {
             type: 'GK_QI_DMG', value: [0.1],
-            target: { skillIds: [ NAMES[ID.BLAZE_FLASH.BODY] ] }
+            target: { skillIds: [ID.BLAZE_FLASH.BODY] }
           }
         ],
       },
@@ -1762,7 +1738,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 1 },
         effects: [{
           type: 'DMG_INC', value: [1.5],
-          target: { skillIds: [ NAMES[ID.BLAZE_FLASH.BODY] ] }
+          target: { skillIds: [ID.BLAZE_FLASH.BODY] }
         }]
       },
       {
@@ -1772,14 +1748,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 2 },
         effects: [{
           type: 'DMG_INC', value: [0.8],
-          target: { skillIds: [ NAMES[ID.BLAZE_FLASH.BODY] ] }
+          target: { skillIds: [ID.BLAZE_FLASH.BODY] }
         }]
       }
     ]
   },
-
-  // ────── 렌딩 피니셔 ──────────────────────────────────
-  {
+  { // ────── 렌딩 피니셔 ──────────────────────────────────
     id: ID.RENDING_FINISHER.BODY,
     name: NAMES[ID.RENDING_FINISHER.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.RENDING_FINISHER.BODY}.webp`,
@@ -1828,7 +1802,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { typeId: 'CHARGE', superArmorId: 'PUSH_IMMUNE' },
         effects: [{
           type: 'DMG_INC', value: [0.5],
-          target: { skillIds: [ NAMES[ID.RENDING_FINISHER.BODY] ] }
+          target: { skillIds: [ID.RENDING_FINISHER.BODY] }
         }]
       },
       {
@@ -1837,7 +1811,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.RENDING_FINISHER.BODY] ] }
+          target: { skillIds: [ID.RENDING_FINISHER.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -1849,11 +1823,11 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         effects: [
           {
             type: 'DMG_INC', value: [0.5],
-            target: { skillIds: [ NAMES[ID.RENDING_FINISHER.BODY] ] }
+            target: { skillIds: [ID.RENDING_FINISHER.BODY] }
           },
           {
             type: 'GK_QI_DMG', value: [0.1],
-            target: { skillIds: [ NAMES[ID.RENDING_FINISHER.BODY] ] }
+            target: { skillIds: [ID.RENDING_FINISHER.BODY] }
           }
         ]
       },
@@ -1864,14 +1838,12 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         link: { slot: 2, index: 1 },
         effects: [{
           type: 'DMG_INC', value: [1.0],
-          target: { skillIds: [ NAMES[ID.RENDING_FINISHER.BODY] ] }
+          target: { skillIds: [ID.RENDING_FINISHER.BODY] }
         }]
       }
     ]
   },
-
-  // ────── 익스플로전 피니셔 ──────────────────────────────────
-  {
+  { // ────── 익스플로전 피니셔 ──────────────────────────────────
     id: ID.EXPLOSION_FINISHER.BODY,
     name: NAMES[ID.EXPLOSION_FINISHER.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.EXPLOSION_FINISHER.BODY}.webp`,
@@ -1920,7 +1892,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         overrides: { typeId: 'CHARGE', superArmorId: 'PUSH_IMMUNE' },
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.EXPLOSION_FINISHER.BODY] ] }
+          target: { skillIds: [ID.EXPLOSION_FINISHER.BODY] }
         }]
       },
       {
@@ -1929,7 +1901,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         slot: 2, index: 2,
         effects: [{
           type: 'DMG_INC', value: [0.7],
-          target: { skillIds: [ NAMES[ID.EXPLOSION_FINISHER.BODY] ] }
+          target: { skillIds: [ID.EXPLOSION_FINISHER.BODY] }
         }]
       },
       // ── 3티어 ─────────────────────────────────────────────
@@ -1941,7 +1913,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         effects: [
           {
             type: 'DMG_INC', value: [0.75],
-            target: { skillIds: [ NAMES[ID.EXPLOSION_FINISHER.BODY] ] }
+            target: { skillIds: [ID.EXPLOSION_FINISHER.BODY] }
           }
         ],
         addDamageSources: [
@@ -1960,19 +1932,19 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         effects: [
           {
             type: 'DMG_INC', value: [0.5],
-            target: { skillIds: [ NAMES[ID.EXPLOSION_FINISHER.BODY] ] }
+            target: { skillIds: [ID.EXPLOSION_FINISHER.BODY] }
           },
           {
             type: 'GK_QI_COST', value: [4],
-            target: { skillIds: [ NAMES[ID.EXPLOSION_FINISHER.BODY] ] }
+            target: { skillIds: [ID.EXPLOSION_FINISHER.BODY] }
           }
         ]
       }
     ]
-  },
+  },  
 
-  // ────── 소울 디바이드 ──────────────────────────────────
-  {
+  // ── [초각성 스킬, category: 'HYPER_SKILL'] ────────────────────────────────── 
+  { // ────── 소울 디바이드 ──────────────────────────────────
     id: ID.SOUL_DIVIDE.BODY,
     name: NAMES[ID.SOUL_DIVIDE.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.SOUL_DIVIDE.BODY}.webp`,
@@ -1997,9 +1969,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
       }
     ]
   },
-
-  // ────── 딥 임팩트 ──────────────────────────────────
-  {
+  { // ────── 딥 임팩트 ──────────────────────────────────
     id: ID.DEEP_IMPACT.BODY,
     name: NAMES[ID.DEEP_IMPACT.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.DEEP_IMPACT.BODY}.webp`,
@@ -2026,8 +1996,8 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
     ]
   },
 
-  // ────── 가디언 백래시 ──────────────────────────────────
-  {
+  // ── [각성기/초각성기, category: 'ULTIMATE'/'HYPER_ULTIMATE'] ────────────────────────────────── 
+  { // ────── 가디언 백래시 ──────────────────────────────────
     id: ID.GUARDIAN_BACKLASH.BODY,
     name: NAMES[ID.GUARDIAN_BACKLASH.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.GUARDIAN_BACKLASH.BODY}.webp`,
@@ -2052,9 +2022,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
       }
     ]
   },
-
-  // ────── 브레스 오브 엠버레스 ──────────────────────────────────
-  {
+  { // ────── 브레스 오브 엠버레스 ────────────────────────────────── 
     id: ID.BREATH_OF_EMBERES.BODY,
     name: NAMES[ID.BREATH_OF_EMBERES.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.BREATH_OF_EMBERES.BODY}.webp`,
@@ -2074,9 +2042,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
       }
     ]
   },
-
-  // ────── 가디언즈 크래시 ──────────────────────────────────
-  {
+  { // ────── 가디언즈 크래시 ──────────────────────────────────
     id: ID.GUARDIANS_CRASH.BODY,
     name: NAMES[ID.GUARDIANS_CRASH.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.GUARDIANS_CRASH.BODY}.webp`,
@@ -2096,9 +2062,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
       }
     ]
   },
-
-  // ────── 어웨이큰 ──────────────────────────────────
-  {
+  { // ────── 어웨이큰 ──────────────────────────────────
     id: ID.AWAKEN.BODY,
     name: NAMES[ID.AWAKEN.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.AWAKEN.BODY}.webp`,
@@ -2119,8 +2083,8 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
     ]
   },
 
-  // ────── 인페르노 버스트 ──────────────────────────────────
-  {
+  // ── [아덴 스킬, category: ''] ────────────────────────────────── 
+  { // ────── 인페르노 버스트 ──────────────────────────────────
     id: ID.INFERNO_BURST.BODY,
     name: NAMES[ID.INFERNO_BURST.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.INFERNO_BURST.BODY}.webp`,
@@ -2140,9 +2104,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
       }
     ]
   },
-
-  // ────── 가디언 피어 ──────────────────────────────────
-  {
+  { // ────── 가디언 피어 ──────────────────────────────────
     id: ID.GUARDIAN_FEAR.BODY,
     name: NAMES[ID.GUARDIAN_FEAR.BODY],
     iconPath: `/images/skills/guardian-knight/${ID.GUARDIAN_FEAR.BODY}.webp`,
