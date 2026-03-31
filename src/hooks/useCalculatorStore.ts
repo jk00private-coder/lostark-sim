@@ -144,8 +144,8 @@ const createEmptyDamageModifiers = (): DamageModifiers => ({
   critDamage       : 2.0,  // 기본 치명타 피해 200%
   defPenetration   : 0,
   enemyDamageTaken : 0,
-  atkSpeed: 0,
-  movSpeed: 0,
+  spdAtk: 0,
+  spdMov: 0,
 });
 
 const createEmptyCalcData = (): CalcData => ({
