@@ -7,5 +7,4 @@ export interface EngravingData extends BaseSimData {
     relic?  : EffectEntry;
     ability?: EffectEntry;
   };
-  
 }

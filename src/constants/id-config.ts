@@ -24,9 +24,16 @@ export const ID_AA = {
   ARK_GRID   : 80,   // 아크그리드
 } as const;
 
+/**
+ * 현재 티어 구분이 되는건 직업 공통밖에 없음
+ * 시즌4가 언제 나올지도 모르기 때문에
+ * 티어 구분을 미리 해놓을 필요는 없지만
+ * 나올 경우 11로 하기.
+*/
 export const ID_BB = {
   // 직업 공통
-  COMMON: 10,
+  COMMON: 10, // DEFAULT: 4티어
+  T5    : 11,
 
   // 전사 (Warrior)
   ROOT_WARRIOR: 20,

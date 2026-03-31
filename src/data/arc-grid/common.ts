@@ -48,8 +48,8 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'CRIT_DMG_INC', value: [0.0055] }] },
       { point: 14, effects: [{ type: 'DMG_INC', value: [0.005] }] },
       { point: 17, effects: [
-          { type: 'DMG_INC', multiValues: [0.01, 0.015] },
-          { type: 'CRIT_DMG_INC', multiValues: [0.0055, 0.011] }
+          { type: 'DMG_INC', multiValues: { relic:[0.01], ancient:[0.015] } },
+          { type: 'CRIT_DMG_INC', multiValues: { relic:[0.0055], ancient:[0.011] } }
       ]},
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
@@ -61,7 +61,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10 }, // 받는 피해가 0.5% 감소한다.
       { point: 14, effects: [{ type: 'ADD_DMG', value: [0.007] }] },
-      { point: 17, effects: [{ type: 'ADD_DMG', multiValues: [0.014, 0.028] }] },
+      { point: 17, effects: [{ type: 'ADD_DMG', multiValues: { relic: [0.014], ancient: [0.028] } }] },
       { point: 18, effects: [{ type: 'ADD_DMG', value: [0.0023] }] },
       { point: 19, effects: [{ type: 'ADD_DMG', value: [0.0023] }] },
       { point: 20, effects: [{ type: 'ADD_DMG', value: [0.0023] }] }
@@ -73,8 +73,8 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'SPEED_ATK', value: [0.01] }] },
       { point: 14, effects: [{ type: 'CRIT_DMG', value: [0.014] }] },
       { point: 17, effects: [
-          { type: 'SPEED_ATK', multiValues: [0.02, 0.03] },
-          { type: 'CRIT_DMG', multiValues: [0.028, 0.056] }
+          { type: 'SPEED_ATK', multiValues: { relic: [0.02], ancient: [0.03] } },
+          { type: 'CRIT_DMG', multiValues: { relic: [0.028], ancient: [0.056] } }
       ]},
       { point: 18, effects: [{ type: 'CRIT_DMG', value: [0.0045] }] },
       { point: 19, effects: [{ type: 'CRIT_DMG', value: [0.0045] }] },
@@ -97,7 +97,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10 },
       { point: 14, effects: [{ type: 'CDR_P', value: [0.004] }] },
-      { point: 17, effects: [{ type: 'CDR_P', multiValues: [0.008, 0.016] }] },
+      { point: 17, effects: [{ type: 'CDR_P', multiValues: { relic: [0.008], ancient: [0.016] } }] },
       { point: 18, effects: [{ type: 'CDR_P', value: [0.0013] }] },
       { point: 19, effects: [{ type: 'CDR_P', value: [0.0013] }] },
       { point: 20, effects: [{ type: 'CDR_P', value: [0.0013] }] }
@@ -121,7 +121,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10}, //todo: 화상 도트 대미지 유틸
       { point: 14, effects: [{ type: 'DMG_INC', value: [0.005] }] },
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.01, 0.02] }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.01], ancient: [0.02] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.0016] }] }
@@ -132,7 +132,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10 }, // 생명력 회복 유틸
       { point: 14, effects: [{ type: 'DMG_INC', value: [0.005] }] },
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.01, 0.02] }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.01], ancient: [0.02] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.0016] }] }
@@ -143,7 +143,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10 }, // 부위 파괴 유틸
       { point: 14, effects: [{ type: 'CRIT_CHANCE', value: [0.0065] }] },
-      { point: 17, effects: [{ type: 'CRIT_CHANCE', multiValues: [0.013, 0.026] }] },
+      { point: 17, effects: [{ type: 'CRIT_CHANCE', multiValues: { relic: [0.013], ancient: [0.026] } }] },
       { point: 18, effects: [{ type: 'CRIT_CHANCE', value: [0.0021] }] },
       { point: 19, effects: [{ type: 'CRIT_CHANCE', value: [0.0021] }] },
       { point: 20, effects: [{ type: 'CRIT_CHANCE', value: [0.0021] }] }
@@ -165,7 +165,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10, effects:[{ type: 'DEF_PENETRATION', value: [0.002] }] },
       { point: 14 },
-      { point: 17, effects:[{ type: 'DEF_PENETRATION', multiValues: [0.004, 0.008] }] },
+      { point: 17, effects: [{ type: 'DEF_PENETRATION', multiValues: { relic: [0.004], ancient: [0.008] } }] },
       { point: 18 },
       { point: 19 },
       { point: 20 }
@@ -176,7 +176,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10, effects: [{ type: 'CRIT_DMG', value: [0.003] }] },
       { point: 14, },
-      { point: 17, effects: [{ type: 'CRIT_DMG', multiValues: [0.006, 0.012] }] },
+      { point: 17, effects: [{ type: 'CRIT_DMG', multiValues: { relic: [0.006], ancient: [0.012] } }] },
       { point: 18 },
       { point: 19 },
       { point: 20 }
@@ -190,8 +190,8 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'ATK_C', value: [900] }] },
       { point: 14, effects: [{ type: 'ATK_P', value: [0.0055] }] },
       { point: 17, effects: [
-          { type: 'ATK_P', multiValues: [0.011, 0.0165] },
-          { type: 'ATK_C', multiValues: [1800, 2700] }
+          { type: 'ATK_P', multiValues: { relic: [0.011], ancient: [0.0165] } },
+          { type: 'ATK_C', multiValues: { relic: [1800], ancient: [2700] } }
       ]},
       { point: 18, effects: [{ type: 'ATK_P', value: [0.0016] }] },
       { point: 19, effects: [{ type: 'ATK_P', value: [0.0016] }] },
@@ -204,8 +204,8 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'WEAPON_ATK_C', value: [1300] }] },
       { point: 14, effects: [{ type: 'WEAPON_ATK_P', value: [0.0075] }] },
       { point: 17, effects: [
-          { type: 'WEAPON_ATK_P', multiValues: [0.015, 0.0225] },
-          { type: 'WEAPON_ATK_C', multiValues: [2600, 3900] }
+          { type: 'WEAPON_ATK_P', multiValues: { relic: [0.015], ancient: [0.0225] } },
+          { type: 'WEAPON_ATK_C', multiValues: { relic: [2600], ancient: [3900] } }
       ]},
       { point: 18, effects: [{ type: 'WEAPON_ATK_P', value: [0.0023] }] },
       { point: 19, effects: [{ type: 'WEAPON_ATK_P', value: [0.0023] }] },
@@ -240,8 +240,8 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'SPEED_ATK', value: [0.009] }] },
       { point: 14, effects: [{ type: 'SPEED_MOV', value: [0.009] }] },
       { point: 17, effects: [
-          { type: 'SPEED_ATK', multiValues: [0.018, 0.027] },
-          { type: 'SPEED_MOV', multiValues: [0.018, 0.027] }
+          { type: 'SPEED_ATK', multiValues: { relic: [0.018], ancient: [0.027] } },
+          { type: 'SPEED_MOV', multiValues: { relic: [0.018], ancient: [0.027] } }
       ]},
       { point: 18, effects: [{ type: 'SPEED_ATK', value: [0.003] }, { type: 'SPEED_MOV', value: [0.003] }] },
       { point: 19, effects: [{ type: 'SPEED_ATK', value: [0.003] }, { type: 'SPEED_MOV', value: [0.003] }] },

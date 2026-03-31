@@ -110,7 +110,7 @@ export interface RawAvatar {
 export interface RawArkPassiveEffect {
   Name             : string;        // "원한" | "예리한 둔기" | "아드레날린" 등
   Grade            : string;        // "유물"
-  Level            : number;        // 각인 레벨 (0 = 최대)
+  Level            : number;        // 각인 레벨 (4 = 최대)
   AbilityStoneLevel: number | null; // 어빌리티 스톤에서 온 레벨 (없으면 null)
   Description      : string;        // HTML 포함 효과 설명 — 파싱으로 수치 추출
 }

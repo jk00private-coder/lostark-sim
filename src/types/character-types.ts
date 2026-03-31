@@ -259,7 +259,7 @@ export interface AvatarDisplay {
 export interface EngravingDisplay {
   name             : ColoredText;   // { text: "원한", color: "#FFFFAC" }
   grade            : ColoredText;   // { text: "유물", color: "#FA5D00" }
-  level            : number;        // 0 (최대)
+  level            : number;        // 0 ~ 4(Max)
   abilityStoneLevel: number | null; // 어빌리티 스톤 레벨 (없으면 null)
   description      : string;        // HTML 제거된 효과 설명
   icon             : string;        // ENGRAVINGS_DB 에서 매핑

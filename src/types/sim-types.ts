@@ -195,7 +195,6 @@ export interface OptionGrades {
   low : [number, number];
   mid : [number, number];
   high: [number, number];
-
 }
 // 상중하 등급 색깔 — 게임 내 고정값
 export const OPTION_GRADE_COLORS = {
@@ -204,18 +203,22 @@ export const OPTION_GRADE_COLORS = {
   high: '#FE9600',  // 주황
 } as const;
 
-export type GradeValue = [number, number];
-
 export type EffectEntry = {
   type       : EffectTypeId;
   valueColor?: string;
   subGroup?  : string;
   target?    : EffectTarget;
 } & (
-  | { value: number[]; grades?: never; multiValues?: never }  // 1. 일반 (기존)
-  | { grades: OptionGrades; value?: never; multiValues?: never } // 2. 범위형 단일 등급 (기존)
-  | { multiValues: GradeValue; value?: never; grades?: never } // 3. 등급별 고정치 (아크그리드용)
-  | { multiGrades: { relic: OptionGrades; ancient: OptionGrades }; value?: never; grades?: never } // 4. 등급별 범위치 (팔찌 리팩토링용)
+  | { value: number[]; grades?: never; multiValues?: never; multiGrades?: never }
+  | { grades: OptionGrades; value?: never; multiValues?: never; multiGrades?: never }
+  | { 
+      multiValues: { relic?: number[]; ancient?: number[]; serca?: number[] };
+      value?: never; grades?: never; multiGrades?: never
+    } 
+  | { 
+      multiGrades: { relic?: OptionGrades; ancient?: OptionGrades };
+      value?: never; grades?: never; multiValues?: never;
+    }
 );
 
 

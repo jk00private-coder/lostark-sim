@@ -46,7 +46,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
         point: 17,
         effects: [
           {
-            type: 'DMG_INC', multiValues: [0.25, 0.3],
+            type: 'DMG_INC', multiValues: { relic: [0.25], ancient: [0.3] },
             target: { skillIds: [SK_ID.RENDING_FINISHER.BODY, SK_ID.EXPLOSION_FINISHER.BODY] }
           }
         ]
@@ -87,7 +87,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
         point: 17,
         effects: [
           {
-            type: 'DMG_INC', multiValues: [0.24, 0.3], // 레조넌스 6중첩 기준 (0.04*6 / 0.05*6)
+            type: 'DMG_INC', multiValues: { relic: [0.24], ancient: [0.3] }, // 레조넌스 6중첩 기준 (0.04*6 / 0.05*6)
             target: { skillIds: [SK_ID.INFERNO_BURST.BODY, SK_ID.EXPLOSION_FINISHER.BODY] }
           }
         ]
@@ -118,7 +118,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
         effects: [
           {
             // 14P의 0.7을 대체하여 1.0 / 1.14가 됨
-            type: "DMG_INC", multiValues: [0.3, 0.44], subGroup: 'SNH_03', 
+            type: "DMG_INC", multiValues: { relic: [0.3], ancient: [0.44] }, subGroup: 'SNH_03', 
             target: { skillIds: [SK_ID.AVENGING_SPEAR.BODY] }
           }
         ]
@@ -152,7 +152,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
           }
         ] 
       },
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.06, 0.075], target: { skillTypes: ['CHARGE'] } }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.06], ancient: [0.075] }, target: { skillTypes: ['CHARGE'] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.002], target: { skillTypes: ['CHARGE'] } }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.002], target: { skillTypes: ['CHARGE'] } }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.002], target: { skillTypes: ['CHARGE'] } }] }
@@ -171,7 +171,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
           { type: 'DMG_INC', value: [0.2], target: { skillIds: [SK_ID.GUILLOTINE_SPIN.BODY] } }
         ] 
       },
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0, 0.05], target: { skillIds: [SK_ID.FRENZY_SWEEP.BODY] } }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0], ancient: [0.05] }, target: { skillIds: [SK_ID.FRENZY_SWEEP.BODY] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.0016] }] }
@@ -185,7 +185,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'DMG_INC', value: [0.015] }] },
       { point: 14, effects: [{ type: 'DMG_INC', subGroup: 'SND_03', value: [0.06] }] },
       // 14P의 0.6을 대체하여 0.11 / 0.12가 됨
-      { point: 17, effects: [{ type: 'DMG_INC', subGroup: 'SND_03', multiValues: [0.11, 0.12] }] },
+      { point: 17, effects: [{ type: 'DMG_INC', subGroup: 'SND_03', multiValues: { relic: [0.11], ancient: [0.12] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.0016] }] }
@@ -201,7 +201,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'DMG_INC', value: [0.015] }] },
       { point: 14 }, // 화신화 사용 시 '운명'이 발동한다.
       // todo: 조건이 화신상태에서 주는 피해량 증가임, 화신상태에서 쓰는 일반스킬도 데미지 늘어나는지 검토 필요
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.05, 0.065], target: { categories: ['GOD_FORM'] } }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.05], ancient: [0.065] }, target: { categories: ['GOD_FORM'] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0023], target: { categories: ['GOD_FORM'] } }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.0023], target: { categories: ['GOD_FORM'] } }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.0023], target: { categories: ['GOD_FORM'] } }] }
@@ -214,7 +214,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10 }, // 더 이상 발현 스킬이 소켓을 잠그지 않는다.
       { point: 14 }, // 발현 스킬 사용 시 '운명'이 발동한다.
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.08, 0.1], target: { categories: ['ENLIGHTEN'] } }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.08], ancient: [0.1] }, target: { categories: ['ENLIGHTEN'] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0032], target: { categories: ['ENLIGHTEN'] } }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.0032], target: { categories: ['ENLIGHTEN'] } }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.0032], target: { categories: ['ENLIGHTEN'] } }] }
@@ -231,7 +231,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
         point: 17, 
         effects: [
           { type: 'CDR_C', value: [-28.0], target: { skillIds: [SK_ID.AVENGING_SPEAR.BODY] } },
-          { type: 'DMG_INC', multiValues: [1.0, 1.14], target: { skillIds: [SK_ID.AVENGING_SPEAR.BODY] } }
+          { type: 'DMG_INC', multiValues: { relic: [1.0], ancient: [1.14] }, target: { skillIds: [SK_ID.AVENGING_SPEAR.BODY] } }
         ] 
       },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0023], target: { categories: ['GOD_FORM'] } }] },
@@ -247,7 +247,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
     thresholds: [
       { point: 10, effects: [{ type: 'DMG_INC', value: [0.02], target: { skillTypes: ['CHARGE'] } }] },
       { point: 14 }, // 가디언 피어 사용 시 '운명'이 발동한다.
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.4, 0.46], target: { skillIds: [SK_ID.PIERCING_SHOCK.BODY] } }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.4], ancient: [0.46] }, target: { skillIds: [SK_ID.PIERCING_SHOCK.BODY] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.002], target: { skillTypes: ['CHARGE'] } }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.002], target: { skillTypes: ['CHARGE'] } }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.002], target: { skillTypes: ['CHARGE'] } }] }
@@ -263,7 +263,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
       { 
         point: 17, 
         effects: [{ 
-          type: 'DMG_INC', multiValues: [0.1, 0.125], 
+          type: 'DMG_INC', multiValues: { relic: [0.1], ancient: [0.125] },
           target: { skillIds: [SK_ID.GUILLOTINE_SPIN.BODY, SK_ID.FRENZY_SWEEP.BODY] } 
         }] 
       },
@@ -280,7 +280,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'DMG_INC', value: [0.015] }] },
       { point: 14 }, // 가디언 피어 사용 시 '운명'이 발동한다.
       // todo: 초월 상태에서 피해 증가, 그냥 상시 초월상태 or 사이클의 몇퍼센트 고려, 초월 상태따로 선언한 곳이 없음.
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.04, 0.055] }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.04], ancient: [0.055] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.0016] }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.0016] }] }
@@ -299,7 +299,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
         point: 17, 
         effects: [{ 
           // todo: 익스플로전 피니셔의 '푸른 심장' 트라이포드 적용 시 피해 증가 및 피격 이상 면역
-          type: 'DMG_INC', multiValues: [0.2, 0.27], 
+          type: 'DMG_INC', multiValues: { relic: [0.2], ancient: [0.27] }, 
           target: { skillIds: [SK_ID.EXPLOSION_FINISHER.BODY] }
         }] 
       },
@@ -316,7 +316,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'DMG_INC', value: [0.05], target: { categories: ['ENLIGHTEN'] } }] },
       // todo: 임페일 쇼크의 '즉결심판' 트라이포드 적용 시 재사용 대기시간이 "추가"로 감소한다, 트라이포드의 기존 6초감소에 10초 더 감소
       { point: 14, effects: [{ type: 'CDR_C', value: [10.0], target: { skillIds: [SK_ID.PIERCING_SHOCK.BODY] } }] },
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.1, 0.15], target: { skillIds: [SK_ID.RENDING_FINISHER.BODY] } }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.1], ancient: [0.15] }, target: { skillIds: [SK_ID.RENDING_FINISHER.BODY] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.008], target: { skillIds: [SK_ID.RENDING_FINISHER.BODY] } }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.008], target: { skillIds: [SK_ID.RENDING_FINISHER.BODY] } }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.008], target: { skillIds: [SK_ID.RENDING_FINISHER.BODY] } }] }
@@ -330,7 +330,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
       { point: 10 }, // 리벤지 블로우 사용 시 엠버레스 오브 게이지를 10.0% 회복하고, 리벤지 스피어의 시전 속도가 20.0% 증가한다.
       { point: 14, effects: [{ type: 'DMG_INC', value: [0.2], target: { skillIds: [SK_ID.VENGEFUL_BLOW.BODY] } }] },
        // todo: 블레이즈 플래시의 '맹렬한 추격' 트라이포드 적용 시
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.16, 0.25], target: { skillIds: [SK_ID.BLAZE_FLASH.BODY] }}] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.16], ancient: [0.25] }, target: { skillIds: [SK_ID.BLAZE_FLASH.BODY] }}] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.008], target: { skillIds: [SK_ID.AVENGING_SPEAR.BODY] } }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.008], target: { skillIds: [SK_ID.AVENGING_SPEAR.BODY] } }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.008], target: { skillIds: [SK_ID.AVENGING_SPEAR.BODY] } }] }
@@ -353,7 +353,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
         ] 
       },
       // todo: 퀘이크 스매시의 '말살' 트라이포드 적용 시
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.14, 0.18], target: { skillIds: [SK_ID.QUAKE_SMASH.BODY] } }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.14], ancient: [0.18] }, target: { skillIds: [SK_ID.QUAKE_SMASH.BODY] } }] },
       { point: 18, effects: [{ type: 'CRIT_DMG_INC', value: [0.0021], target: { skillTypes: ['CHARGE'] } }] },
       { point: 19, effects: [{ type: 'CRIT_DMG_INC', value: [0.0021], target: { skillTypes: ['CHARGE'] } }] },
       { point: 20, effects: [{ type: 'CRIT_DMG_INC', value: [0.0021], target: { skillTypes: ['CHARGE'] } }] }
@@ -373,7 +373,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
         point: 17, 
         effects: [
           { type: 'CDR_C', value: [-18.0], target: { skillIds: [SK_ID.FRENZY_SWEEP.BODY] } },
-          { type: 'DMG_INC', multiValues: [0.8, 0.88], target: { skillIds: [SK_ID.FRENZY_SWEEP.BODY] } }
+          { type: 'DMG_INC', multiValues: { relic: [0.8], ancient: [0.88] }, target: { skillIds: [SK_ID.FRENZY_SWEEP.BODY] } }
         ] 
       },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.008], target: { skillIds: [SK_ID.FRENZY_SWEEP.BODY] } }] },
@@ -389,7 +389,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
       { point: 10, effects: [{ type: 'DMG_INC', value: [0.1], target: { skillIds: [SK_ID.GUILLOTINE_SPIN.BODY] } }] },
       // todo: 프렌지 스윕의 '파멸의 오브' 트라이포드 적용 시
       { point: 14, effects: [{ type: 'DMG_INC', value: [0.15], target: { skillIds: [SK_ID.FRENZY_SWEEP.BODY] } }] },
-      { point: 17, effects: [{ type: 'DMG_INC', multiValues: [0.15, 0.2], target: { skillIds: [SK_ID.QUAKE_SMASH.BODY] } }] },
+      { point: 17, effects: [{ type: 'DMG_INC', multiValues: { relic: [0.15], ancient: [0.2] }, target: { skillIds: [SK_ID.QUAKE_SMASH.BODY] } }] },
       { point: 18, effects: [{ type: 'DMG_INC', value: [0.009], target: { skillIds: [SK_ID.QUAKE_SMASH.BODY] } }] },
       { point: 19, effects: [{ type: 'DMG_INC', value: [0.009], target: { skillIds: [SK_ID.QUAKE_SMASH.BODY] } }] },
       { point: 20, effects: [{ type: 'DMG_INC', value: [0.009], target: { skillIds: [SK_ID.QUAKE_SMASH.BODY] } }] }
