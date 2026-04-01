@@ -4,16 +4,19 @@
  * UI 표시용 데이터만 생성 — 계산용 수치는 useCalculatorStore 담당
  */
 
-import { ColoredText, ColoredValue } from '@/types/sim-types';
 import { RawCharacterData } from '@/types/raw-types';
 import {
+  ColoredText,
+  ColoredValue,
   CharacterDisplayData,
   CharacterProfileDisplay,
   CombatStatsDisplay,
   EquipmentDisplay,
+  EquipmentSetType,
   AccessoryDisplay,
   AccessoryBaseEffect,
   AccessoryPolishEffect,
+  OptionGrade,
   BraceletDisplay,
   BraceletEffect,
   AbilityStoneDisplay,
@@ -29,12 +32,10 @@ import {
   SkillDisplay,
   SelectedTripodDisplay,
   EquippedRuneDisplay,
-  OptionGrade,
-  EquipmentSetType,
 } from '@/types/character-types';
 
-import { getEquipmentSetType } from '@/data/equipment-sets';
-import { getOptionGrade } from '@/data/accessory-option-grades';
+import { COMBAT_EQUIP_DATA } from '@/data/equipment/combat-equip';
+import { ACCESSORY_DATA }    from '@/data/equipment/accessory';
 
 
 // ============================================================
@@ -92,57 +93,89 @@ const extractItemTier = (leftStr2: string): number => {
   return m ? parseInt(m[1]) : 0;
 };
 
-/** 등급 → ColoredText */
+/** 등급명 → 색상 상수 */
 const GRADE_COLORS: Record<string, string> = {
   '고대': '#E3C7A1', '유물': '#FA5D00', '전설': '#F99200',
   '영웅': '#CE43FC', '희귀': '#00B0FA', '일반': '#FFFFFF',
 };
+
+/** 등급명 → ColoredText */
 const toGradeColoredText = (grade: string): ColoredText => ({
   text : grade,
   color: GRADE_COLORS[grade],
 });
 
-/** 아크패시브 카테고리 색깔 */
+/** 아크패시브 카테고리 색상 */
 const ARK_PASSIVE_COLORS: Record<string, string> = {
   '진화': '#F1D594', '깨달음': '#83E9FF', '도약': '#C2EA55',
 };
 
-/** 스킬 분류 색깔 */
+/** 스킬 분류 색상 */
 const SKILL_CATEGORY_COLORS: Record<string, string> = {
   '일반 스킬': '#83DCB7', '발현 스킬': '#FE9A2E',
-  '화신 스킬': '#FF0000', '각성기': '#E73517', '초각성기': '#E73517',
+  '화신 스킬': '#FF0000', '각성기'  : '#E73517', '초각성기': '#E73517',
 };
 
-/** 연마효과 타입 감지 (순서 중요 — 무기공격력 먼저) */
-const POLISH_EFFECT_TYPE_LIST: Array<[string, string]> = [
-  ['적에게 주는 피해', 'DMG_INC'     ],
-  ['추가 피해'       , 'ADD_DMG'     ],
-  ['무기 공격력'     , 'WEAPON_ATK_P'],
-  ['공격력'          , 'ATK_P'       ],
-  ['치명타 피해'     , 'CRIT_DMG'    ],
-  ['치명타 적중률'   , 'CRIT_CHANCE' ],
-];
-const detectPolishEffectType = (label: string): string => {
-  for (const [key, typeId] of POLISH_EFFECT_TYPE_LIST) {
-    if (label.includes(key)) return typeId;
+
+// ============================================================
+// DB 조회 헬퍼
+// ============================================================
+
+/**
+ * 장비 이름으로 세트 타입 판별
+ *
+ * combat-equip.ts의 multiName을 기준으로 매칭합니다.
+ * multiName 예: { ancient: '운명의 업화 투구', serca: '운명의 전율 투구' }
+ * "운명의 업화" → AEGIR_ANCIENT
+ * "운명의 전율" → SERCA_ANCIENT
+ * 매칭 없음    → UNKNOWN
+ */
+const findEquipSetType = (itemName: string): EquipmentSetType => {
+  for (const db of COMBAT_EQUIP_DATA) {
+    if (db.multiName.serca   && itemName.includes(db.multiName.serca.split(' ')[2]   ?? '')) return 'SERCA_ANCIENT';
+    if (db.multiName.ancient && itemName.includes(db.multiName.ancient.split(' ')[2] ?? '')) return 'AEGIR_ANCIENT';
+    if (db.multiName.relic   && itemName.includes(db.multiName.relic.split(' ')[2]   ?? '')) return 'NORMAL_RELIC';
   }
   return 'UNKNOWN';
 };
 
-/** color 기반 상중하 판별 → fallback: 수치 기반 */
-const detectOptionGrade = (
-  color      : string | undefined,
+/**
+ * 연마효과 수치로 상/중/하 등급 판별
+ *
+ * accessory.ts의 grades 범위를 기준으로 판별합니다.
+ * grades.high[0] 이상 → HIGH
+ * grades.mid[0]  이상 → MID
+ * 그 외           → LOW
+ *
+ * color가 명시된 경우 color 우선 적용 (API가 색상을 직접 주는 경우)
+ */
+const findPolishGrade = (
   effectType : string,
   value      : number,
-  isAccessory: boolean = true,
+  colorHint ?: string,
 ): OptionGrade => {
-  if (color === '#FE9600') return 'HIGH';
-  if (color === '#CE43FC') return 'MID';
-  if (color === '#00B5FF') return 'LOW';
-  return getOptionGrade(effectType, value, isAccessory);
+  // API 색상이 있으면 색상 기준으로 우선 판별
+  if (colorHint === '#FE9600') return 'HIGH';
+  if (colorHint === '#CE43FC') return 'MID';
+  if (colorHint === '#00B5FF') return 'LOW';
+
+  // DB grades 범위로 판별
+  for (const db of ACCESSORY_DATA) {
+    const eff = db.effects?.find(e => e.type === effectType && e.grades);
+    if (!eff?.grades) continue;
+    if (value >= eff.grades.high[0]) return 'HIGH';
+    if (value >= eff.grades.mid[0])  return 'MID';
+    return 'LOW';
+  }
+
+  // DB에 해당 타입 없으면 LOW 기본값
+  return 'LOW';
 };
 
-/** 아크패시브 포인트 기여 추출 */
+/**
+ * 아크패시브 포인트 기여 추출
+ * 장비/악세서리 툴팁에서 아크패시브 포인트 기여분을 파싱합니다.
+ */
 const extractArkPassivePoint = (
   tooltip: Record<string, any>
 ): { category: ColoredText; point: ColoredValue } | null => {
@@ -158,6 +191,28 @@ const extractArkPassivePoint = (
     }
   }
   return null;
+};
+
+/**
+ * 연마효과 label → effectType 감지
+ * 순서 중요 — 무기공격력을 공격력보다 먼저 검사
+ */
+const POLISH_EFFECT_TYPE_LIST: Array<[string, string]> = [
+  ['적에게 주는 피해', 'DMG_INC'     ],
+  ['추가 피해'       , 'ADD_DMG'     ],
+  ['무기 공격력'     , 'WEAPON_ATK_P'],
+  ['공격력'          , 'ATK_P'       ],
+  ['치명타 피해'     , 'CRIT_DMG'    ],
+  ['치명타 적중률'   , 'CRIT_CHANCE' ],
+];
+
+const detectPolishEffectType = (label: string, value: number): string => {
+  // 공격력 C/P 구분: % 여부로 판단 (value < 1이면 퍼센트)
+  if (label.includes('공격력') && !label.includes('무기') && value >= 1) return 'ATK_C';
+  for (const [key, typeId] of POLISH_EFFECT_TYPE_LIST) {
+    if (label.includes(key)) return typeId;
+  }
+  return 'UNKNOWN';
 };
 
 
@@ -223,7 +278,7 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         refineStep: extractRefineStep(eq.Name),
         quality   : titleEl.qualityValue ?? 0,
         itemTier  : tier,
-        setType   : getEquipmentSetType(eq.Name),
+        setType   : findEquipSetType(eq.Name),
         arkPassivePoint: extractArkPassivePoint(tooltip),
       };
     });
@@ -240,7 +295,7 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
       const titleEl = tooltip['Element_001']?.value ?? {};
       const tier    = extractItemTier(titleEl.leftStr2 ?? '');
 
-      // 기본 효과 파싱
+      // 기본 효과 파싱 (주스탯, 체력)
       const baseEffects: AccessoryBaseEffect[] = [];
       const baseStr: string = tooltip['Element_004']?.value?.Element_001 ?? '';
       baseStr.split(/<br\s*\/?>/i).filter(Boolean).forEach(line => {
@@ -263,19 +318,12 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
         const labelM    = clean.match(/^([가-힣\s]+)/);
         const labelText = labelM ? labelM[1].trim() : clean;
         const cv        = toColoredValue(line);
-
-        // 공격력 C/P 구분: % 포함 여부로 판단
-        let effectType: string;
-        if (labelText.includes('공격력') && !line.includes('%')) {
-          effectType = 'ATK_C';
-        } else {
-          effectType = detectPolishEffectType(labelText);
-        }
+        const effectType = detectPolishEffectType(labelText, cv.value);
 
         polishEffects.push({
           label: { text: labelText, color: undefined },
           value: cv,
-          grade: detectOptionGrade(cv.color, effectType, cv.value, true),
+          grade: findPolishGrade(effectType, cv.value, cv.color),
         });
       });
 
@@ -302,13 +350,16 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
   const tooltip   = parseTooltip(bracelet.Tooltip);
   const effectStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
 
+  /** 팔찌 효과 키워드 → { effectType, isFixed } */
   const BRACELET_EFFECT_MAP: Record<string, { effectType: string; isFixed: boolean }> = {
-    '신속'            : { effectType: 'SWIFTNESS',    isFixed: true  },
-    '특화'            : { effectType: 'SPECIALIZATION', isFixed: true },
-    '헤드어택'        : { effectType: 'DMG_INC',      isFixed: false },
-    '치명타 피해'     : { effectType: 'CRIT_DMG',     isFixed: false },
+    '신속'            : { effectType: 'STAT_SWIFT', isFixed: true  },
+    '특화'            : { effectType: 'STAT_SPEC',  isFixed: true  },
+    '치명'            : { effectType: 'STAT_CRIT',  isFixed: true  },
+    '헤드어택'        : { effectType: 'DMG_INC',    isFixed: false },
+    '치명타 피해'     : { effectType: 'CRIT_DMG',   isFixed: false },
     '치명타로 적중 시': { effectType: 'CRIT_DMG_INC', isFixed: false },
-    '추가 피해'       : { effectType: 'ADD_DMG',      isFixed: false },
+    '추가 피해'       : { effectType: 'ADD_DMG',    isFixed: false },
+    '무기 공격력'     : { effectType: 'WEAPON_ATK_C', isFixed: false },
   };
 
   const effects: BraceletEffect[] = effectStr
@@ -337,7 +388,7 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
         isFixed,
         grade  : isFixed
           ? undefined
-          : detectOptionGrade(cv.color, effectType, cv.value, false),
+          : findPolishGrade(effectType, cv.value, cv.color),
       };
     });
 
@@ -400,9 +451,9 @@ export const normalizeBoJu = (raw: RawCharacterData): BoJuDisplay | null => {
   const boju = raw.equipment.find(eq => eq.Type === '보주');
   if (!boju) return null;
 
-  const tooltip  = parseTooltip(boju.Tooltip);
+  const tooltip   = parseTooltip(boju.Tooltip);
   const effectStr: string = tooltip['Element_004']?.value?.Element_001 ?? '';
-  const seasonM  = effectStr.match(/시즌(\d+)\s*달성\s*최대\s*낙원력\s*:\s*([\d,]+)/);
+  const seasonM   = effectStr.match(/시즌(\d+)\s*달성\s*최대\s*낙원력\s*:\s*([\d,]+)/);
 
   return {
     name        : boju.Name,
@@ -460,16 +511,16 @@ export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] =
 export const normalizeGems = (raw: RawCharacterData): GemSummaryDisplay => {
   const gemMap = Object.fromEntries(raw.gems.Gems.map(g => [g.Slot, g]));
   const gems: GemDisplay[] = raw.gems.Effects.Skills.map(skill => {
-    const gem  = gemMap[skill.GemSlot];
-    const desc = skill.Description[0] ?? '';
-    const isDmg       = desc.includes('피해');
+    const gem     = gemMap[skill.GemSlot];
+    const desc    = skill.Description[0] ?? '';
+    const isDmg   = desc.includes('피해');
     const effectValue = extractPercent(desc);
     return {
       slot        : skill.GemSlot,
       level       : gem?.Level  ?? 0,
       grade       : toGradeColoredText(gem?.Grade ?? ''),
       icon        : gem?.Icon   ?? skill.Icon,
-      skillName   : { text: skill.Name,    color: '#FFD200' },
+      skillName   : { text: skill.Name, color: '#FFD200' },
       effectLabel : { text: isDmg ? '피해' : '재사용 대기시간', color: undefined },
       effectValue : { value: effectValue, color: isDmg ? '#99ff99' : '#87CEEB' },
       baseAtkBonus: extractPercent(skill.Option),
@@ -533,11 +584,11 @@ export const normalizeArkPassive = (raw: RawCharacterData) => {
   const PATTERN = /(진화|깨달음|도약)\s+(\d+)티어\s+(.+?)\s+Lv\.(\d+)/;
 
   const effects: ArkPassiveEffectDisplay[] = p.Effects.map(eff => {
-    const clean  = stripHtml(eff.Description);
-    const m      = clean.match(PATTERN);
-    const ttJson = parseTooltip(eff.ToolTip);
+    const clean    = stripHtml(eff.Description);
+    const m        = clean.match(PATTERN);
+    const ttJson   = parseTooltip(eff.ToolTip);
     const descRaw: string = ttJson['Element_002']?.value ?? '';
-    const desc   = stripHtml(descRaw.split('||')[0]);
+    const desc     = stripHtml(descRaw.split('||')[0]);
     const category = m ? m[1] : eff.Name;
     return {
       category   : { text: category, color: ARK_PASSIVE_COLORS[category] },
@@ -557,14 +608,14 @@ export const normalizeArkPassive = (raw: RawCharacterData) => {
 export const normalizeArkGrid = (raw: RawCharacterData): ArkGridDisplay => {
   const cores = raw.arkGrid.Slots.map(slot => ({
     index: slot.Index,
-    name : { text: slot.Name,  color: GRADE_COLORS[slot.Grade] },
-    point: { value: slot.Point, color: '#B7FB00' },
+    name : { text: slot.Name,   color: GRADE_COLORS[slot.Grade] },
+    point: { value: slot.Point, color: '#B7FB00' as string | undefined },
     grade: toGradeColoredText(slot.Grade),
     icon : slot.Icon,
   }));
 
   const effects = raw.arkGrid.Effects.map(eff => ({
-    label: { text: eff.Name, color: undefined },
+    label: { text: eff.Name, color: undefined as string | undefined },
     level: eff.Level,
     value: { value: extractPercent(eff.Tooltip), color: extractColor(eff.Tooltip) },
   }));
@@ -586,16 +637,17 @@ export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
   };
 
   return raw.skills.filter(isSkillUsed).map(skill => {
-    const tooltip  = parseTooltip(skill.Tooltip);
-    const titleEl  = tooltip['Element_001']?.value ?? {};
-    const levelStr: string = titleEl.level ?? '';
-    const categoryM        = levelStr.match(/\[([^\]]+)\]/);
-    const categoryText     = categoryM ? categoryM[1] : '일반 스킬';
+    const tooltip      = parseTooltip(skill.Tooltip);
+    const titleEl      = tooltip['Element_001']?.value ?? {};
+    const levelStr     : string = titleEl.level ?? '';
+    const categoryM    = levelStr.match(/\[([^\]]+)\]/);
+    const categoryText = categoryM ? categoryM[1] : '일반 스킬';
 
     const selectedTripods: SelectedTripodDisplay[] = skill.Tripods
       .filter(t => t.IsSelected)
       .map(t => ({
-        tier: t.Tier, slot: t.Slot,
+        tier: t.Tier,
+        slot: t.Slot,
         name: { text: t.Name, color: '#FFBB63' },
         icon: t.Icon,
       }));
@@ -612,16 +664,14 @@ export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
       level          : skill.Level,
       type           : skill.Type,
       skillType      : skill.SkillType,
-      category       : {
-        text : categoryText,
-        color: SKILL_CATEGORY_COLORS[categoryText],
-      },
+      category       : { text: categoryText, color: SKILL_CATEGORY_COLORS[categoryText] },
       isUsed         : true,
       selectedTripods,
       rune,
     };
   });
 };
+
 
 // ============================================================
 // 최상위 통합

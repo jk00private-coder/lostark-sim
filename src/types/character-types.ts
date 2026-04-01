@@ -5,9 +5,17 @@
  * 계산용 수치는 포함하지 않음 — useCalculatorStore 참조
  */
 
-import { ColoredText, ColoredValue } from '@/types/sim-types';
-
-export type { ColoredText, ColoredValue };
+/**
+ * color 없으면 기본색(흰색) 처리
+ */
+export interface ColoredValue {
+  value : number;
+  color?: string;
+}
+export interface ColoredText {
+  text : string;
+  color?: string;
+}
 
 // ============================================================
 // 공통
