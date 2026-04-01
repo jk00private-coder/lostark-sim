@@ -6,3 +6,4 @@
 export * from './atk-calculator';
 export * from './damage-calculator';
 export * from './skill-resolver';
+export * from './skill-damage-runner';
