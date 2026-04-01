@@ -6,6 +6,7 @@
  * [계산 순서]
  *   1. 무기공격력  = weaponAtkC * (1 + weaponAtkP)
  *   2. 주스탯      = mainStatC  * (1 + mainStatP)
+ *                 = API에서 불러온 기본공격력에서 역산을 기본값으로
  *   3. 기본공격력  = sqrt(주스탯 * 무기공격력 / 6) * (1 + baseAtkP)
  *   4. 최종공격력  = (기본공격력 + atkC) * (1 + atkP)
  */

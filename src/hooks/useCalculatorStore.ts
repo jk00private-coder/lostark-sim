@@ -25,6 +25,7 @@ import {
   SUB_GROUPS,
 } from '@/types/sim-types';
 import { ENGRAVINGS_DB } from '@/data/engravings';
+import { calcAllAtk }    from '@/engine/atk-calculator';
 
 
 // ============================================================
@@ -63,7 +64,7 @@ export interface CalcData {
   statModifiers  : StatModifiers;
   damageModifiers: DamageModifiers;
   effectLog      : EffectLog[];
-  classEffectLog : EffectLog[];  // 직업 특수 효과 별도 보관
+  classEffectLog : EffectLog[];
 }
 
 
@@ -111,18 +112,18 @@ const createEmptyStatModifiers = (): StatModifiers => ({
  * critDamage 기본값                         : 2.0 (기본 치명타 200%)
  */
 const createEmptyDamageModifiers = (): DamageModifiers => ({
-  damageInc      : 1.0,
-  critDamageInc  : 1.0,
-  evoDamage      : 0,
-  addDamage      : 0,
-  critChance     : 0,
-  critDamage     : 2.0,
-  defPenetration : 0,
+  damageInc       : 1.0,
+  critDamageInc   : 1.0,
+  evoDamage       : 0,
+  addDamage       : 0,
+  critChance      : 0,
+  critDamage      : 2.0,
+  defPenetration  : 0,
   enemyDamageTaken: 0,
-  cdrC           : 0,
-  cdrP           : 0,
-  spdAtk         : 0,
-  spdMov         : 0,
+  cdrC            : 0,
+  cdrP            : 0,
+  spdAtk          : 0,
+  spdMov          : 0,
 });
 
 export const createEmptyCalcData = (): CalcData => ({
@@ -132,61 +133,6 @@ export const createEmptyCalcData = (): CalcData => ({
   effectLog      : [],
   classEffectLog : [],
 });
-
-
-// ============================================================
-// 공격력 계산 함수
-// ============================================================
-
-/**
- * 최종 무기 공격력
- * = 무기공격력 고정증가 합산 * (1 + 무기공격력 % 증가)
- */
-const calcWeaponAtk = (weaponAtkC: number, weaponAtkP: number): number =>
-  weaponAtkC * (1 + weaponAtkP);
-
-/**
- * 주스탯 역산
- * API에 주스탯이 없으므로 기본공격력에서 역산
- * = ((baseAtk / (1 + baseAtkP))^2 * 6) / weaponAtk
- */
-const calcMainStat = (
-  baseAtk  : number,
-  baseAtkP : number,
-  weaponAtk: number,
-): number => {
-  if (weaponAtk === 0) return 0;
-  const base = baseAtk / (1 + baseAtkP);
-  return (base * base * 6) / weaponAtk;
-};
-
-/**
- * 최종 공격력 (인게임 표시 공격력)
- * = (baseAtk + atkC) * (1 + atkP합산)
- *
- * ATK_P는 subGroup 없이 각각 독립 곱연산이므로
- * effectLog에서 ATK_P 항목을 꺼내 직접 계산
- */
-const calcFinalAtk = (
-  baseAtk   : number,
-  atkC      : number,
-  atkPLogs  : EffectLog[],
-): number => {
-  // ATK_P 항목을 subGroup별로 합산 후 독립 곱연산
-  const groupMap: Record<string, number[]> = {};
-  atkPLogs.forEach((log, idx) => {
-    const key = log.subGroup ?? `__solo_${idx}`;
-    if (!groupMap[key]) groupMap[key] = [];
-    groupMap[key].push(log.value);
-  });
-
-  let multiplier = 1;
-  Object.values(groupMap).forEach(values => {
-    multiplier *= (1 + values.reduce((s, v) => s + v, 0));
-  });
-
-  return (baseAtk + atkC) * multiplier;
-};
 
 
 // ============================================================
@@ -205,7 +151,6 @@ const calcModifiersFromLog = (
   statMods  : StatModifiers,
   damageMods: DamageModifiers,
 ): void => {
-  // type별 그룹핑
   const typeMap: Record<string, EffectLog[]> = {};
   logs.forEach(log => {
     if (!typeMap[log.type]) typeMap[log.type] = [];
@@ -216,14 +161,12 @@ const calcModifiersFromLog = (
     const entry = EFFECT_MAP[type as CommonEffectTypeId];
     if (!entry) return;
 
-    // StatModifiers / DamageModifiers 중 해당 필드가 있는 쪽 선택
     const statMod   = statMods   as unknown as Record<string, number>;
     const damageMod = damageMods as unknown as Record<string, number>;
     const targetMod = Object.prototype.hasOwnProperty.call(statMods, entry.field)
       ? statMod
       : damageMod;
 
-    // subGroup별 재그룹핑 → 합산 후 독립 곱연산
     const groupMap: Record<string, number[]> = {};
     typeLogs.forEach((log, idx) => {
       const key = log.subGroup ?? `__solo_${idx}`;
@@ -247,14 +190,9 @@ const calcModifiersFromLog = (
  * 각인 하나의 최종 EffectLog 목록 생성
  *
  * [합산 규칙]
- *   effects[i].value[0]           → 기본 고정값 (레벨 무관)
- *   bonus.relic.value[level-1]    → 유물 레벨별 추가 (index 0 = 레벨1)
+ *   effects[i].value[0]               → 기본 고정값 (레벨 무관)
+ *   bonus.relic.value[level-1]        → 유물/전설 레벨별 추가
  *   bonus.ability.value[stoneLevel-1] → 어빌리티스톤 레벨별 추가
- *
- * @param name       - 각인 이름 (DB 조회 키)
- * @param grade      - "유물" | "전설" 등
- * @param level      - 각인 레벨 (1~4)
- * @param stoneLevel - 어빌리티 스톤 레벨 (null = 미적용)
  */
 const resolveEngravingEffects = (
   name      : string,
@@ -270,20 +208,12 @@ const resolveEngravingEffects = (
   db.effects.forEach(eff => {
     if (!eff.value) return;
 
-    // 기본 고정값
     const baseValue = eff.value[0] ?? 0;
 
-    // 등급별 bonus
     let bonusValue = 0;
-    if (grade === '유물' && db.bonus?.relic?.value) {
+    if ((grade === '유물' || grade === '전설') && db.bonus?.relic?.value) {
       bonusValue += db.bonus.relic.value[level - 1] ?? 0;
     }
-    if (grade === '전설' && db.bonus?.relic?.value) {
-      // 전설도 relic bonus 적용 (게임 내 동일 테이블)
-      bonusValue += db.bonus.relic.value[level - 1] ?? 0;
-    }
-
-    // 어빌리티 스톤 bonus
     if (stoneLevel !== null && db.bonus?.ability?.value) {
       bonusValue += db.bonus.ability.value[stoneLevel - 1] ?? 0;
     }
@@ -309,7 +239,7 @@ const resolveEngravingEffects = (
 
 /** 카드 효과 키워드 → EffectTypeId 매핑 (순서 중요) */
 const CARD_EFFECT_LIST: Array<[string, CommonEffectTypeId | null]> = [
-  ['피해 감소'  , null          ],  // 딜 계산 무관
+  ['피해 감소'  , null          ],
   ['피해'       , 'DMG_INC'    ],
   ['공격력'     , 'ATK_P'      ],
   ['치명타 피해', 'CRIT_DMG'   ],
@@ -349,7 +279,6 @@ const POLISH_LABEL_MAP: Array<[string, string]> = [
 ];
 
 const detectPolishEffectType = (label: string, value: number): string => {
-  // 공격력 C/P 구분: value >= 1 이면 고정값(C)
   if (label.includes('공격력') && !label.includes('무기')) {
     return value >= 1 ? 'ATK_C' : 'ATK_P';
   }
@@ -366,19 +295,14 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   const statModifiers   = createEmptyStatModifiers();
   const damageModifiers = createEmptyDamageModifiers();
   const effectLog       : EffectLog[] = [];
-  const classEffectLog  : EffectLog[] = [];  // GK_QI_DMG 등 별도 보관
+  const classEffectLog  : EffectLog[] = [];
 
-  /**
-   * 효과 로그 수집
-   * 직업 특수 타입(ClassEffectTypeId)은 classEffectLog로 분리
-   */
   const applyEffect = (
     label   : string,
     type    : string,
     value   : number,
     subGroup?: string,
   ) => {
-    // GK_QI_DMG, GK_QI_COST 등 직업 특수 효과는 별도 보관
     if (type === 'GK_QI_DMG' || type === 'GK_QI_COST') {
       classEffectLog.push({ label, type, value, subGroup });
       return;
@@ -407,7 +331,7 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
 
   // ── 3. 팔찌 랜덤 옵션 ───────────────────────────────────
   display.bracelet?.effects.forEach(eff => {
-    if (eff.isFixed) return;  // 고정 특성(신속/특화 등)은 전투특성에 이미 포함
+    if (eff.isFixed) return;
     const effectType = detectBraceletEffectType(eff.label.text);
     if (effectType !== 'UNKNOWN')
       applyEffect(`팔찌 ${eff.label.text}`, effectType, eff.value.value);
@@ -463,21 +387,15 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   // ── 10. effectLog → Modifiers 일괄 계산 ─────────────────
   calcModifiersFromLog(effectLog, statModifiers, damageModifiers);
 
-  // ── 11. 공격력 3종 계산 ──────────────────────────────────
-  combatStats.weaponAtk = calcWeaponAtk(
-    statModifiers.weaponAtkC,
-    statModifiers.weaponAtkP,
-  );
-  combatStats.mainStat = calcMainStat(
-    combatStats.baseAtk,
-    statModifiers.baseAtkP,
-    combatStats.weaponAtk,
-  );
-  combatStats.finalAtk = calcFinalAtk(
-    combatStats.baseAtk,
-    statModifiers.atkC,
+  // ── 11. 공격력 4종 계산 (engine/atk-calculator) ──────────
+  const { weaponAtk, mainStat, baseAtk, finalAtk } = calcAllAtk(
+    statModifiers,
     effectLog.filter(l => l.type === 'ATK_P'),
   );
+  combatStats.weaponAtk = weaponAtk;
+  combatStats.mainStat  = mainStat;
+  combatStats.baseAtk   = baseAtk;
+  combatStats.finalAtk  = finalAtk;
 
   return {
     combatStats,
@@ -500,7 +418,6 @@ export const useCalculatorStore = () => {
   const [calcData, setCalcData] =
     useState<CalcData>(createEmptyCalcData());
 
-  // displayData 변경 시 calcData 자동 재계산
   useEffect(() => {
     if (!displayData) {
       setCalcData(createEmptyCalcData());
