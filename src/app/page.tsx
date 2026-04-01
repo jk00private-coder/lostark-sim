@@ -1,18 +1,32 @@
-// @/app/page
-
+// @/app/page.tsx
 "use client";
 
-import { Suspense } from 'react';
+import { useMemo } from 'react';
 import CharacterSearch from '@/components/CharacterSearch';
 import { useCalculatorStore } from '@/hooks/useCalculatorStore';
+import { runSkillDamage } from '@/engine/skill-damage-runner';
+import { SkillDamageResult } from '@/engine/damage-calculator';
+
 
 export default function EngravingSimulator() {
   const { displayData, setDisplayData, calcData } = useCalculatorStore();
 
+  // ── 스킬 피해량 계산 ──────────────────────────────────────
+  const skillDamageResults = useMemo(() => {
+    if (!displayData) return [];
+    return runSkillDamage(displayData, calcData);
+  }, [displayData, calcData]);
+
+  // ── 그래프용 최대값 ───────────────────────────────────────
+  const maxDamage = useMemo(() =>
+    Math.max(...skillDamageResults.map(r => r.totalDamage), 1),
+    [skillDamageResults]
+  );
+
   return (
     <main className="min-h-screen bg-[#0f1215] text-slate-200 p-4 md:p-8 font-sans">
 
-      {/* 캐릭터 검색 — 로드 완료 시 setDisplayData 호출 */}
+      {/* 캐릭터 검색 */}
       <CharacterSearch onDataLoaded={setDisplayData} />
 
       {/* 데이터 미로드 상태 */}
@@ -144,275 +158,12 @@ export default function EngravingSimulator() {
               </div>
             )}
 
-            {/* 5. 계산용 수치 디버그 패널 (개발 중 확인용) */}
-            <div className="p-4 bg-slate-800 rounded-lg">
-              <p className="text-xs text-slate-500 mb-2 font-bold">
-                [DEV] calcData 동기화 확인
-              </p>
-              <div className="space-y-3 text-xs">
-
-                {/* ── 전투 스탯 ───────────────────────────────── */}
-                <div>
-                  <p className="text-slate-500 mb-1">— 전투 스탯 —</p>
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-400">
-
-                    {/* API 원본 공격력 */}
-                    <span>baseAtk (API):</span>
-                    <span className="text-cyan-400">
-                      {calcData.combatStats.baseAtk.toLocaleString()}
-                    </span>
-
-                    {/* 계산된 무기 공격력 */}
-                    <span>weaponAtk:</span>
-                    <span className="text-cyan-400">
-                      {Math.round(calcData.combatStats.weaponAtk).toLocaleString()}
-                    </span>
-
-                    {/* 역산된 주스탯 */}
-                    <span>mainStat (역산):</span>
-                    <span className="text-cyan-400">
-                      {Math.round(calcData.combatStats.mainStat).toLocaleString()}
-                    </span>
-
-                    {/* 최종 공격력 — 계산 엔진 입력값 */}
-                    <span className="text-green-400 font-bold">finalAtk:</span>
-                    <span className="text-green-400 font-bold">
-                      {Math.round(calcData.combatStats.finalAtk).toLocaleString()}
-                    </span>
-
-                  </div>
-                </div>
-
-                {/* ── 공격력 보정 ─────────────────────────────── */}
-                <div>
-                  <p className="text-slate-500 mb-1">— 공격력 보정 —</p>
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-400">
-
-                    {/* weaponAtkC */}
-                    <span>weaponAtkC:</span>
-                    <span className="text-cyan-400">
-                      {calcData.statModifiers.weaponAtkC.toLocaleString()}
-                    </span>
-                    {/* weaponAtkC 출처 내역 */}
-                    {calcData.effectLog
-                      .filter(l => l.type === 'WEAPON_ATK_C')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{l.value.toLocaleString()}
-                        </span>
-                      ))}
-
-                    {/* weaponAtkP */}
-                    <span>weaponAtkP:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.statModifiers.weaponAtkP * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'WEAPON_ATK_P')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* baseAtkP */}
-                    <span>baseAtkP:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.statModifiers.baseAtkP * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'BASE_ATK_P')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* atkP */}
-                    <span>atkP:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.statModifiers.atkP * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'ATK_P')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* atkC */}
-                    <span>atkC:</span>
-                    <span className="text-cyan-400">
-                      {calcData.statModifiers.atkC.toLocaleString()}
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'ATK_C')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{l.value.toLocaleString()}
-                        </span>
-                      ))}
-
-                  </div>
-                </div>
-
-                {/* ── 피해 보정 ────────────────────────────────── */}
-                <div>
-                  <p className="text-slate-500 mb-1">— 피해 보정 —</p>
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-400">
-
-                    {/* dmgInc (MULTIPLY) */}
-                    <span>dmgInc (×배율):</span>
-                    <span className="text-yellow-400">
-                      ×{calcData.damageModifiers.damageInc.toFixed(4)}
-                    </span>
-                    {/* MULTIPLY 항목: 각각 표시 */}
-                    {calcData.effectLog
-                      .filter(l => l.type === 'DMG_INC')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: ×{(1 + l.value).toFixed(4)}
-                        </span>
-                      ))}
-                    {/* ADD subGroup 항목: 그룹별로 합산해서 표시 */}
-                    {(() => {
-                      // subGroup 있는 DMG_INC ADD 항목을 그룹별로 묶어서 표시
-                      const addLogs = calcData.effectLog.filter(
-                        l => l.type === 'DMG_INC' && l.subGroup
-                      );
-                      const groups: Record<string, typeof addLogs> = {};
-                      addLogs.forEach(l => {
-                        const key = l.subGroup!;
-                        if (!groups[key]) groups[key] = [];
-                        groups[key].push(l);
-                      });
-                      return Object.entries(groups).map(([groupKey, logs]) => {
-                        const sum = logs.reduce((s, l) => s + l.value, 0);
-                        return (
-                          <span key={groupKey} className="col-span-2 pl-3 text-slate-500">
-                            └ [{groupKey}합산] ×{(1 + sum).toFixed(4)}
-                            {logs.map((l, i) => (
-                              <span key={i} className="block pl-4 text-slate-600">
-                                └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                              </span>
-                            ))}
-                          </span>
-                        );
-                      });
-                    })()}
-                    {/* ADD subGroup 없는 항목 (일반 ADD) */}
-                    {calcData.effectLog
-                      .filter(l => l.type === 'DMG_INC' && !l.subGroup)
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* evoDamage */}
-                    <span>evoDamage:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.damageModifiers.evoDamage * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'EVO_DMG')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* addDamage */}
-                    <span>addDamage:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.damageModifiers.addDamage * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'ADD_DMG')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* critChance */}
-                    <span>critChance:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.damageModifiers.critChance * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'CRIT_CHANCE')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* critDamage */}
-                    <span>critDamage:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.damageModifiers.critDamage * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'CRIT_DMG')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* critDamageInc (MULTIPLY) */}
-                    <span>critDmgInc (×배율):</span>
-                    <span className="text-yellow-400">
-                      ×{calcData.damageModifiers.critDamageInc.toFixed(4)}
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'CRIT_DMG_INC')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: ×{(1 + l.value).toFixed(4)}
-                        </span>
-                      ))}
-
-                    {/* defPenetration */}
-                    <span>defPenetration:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.damageModifiers.defPenetration * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'DEF_PENETRATION')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                    {/* enemyDamageTaken */}
-                    <span>enemyDmgTaken:</span>
-                    <span className="text-cyan-400">
-                      {(calcData.damageModifiers.enemyDamageTaken * 100).toFixed(2)}%
-                    </span>
-                    {calcData.effectLog
-                      .filter(l => l.type === 'ENEMY_DMG_TAKEN')
-                      .map((l, i) => (
-                        <span key={i} className="col-span-2 pl-3 text-slate-500">
-                          └ {l.label}: +{(l.value * 100).toFixed(2)}%
-                        </span>
-                      ))}
-
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
           </div>
 
           {/* ── 오른쪽 열 ──────────────────────────────────── */}
           <div className="space-y-4">
 
-            {/* 6. 장비 및 악세서리 */}
+            {/* 5. 장비 및 악세서리 */}
             <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
               <h2 className="text-sm font-bold mb-4 text-blue-400 border-b border-slate-700 pb-2">
                 장비 및 악세서리
@@ -444,7 +195,7 @@ export default function EngravingSimulator() {
                     );
                   })}
 
-                  {/* 보주 — 무기 아래 */}
+                  {/* 보주 */}
                   {displayData.boJu && (
                     <div className="flex items-center gap-3 p-2 bg-slate-800/30 rounded
                                       border border-slate-700/50">
@@ -480,11 +231,10 @@ export default function EngravingSimulator() {
                         <p className="text-xs" style={{ color: acc.grade.color }}>
                           {acc.name}
                         </p>
-                        {/* 연마효과 */}
                         {acc.polishEffects.map((eff, j) => (
                           <p key={j} className="text-[10px]"
                             style={{ color: eff.value.color }}>
-                            {eff.value.value} +{
+                            {eff.label.text} +{
                               eff.value.value < 1
                                 ? `${(eff.value.value * 100).toFixed(2)}%`
                                 : eff.value.value
@@ -515,7 +265,7 @@ export default function EngravingSimulator() {
                         {displayData.bracelet.effects.map((eff, j) => (
                           <p key={j} className="text-[10px]"
                             style={{ color: eff.value.color }}>
-                            {eff.value.value} +{
+                            {eff.label.text} +{
                               eff.value.value < 1
                                 ? `${(eff.value.value * 100).toFixed(2)}%`
                                 : eff.value.value
@@ -558,7 +308,7 @@ export default function EngravingSimulator() {
               </div>
             </div>
 
-            {/* 7. 보석 */}
+            {/* 6. 보석 */}
             <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
               <div className="flex justify-between items-end mb-4 border-b border-slate-700 pb-2">
                 <h2 className="text-sm font-bold text-purple-400">보석 세팅</h2>
@@ -593,7 +343,7 @@ export default function EngravingSimulator() {
               </div>
             </div>
 
-            {/* 8. 아크패시브 */}
+            {/* 7. 아크패시브 */}
             <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg relative">
               <h2 className="text-sm font-bold mb-4 text-cyan-400 border-b border-slate-700 pb-2">
                 아크 패시브
@@ -601,8 +351,8 @@ export default function EngravingSimulator() {
               <div className="grid grid-cols-3 gap-4 mb-4">
                 {[
                   { key: 'evolution', label: '진화', color: '#F1D594' },
-                  { key: 'insight', label: '깨달음', color: '#83E9FF' },
-                  { key: 'leap', label: '도약', color: '#C2EA55' },
+                  { key: 'insight',   label: '깨달음', color: '#83E9FF' },
+                  { key: 'leap',      label: '도약', color: '#C2EA55' },
                 ].map(({ key, label, color }) => {
                   const pt = displayData.arkPassive.points[
                     key as keyof typeof displayData.arkPassive.points
@@ -632,13 +382,12 @@ export default function EngravingSimulator() {
               </div>
             </div>
 
-            {/* 9. 아크그리드 */}
+            {/* 8. 아크그리드 */}
             <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
               <h2 className="text-sm font-bold mb-4 text-yellow-500 border-b border-slate-700 pb-2">
                 아크 그리드
               </h2>
               <div className="space-y-4">
-                {/* 코어 목록 */}
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   {displayData.arkGrid.cores.map((core, i) => (
                     <div key={i}
@@ -655,7 +404,6 @@ export default function EngravingSimulator() {
                     </div>
                   ))}
                 </div>
-                {/* 합산 효과 */}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs
                                 border-t border-slate-800 pt-3">
                   {displayData.arkGrid.effects.map((eff, i) => (
@@ -668,6 +416,73 @@ export default function EngravingSimulator() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* 9. 스킬 피해량 */}
+            <div className="bg-[#1c1f23] rounded-lg p-6 border border-slate-800 shadow-lg">
+              <h2 className="text-sm font-bold mb-4 text-emerald-400 border-b border-slate-700 pb-2">
+                스킬 피해량
+              </h2>
+
+              {skillDamageResults.length === 0 ? (
+                <p className="text-xs text-slate-500">
+                  DB에 등록된 스킬이 없습니다.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {skillDamageResults
+                    .sort((a, b) => b.totalDamage - a.totalDamage)
+                    .map((result, i) => {
+                      const pct = (result.totalDamage / maxDamage) * 100;
+                      return (
+                        <div key={i} className="space-y-1">
+                          {/* 스킬명 + 수치 */}
+                          <div className="flex justify-between items-center text-xs">
+                            <div className="flex items-center gap-2">
+                              {/* 스킬 아이콘 */}
+                              {(() => {
+                                const skill = displayData.skills.find(
+                                  s => s.name === result.skillName
+                                );
+                                return skill ? (
+                                  <div className="w-6 h-6 rounded bg-slate-700 overflow-hidden flex-shrink-0">
+                                    <img src={skill.icon} alt={skill.name}
+                                      className="w-full h-full object-cover" />
+                                  </div>
+                                ) : null;
+                              })()}
+                              <span className="text-slate-200 font-bold">
+                                {result.skillName}
+                              </span>
+                            </div>
+                            <span className="text-emerald-400 font-mono">
+                              {result.totalDamage.toLocaleString(undefined, {
+                                maximumFractionDigits: 0
+                              })}
+                            </span>
+                          </div>
+                          {/* 바 그래프 */}
+                          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          {/* 피해원 상세 (isCombined=false인 것만) */}
+                          {result.sources.filter(s => !s.isCombined).map((src, j) => (
+                            <div key={j}
+                              className="flex justify-between text-[10px] text-slate-500 pl-8">
+                              <span>{src.name}</span>
+                              <span>{src.damage.toLocaleString(undefined, {
+                                maximumFractionDigits: 0
+                              })}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
 
             {/* 10. 스킬 목록 */}
@@ -697,7 +512,6 @@ export default function EngravingSimulator() {
                           Lv.{skill.level}
                         </span>
                       </div>
-                      {/* 선택된 트라이포드 */}
                       <div className="flex gap-1 mt-0.5">
                         {skill.selectedTripods.map((t, j) => (
                           <span key={j} className="text-[10px]"
@@ -707,7 +521,6 @@ export default function EngravingSimulator() {
                         ))}
                       </div>
                     </div>
-                    {/* 룬 */}
                     {skill.rune && (
                       <span className="text-[10px]"
                         style={{ color: skill.rune.grade.color }}>
