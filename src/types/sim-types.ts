@@ -159,6 +159,7 @@ export const SUB_GROUPS = {
   CARD  : 'card',   // 카드 피해 — 카드끼리 합산 후 1회 곱연산
   SHN_03: 'snh03',  // 업화 해3 14p, 17p
   SND_03: 'snd03',  // 드레드 해3 14p, 17p
+  MAIN_STAT_C_GROUP: 'mainStatC',
 } as const;
 
 /**

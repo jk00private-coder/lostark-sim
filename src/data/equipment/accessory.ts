@@ -32,7 +32,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
   { // 주스탯
     id: ID.AN_1,
     effects: [{
-        type: "MAIN_STAT_C",
+        type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
         grades: { low: [15178, 17068], mid: [17069, 17589], high: [17590, 17857] }
       }]
   },
@@ -76,7 +76,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
   { // 주스탯
     id: ID.AE_1,
     effects: [{
-        type: "MAIN_STAT_C",
+        type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
         grades: { low: [11806, 12446], mid: [12447, 13275], high: [13276, 13889] }
       }]
   },
@@ -120,7 +120,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
   { // 주스탯
     id: ID.AR_1,
     effects: [{
-        type: "MAIN_STAT_C",
+        type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
         grades: { low: [10962, 11556], mid: [11557, 12327], high: [12328, 12897] }
       }]
   },
