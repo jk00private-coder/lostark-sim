@@ -135,5 +135,8 @@ export const calcAllAtk = (
   const baseAtk   = calcBaseAtk(mainStat, weaponAtk, mods.baseAtkP);
   const finalAtk  = calcFinalAtk(baseAtk, mods.atkC, atkPLogs);
 
+  console.log(` 무공: ${weaponAtk},주스탯: ${mainStat},기본공: ${baseAtk},최공: ${finalAtk}`);
+  // console.log(` - 보정치 객체 (Modifiers):`, dmgMods);
+
   return { weaponAtk, mainStat, baseAtk, finalAtk };
 };

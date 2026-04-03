@@ -26,6 +26,7 @@ import {
 } from '@/types/sim-types';
 import { ENGRAVINGS_DB } from '@/data/engravings';
 import { calcAllAtk }    from '@/engine/atk-calculator';
+import { EffectTarget } from '@/types/sim-types';
 
 
 // ============================================================
@@ -46,6 +47,7 @@ export interface EffectLog {
   type     : string;
   value    : number;
   subGroup?: string;
+  target?  : EffectTarget;
 }
 
 
@@ -113,17 +115,17 @@ const createEmptyStatModifiers = (): StatModifiers => ({
  */
 const createEmptyDamageModifiers = (): DamageModifiers => ({
   damageInc       : 1.0,
-  critDamageInc   : 1.0,
-  evoDamage       : 0,
-  addDamage       : 0,
-  critChance      : 0,
+  critDamageInc   : 1,
+  evoDamage       : 1,
+  addDamage       : 1,
+  critChance      : 1,
   critDamage      : 2.0,
   defPenetration  : 0,
   enemyDamageTaken: 0,
   cdrC            : 0,
   cdrP            : 0,
-  spdAtk          : 0,
-  spdMov          : 0,
+  spdAtk          : 1.0,
+  spdMov          : 1.0,
 });
 
 export const createEmptyCalcData = (): CalcData => ({
@@ -226,6 +228,7 @@ const resolveEngravingEffects = (
       type    : eff.type,
       value   : total,
       subGroup: eff.subGroup,
+      target  : eff.target,
     });
   });
 
@@ -302,12 +305,13 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
     type    : string,
     value   : number,
     subGroup?: string,
+    target? : import('@/types/sim-types').EffectTarget,
   ) => {
     if (type === 'GK_QI_DMG' || type === 'GK_QI_COST') {
-      classEffectLog.push({ label, type, value, subGroup });
+      classEffectLog.push({ label, type, value, subGroup, target });
       return;
     }
-    effectLog.push({ label, type, value, subGroup });
+    effectLog.push({ label, type, value, subGroup, target });
   };
 
   // ── 1. 전투 특성 (API 직접 할당) ─────────────────────────
@@ -353,7 +357,7 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
       eng.abilityStoneLevel,
     );
     logs.forEach(log =>
-      applyEffect(log.label, log.type, log.value, log.subGroup)
+      applyEffect(log.label, log.type, log.value, log.subGroup, log.target)
     );
   });
 
