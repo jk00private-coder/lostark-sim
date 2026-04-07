@@ -77,7 +77,6 @@ export interface EquipmentDisplay {
   quality   : number;
   itemTier  : number;
   setType   : EquipmentSetType;
-  arkPassivePoint: { category: ColoredText; point: ColoredValue } | null;
 }
 
 // ============================================================
@@ -106,7 +105,6 @@ export interface AccessoryDisplay {
   itemTier     : number;
   baseEffects  : AccessoryBaseEffect[];
   polishEffects: AccessoryPolishEffect[];
-  arkPassivePoint: { category: ColoredText; point: ColoredValue } | null;
 }
 
 // ============================================================
@@ -125,7 +123,6 @@ export interface BraceletDisplay {
   icon   : string;
   grade  : ColoredText;
   effects: BraceletEffect[];
-  arkPassivePoint: { category: ColoredText; point: ColoredValue } | null;
 }
 
 // ============================================================
@@ -163,6 +160,10 @@ export interface BoJuDisplay {
 // 아바타
 // ============================================================
 
+/**
+ * todo: 자동화할려면 API에서 넘어오는 IsSet, IsInner 필요 여부?
+ *       아니면 모든 아바타를 스캔후 같은 부위에 여러 아바타 일경우 Grade가 높은 아바타만 표시?
+ */
 export interface AvatarDisplay {
   type         : string;
   name         : string;
@@ -180,8 +181,6 @@ export interface EngravingDisplay {
   grade            : ColoredText;
   level            : number;
   abilityStoneLevel: number | null;
-  description      : string;
-  icon             : string;
 }
 
 // ============================================================

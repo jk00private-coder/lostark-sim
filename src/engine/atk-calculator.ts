@@ -130,9 +130,7 @@ export const calcAllAtk = (
   baseAtk  : number;
   finalAtk : number;
 } => {
-
-  
-  const weaponAtk = calcWeaponAtk(100, mods.weaponAtkP);
+  const weaponAtk = calcWeaponAtk(mods.weaponAtkC, mods.weaponAtkP);
   const mainStat  = calcMainStat(mods.mainStatC, mods.mainStatP);
   const baseAtk   = calcBaseAtk(mainStat, weaponAtk, mods.baseAtkP);
   const finalAtk  = calcFinalAtk(baseAtk, mods.atkC, atkPLogs);

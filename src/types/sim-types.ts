@@ -271,7 +271,6 @@ export const EFFECT_MAP: Record<CommonEffectTypeId, EffectMapEntry> = {
 
 interface SimNode {
   id: string;
-  category: SystemSourceId;
   name: string;
 
   // 상황에 따라 선택적으로 사용하는 수치들 (Optional)
@@ -310,19 +309,7 @@ interface SimScenario {
 // 5. 공통 데이터 구조
 // ============================================================
 
-/**
- * 시스템 출처 ID
- * DEV 패널에서 출처별 그룹핑에 활용
- */
-export type SystemSourceId =
-  | 'EQUIIPMENT'
-  | 'AVATAR'
-  | 'SKILL'
-  | 'ENGRAVING'
-  | 'CARD'
-  | 'GEM'
-  | 'ARK_PASSIVE'
-  | 'ARK_GRID';
+
 
 /**
  * 계산 무관 메모용 파라미터

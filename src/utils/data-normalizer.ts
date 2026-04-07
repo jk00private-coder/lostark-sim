@@ -397,7 +397,6 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
     icon  : bracelet.Icon,
     grade : toGradeColoredText(bracelet.Grade),
     effects,
-    arkPassivePoint: extractArkPassivePoint(tooltip),
   };
 };
 

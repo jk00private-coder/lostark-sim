@@ -27,6 +27,7 @@ import {
 import { ENGRAVINGS_DB } from '@/data/engravings';
 import { calcAllAtk }    from '@/engine/atk-calculator';
 import { EffectTarget } from '@/types/sim-types';
+import { COMBAT_EQUIP_DATA } from '@/data/equipment/combat-equip';
 
 
 // ============================================================
@@ -153,22 +154,44 @@ const calcModifiersFromLog = (
   statMods  : StatModifiers,
   damageMods: DamageModifiers,
 ): void => {
+
+  /**
+   * 설명: 여기저기 흩어져 있는 로그들을 **종류별(type)**로 모읍니다.
+   * 예: "공격력 %" 로그 3개, "추가 피해" 로그 2개가 있다면,
+   *     이를 ATK_P: [로그1, 로그2, 로그3], ADD_DMG: [로그4, 로그5] 식으로 정리하는 과정입니다.
+   */ 
   const typeMap: Record<string, EffectLog[]> = {};
   logs.forEach(log => {
     if (!typeMap[log.type]) typeMap[log.type] = [];
     typeMap[log.type].push(log);
   });
 
+  console.log("=== 모든 효과 분류 결과 (typeMap) ===");
+  console.dir(typeMap);
+
+  /**
+   * 설명: 분류된 각 타입이 statModifiers의 어떤 필드(예: mainStatC, damageInc)에 영향을 주는지
+   *      EFFECT_MAP에서 정보를 가져옵니다. 정보가 없으면 무시합니다.
+   */ 
   Object.entries(typeMap).forEach(([type, typeLogs]) => {
     const entry = EFFECT_MAP[type as CommonEffectTypeId];
     if (!entry) return;
 
+    /**
+     * 설명: 지금 처리하는 효과가 스탯(statMods) 쪽인지, 데미지(damageMods) 쪽인지 판단합니다.
+     * 로직: statMods 객체 안에 해당 필드 이름이 있으면 statMod를, 없으면 damageMod를 수정 대상으로 잡습니다.
+     */ 
     const statMod   = statMods   as unknown as Record<string, number>;
     const damageMod = damageMods as unknown as Record<string, number>;
     const targetMod = Object.prototype.hasOwnProperty.call(statMods, entry.field)
       ? statMod
       : damageMod;
 
+    /**
+     * 설명: 같은 타입 안에서도 **"합연산 후 곱연산"**을 할 그룹들을 나눕니다.
+     * 핵심: subGroup이 같으면 한 그룹으로 묶고, 없으면(null) 중복되지 않는
+     *      고유 키(__solo_숫자)를 주어 각각 독립된 그룹으로 만듭니다.
+     */ 
     const groupMap: Record<string, number[]> = {};
     typeLogs.forEach((log, idx) => {
       const key = log.subGroup ?? `__solo_${idx}`;
@@ -176,6 +199,10 @@ const calcModifiersFromLog = (
       groupMap[key].push(log.value);
     });
 
+    /**
+     * const groupSum = ...: 같은 그룹에 속한 값들을 먼저 싹 다 더합니다. (합연산)
+     * targetMod[...] *= (1 + groupSum): 그 합산된 결과를 현재 수치에 곱합니다. (독립 곱연산)
+     */ 
     Object.values(groupMap).forEach(values => {
       const groupSum = values.reduce((s, v) => s + v, 0);
       targetMod[entry.field] *= (1 + groupSum);
@@ -273,7 +300,10 @@ const detectBraceletEffectType = (label: string): string => {
 };
 
 /** 악세서리 연마효과 label → effectType 복원 */
-const POLISH_LABEL_MAP: Array<[string, string]> = [
+const ACCESSORY_LABEL_MAP: Array<[string, string]> = [
+  ['힘', 'MAIN_STAT_C'],
+  ['민첩', 'MAIN_STAT_C'],
+  ['지능', 'MAIN_STAT_C'],
   ['적에게 주는 피해', 'DMG_INC'     ],
   ['추가 피해'       , 'ADD_DMG'     ],
   ['무기 공격력'     , 'WEAPON_ATK_P'],
@@ -285,7 +315,7 @@ const detectPolishEffectType = (label: string, value: number): string => {
   if (label.includes('공격력') && !label.includes('무기')) {
     return value >= 1 ? 'ATK_C' : 'ATK_P';
   }
-  for (const [key, typeId] of POLISH_LABEL_MAP) {
+  for (const [key, typeId] of ACCESSORY_LABEL_MAP) {
     if (label.includes(key)) return typeId;
   }
   return 'UNKNOWN';
@@ -323,6 +353,57 @@ const extractCalcData = (display: CharacterDisplayData): CalcData => {
   combatStats.expertise      = display.combatStats.expertise;
   combatStats.hp             = display.combatStats.maxHp;
   combatStats.baseAtk        = display.combatStats.attackPower;
+
+  // ── 0. 장비 기본 스탯 수집 ───────────────────────────────────
+  //   무기    → WEAPON_ATK_C
+  //   방어구  → MAIN_STAT_C, STAT_HP_C
+
+  // API 장비 타입명 → DB name 매핑 (API는 '어깨', DB는 '견갑')
+  const API_TYPE_TO_DB_NAME: Record<string, string> = {
+    '무기': '무기', '투구': '투구', '어깨': '견갑',
+    '상의': '상의', '하의': '하의', '장갑': '장갑',
+  };
+
+  display.equipment.forEach(eq => {
+    const dbName  = API_TYPE_TO_DB_NAME[eq.type];
+    if (!dbName) return;
+
+    const dbEntry = COMBAT_EQUIP_DATA.find(db => db.name === dbName);
+    if (!dbEntry?.effects) return;
+
+    // setType → DB 등급 키 결정
+    const gradeKey: 'ancient' | 'serca' | 'relic' =
+      eq.setType === 'SERCA_ANCIENT' ? 'serca'   :
+      eq.setType === 'AEGIR_ANCIENT' ? 'ancient'  : 'relic';
+
+    dbEntry.effects.forEach(eff => {
+      // multiValues 타입만 처리 (value, grades 타입은 품질/상재련 계산 단계에서 처리)
+      if (!('multiValues' in eff) || !eff.multiValues) return;
+
+      const values = eff.multiValues[gradeKey];
+      if (!values || values.length === 0) return;
+
+      // refineStep: +25 → index 24 / 0강이면 첫 번째 값 사용
+      const idx   = Math.max(0, eq.refineStep - 1);
+      const value = values[Math.min(idx, values.length - 1)] ?? 0;
+      if (value === 0) return;
+
+      applyEffect(`${eq.type} 기본스탯`, eff.type, value);
+    });
+  });
+
+  // ── 0-1. 악세서리 주스탯 수집 ─────────────────────────────────
+  //   normalizer가 파싱한 baseEffects를 effectLog에 추가
+  //   힘/민첩/지능 → MAIN_STAT_C
+  //   체력         → STAT_HP_C
+
+  display.accessories.forEach(acc => {
+    acc.baseEffects.forEach(eff => {
+      const effectType = eff.statType.text === '체력' ? 'STAT_HP_C' : 'MAIN_STAT_C';
+      if (eff.value.value > 0)
+        applyEffect(`${acc.type} 주스탯`, effectType, eff.value.value);
+    });
+  });
 
   // ── 2. 악세서리 연마효과 ─────────────────────────────────
   display.accessories.forEach(acc =>
