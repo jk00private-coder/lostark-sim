@@ -5,6 +5,7 @@
  */
 
 import { RawCharacterData } from '@/types/raw-types';
+import { COMMON_EFFECT_TYPES } from '@/types/sim-types';
 import {
   ColoredText,
   ColoredValue,
@@ -173,27 +174,6 @@ const findPolishGrade = (
 };
 
 /**
- * 아크패시브 포인트 기여 추출
- * 장비/악세서리 툴팁에서 아크패시브 포인트 기여분을 파싱합니다.
- */
-const extractArkPassivePoint = (
-  tooltip: Record<string, any>
-): { category: ColoredText; point: ColoredValue } | null => {
-  const candidates = ['Element_010', 'Element_007'];
-  for (const key of candidates) {
-    const content: string = tooltip[key]?.value?.Element_001 ?? '';
-    if (content.includes('아크 패시브 포인트')) {
-      const m = stripHtml(content).match(/(진화|깨달음|도약)\s*\+(\d+)/);
-      if (m) return {
-        category: { text: m[1], color: ARK_PASSIVE_COLORS[m[1]] },
-        point   : { value: parseInt(m[2]), color: undefined },
-      };
-    }
-  }
-  return null;
-};
-
-/**
  * 연마효과 label → effectType 감지
  * 순서 중요 — 무기공격력을 공격력보다 먼저 검사
  */
@@ -279,7 +259,6 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         quality   : titleEl.qualityValue ?? 0,
         itemTier  : tier,
         setType   : findEquipSetType(eq.Name),
-        arkPassivePoint: extractArkPassivePoint(tooltip),
       };
     });
 };
@@ -336,7 +315,6 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
         itemTier     : tier,
         baseEffects,
         polishEffects,
-        arkPassivePoint: extractArkPassivePoint(tooltip),
       };
     });
 };

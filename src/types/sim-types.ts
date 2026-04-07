@@ -143,18 +143,9 @@ export type EffectTypeId = CommonEffectTypeId | ClassEffectTypeId;
 
 /**
  * subGroup 식별자 상수
- *
- * [규칙]
- *   subGroup 없음 → 독립 곱연산
- *   subGroup 있음 → 같은 그룹끼리 합산 후 1회 곱연산
- *
- * [명시 위치]
- *   DB 파일에서만 정의\
- *   data-normalizer 에서는 명시하지 않음
- *
- * 필요한 경우에만 추가합니다.
+ * 
+ * todo: 섭그룹이 생길때마다 여기에 작성해야 하는지 검토
  */
-// todo: 섭그룹이 생길때마다 여기에 작성해야 하는지 검토
 export const SUB_GROUPS = {
   CARD  : 'card',   // 카드 피해 — 카드끼리 합산 후 1회 곱연산
   SHN_03: 'snh03',  // 업화 해3 14p, 17p
@@ -162,9 +153,14 @@ export const SUB_GROUPS = {
   MAIN_STAT_C_GROUP: 'mainStatC',
 } as const;
 
+// export type SUB_GROUPS =
+//   | 'CARD'// 카드 피해 — 카드끼리 합산 후 1회 곱연산
+//   | 'SHN_03'// 업화 해3 14p, 17p
+//   | 'SND_03'// 드레드 해3 14p, 17p
+//   | 'MAIN_STAT_C_GROUP';
+
 /**
  * 적용 대상 분류
- * 아무것도 지정하지 않으면 전체 적용
  */
 export interface EffectTarget {
   skillIds?: number[];
@@ -178,9 +174,8 @@ export interface EffectTarget {
  * 모든 효과의 기본 단위 — 계산 + UI 공용
  *
  * [연산 규칙]
- *   subGroup 없음             → 독립 곱연산
- *   같은 type + 같은 subGroup → 합산 후 1회 곱연산
- *   다른 type 끼리            → 곱연산 (디폴트)
+ *  subGroup 있음 → 합연산
+ *  subGroup 없음 → 곱연산
  *
  * [value]
  *   DB 작성 시 color 없으면 생략 가능
@@ -269,41 +264,6 @@ export const EFFECT_MAP: Record<CommonEffectTypeId, EffectMapEntry> = {
 // 4. 시뮬레이션 시나리오 구조
 // ============================================================
 
-interface SimNode {
-  id: string;
-  name: string;
-
-  // 상황에 따라 선택적으로 사용하는 수치들 (Optional)
-  level?: number;      // 레벨 (강화, 아크패시브 등)
-  rank?: number;       // 랭크 (카르마, 장비랭크 등)
-  grade?: string;      // 등급 (고대, 유물 등)
-
-  // 사용자 직접 입력 수치 (악세 주스탯, 상재 등)
-  customValue?: number;
-
-}
-
-interface CalculatedDamage {
-  totalCycleDamage: number; // 한 사이클 총 피해량
-  totalWeightDamage: number; // 비중 기반 총 피해량
-  skillDamageList: {       // 스킬별 상세 (그래프용)
-    skillName: string;
-    damage: number;  // 1회 사용 시 데미지
-    countPerCycle: number;  // 1사이클 당 사용 횟수 (커스텀)
-    weight: number;  // 전체 딜 비중 (%) (커스텀)
-    dps: number;  // 스킬 단일 DPS
-  }[];
-}
-
-// 하나의 완성된 시나리오 세트
-interface SimScenario {
-  id: string;            // "base", "compare-1" 등
-  title: string;            // "현재 세팅", "진화2단계 테스트" 등
-  nodes: SimNode[];         // 아크패시브/각인/보석 등의 상태 리스트
-  calcDmgResult: CalculatedDamage;  // 계산 엔진에 의해 산출된 최종 딜량
-}
-
-
 
 // ============================================================
 // 5. 공통 데이터 구조
@@ -324,14 +284,18 @@ export interface MemoParam {
 /**
  * 공통 데이터 규격
  * API 데이터 + DB 데이터 모두 이 규격으로 통일
+ * 
+ * label: API 툴팁 매칭용
+ * name : UI 표시용
  */
 export interface BaseSimData {
-  id: number;
-  name?: string;
+  id        : number;
+  name     ?: string;
+  label    ?: string;
   nameColor?: string;
-  iconPath?: string;
-  effects?: EffectEntry[];
-  memo?: MemoParam[];
+  iconPath ?: string;
+  effects  ?: EffectEntry[];
+  memo     ?: MemoParam[];
 }
 
 // ============================================================

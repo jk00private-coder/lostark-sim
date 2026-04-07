@@ -1220,7 +1220,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
         coefficients: [0.86, 1.53, 1.95, 2.29, 2.56, 2.77, 2.95, 3.12, 3.25, 3.37, 3.37, 3.37, 3.37, 3.38],
       },
       {
-        name: '2타', isCombined: true, hits: 5,
+        name: '2타', isCombined: true, hits: 1,
         constants: [158, 280, 358, 421, 471, 508, 543, 576, 598, 621, 621, 621, 621, 622],
         coefficients: [0.86, 1.52, 1.95, 2.29, 2.56, 2.76, 2.95, 3.13, 3.25, 3.38, 3.38, 3.38, 3.38, 3.38],
       }
@@ -1306,7 +1306,7 @@ export const SKILLS_GUARDIAN_KNIGHT_DB: SkillData[] = [
 
     levels: [
       {
-        name: '1타', isCombined: true, hits: 10,
+        name: '1타', isCombined: true, hits: 1,
         constants: [503, 892, 1142, 1342, 1500, 1620, 1728, 1828, 1901, 1971, 1972, 1972, 1973, 1973],
         coefficients: [2.73, 4.85, 6.21, 7.3, 8.16, 8.81, 9.4, 9.94, 10.34, 10.72, 10.73, 10.73, 10.74, 10.74],
       }

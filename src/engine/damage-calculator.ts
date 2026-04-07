@@ -132,11 +132,11 @@ export const calcSourceDamage = (
   const baseDmg = (source.constant + source.coefficient * finalAtk)
                 * source.hits;
 
-  // [디버그 로그 추가]
-  console.log(` - 소스:`, source);
-  console.log(` - 공격력: ${finalAtk}, 상수: ${source.constant}, 계수: ${source.coefficient}, 타수: ${source.hits}`);
-  console.log(` - 기초 데미지 (Base): ${baseDmg}`);
-  console.log(` - 보정치 객체 (Modifiers):`, dmgMods);
+  // // [디버그 로그 추가]
+  // console.log(` - 소스:`, source);
+  // console.log(` - 공격력: ${finalAtk}, 상수: ${source.constant}, 계수: ${source.coefficient}, 타수: ${source.hits}`);
+  // console.log(` - 기초 데미지 (Base): ${baseDmg}`);
+  // console.log(` - 보정치 객체 (Modifiers):`, dmgMods);
 
   // 공격 타입 보너스
   const atkBonus = getAttackTypeBonus(source.attackId, isUltimate);

@@ -23,10 +23,11 @@ import {
   CommonEffectTypeId,
   EFFECT_MAP,
   SUB_GROUPS,
+  EffectTarget,
+  EffectTypeId,
 } from '@/types/sim-types';
 import { ENGRAVINGS_DB } from '@/data/engravings';
 import { calcAllAtk }    from '@/engine/atk-calculator';
-import { EffectTarget } from '@/types/sim-types';
 import { COMBAT_EQUIP_DATA } from '@/data/equipment/combat-equip';
 
 
@@ -50,6 +51,21 @@ export interface EffectLog {
   subGroup?: string;
   target?  : EffectTarget;
 }
+/**
+ * 효과의 성격을 규정하는 타입
+ * RAW: 계산의 재료 (스탯, 스택 등)
+ * FINAL: 최종 연산에 곱해지는 수치 (피해 증가 등)
+ */
+// export interface EffectLog {
+//   id       : number;
+//   name     : string;
+//   kind     : 'RAW' | 'FINAL'
+//   type     : EffectTypeId;
+//   value    : number;
+//   target?  : EffectTarget;
+//   subGroup?: string;
+//   desc?    : string;
+// }
 
 
 // ============================================================
