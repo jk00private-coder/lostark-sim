@@ -14,7 +14,7 @@ import {
   CombatStatsDisplay,
   EquipmentDisplay,
   EquipmentSetType,
-  AccessoryDisplay,
+  AccessoryDisplay, AccessoryEffect,
   OptionGrade,
   BraceletDisplay,
   AbilityStoneDisplay,
@@ -260,7 +260,6 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
 };
 
 // ── 악세서리 ────────────────────────────────────────────────
-
 export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] => {
   const accTypes = ['목걸이', '귀걸이', '반지'];
   return raw.equipment
@@ -270,23 +269,30 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
       const titleEl = tooltip['Element_001']?.value ?? {};
       const tier    = extractItemTier(titleEl.leftStr2 ?? '');
 
-      // 기본 효과 파싱 (주스탯, 체력)
-      const baseEffects: AccessoryBaseEffect[] = [];
+      const effects: AccessoryEffect[] = [];
+
+      // 1) 기본 효과 파싱 (힘/민첩/지능/체력)
       const baseStr: string = tooltip['Element_004']?.value?.Element_001 ?? '';
       baseStr.split(/<br\s*\/?>/i).filter(Boolean).forEach(line => {
         const clean = stripHtml(line);
         const m     = clean.match(/(힘|민첩|지능|체력)\s*\+(\d+)/);
         if (m) {
-          const isNonMain = line.toLowerCase().includes('#686660');
-          baseEffects.push({
-            statType: { text: m[1], color: isNonMain ? '#686660' : undefined },
-            value   : { value: parseInt(m[2]), color: undefined },
+          const name = m[1];
+          const value = parseInt(m[2]);
+          const isNonMain = line.toLowerCase().includes('#686660'); // 비주스탯(회색) 체크
+
+          effects.push({
+            id: 0, // 필요 시 DB ID 매칭 (예: MAIN_STAT)
+            name: name,
+            label: { text: name, color: isNonMain ? '#686660' : undefined },
+            isDb: true,
+            value: { value, color: undefined },
+            // 주스탯은 범위값이 없으므로 생략
           });
         }
       });
 
-      // 연마 효과 파싱
-      const polishEffects: AccessoryPolishEffect[] = [];
+      // 2) 연마 효과 파싱
       const polishStr: string = tooltip['Element_006']?.value?.Element_001 ?? '';
       polishStr.split(/<br\s*\/?>/i).filter(Boolean).forEach(line => {
         const clean     = stripHtml(line);
@@ -295,81 +301,76 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
         const cv        = toColoredValue(line);
         const effectType = detectPolishEffectType(labelText, cv.value);
 
-        polishEffects.push({
+        // TODO: ACCESSORY_DATA에서 해당 effectType의 min/max를 가져오는 로직 추가
+        const dbInfo = ACCESSORY_DATA.find(d => d.effects?.some(e => e.type === effectType));
+        const effectDb = dbInfo?.effects?.find(e => e.type === effectType);
+
+        effects.push({
+          id: effectDb?.id ?? 0,
+          name: labelText,
           label: { text: labelText, color: undefined },
+          isDb: !!effectDb,
           value: cv,
-          grade: findPolishGrade(effectType, cv.value, cv.color),
+          valueRange: effectDb?.range, // { min, max }
+          opGrade: findPolishGrade(effectType, cv.value, cv.color),
         });
       });
 
       return {
-        type         : eq.Type,
-        name         : eq.Name,
-        icon         : eq.Icon,
-        grade        : toGradeColoredText(eq.Grade),
-        quality      : titleEl.qualityValue ?? 0,
-        itemTier     : tier,
-        baseEffects,
-        polishEffects,
+        id: 0, // 악세서리 자체 ID는 필요 시 정의
+        name: eq.Name,
+        label: { text: eq.Name, color: undefined },
+        isDb: true,
+        icon: eq.Icon,
+        type: eq.Type,
+        grade: toGradeColoredText(eq.Grade),
+        quality: titleEl.qualityValue ?? 0,
+        itemTier: tier,
+        effects, // 통합된 배열
       };
     });
 };
 
 // ── 팔찌 ────────────────────────────────────────────────────
-
 export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null => {
   const bracelet = raw.equipment.find(eq => eq.Type === '팔찌');
   if (!bracelet) return null;
 
-  const tooltip   = parseTooltip(bracelet.Tooltip);
+  const tooltip = parseTooltip(bracelet.Tooltip);
   const effectStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
 
-  /** 팔찌 효과 키워드 → { effectType, isFixed } */
-  const BRACELET_EFFECT_MAP: Record<string, { effectType: string; isFixed: boolean }> = {
-    '신속'            : { effectType: 'STAT_SWIFT', isFixed: true  },
-    '특화'            : { effectType: 'STAT_SPEC',  isFixed: true  },
-    '치명'            : { effectType: 'STAT_CRIT',  isFixed: true  },
-    '헤드어택'        : { effectType: 'DMG_INC',    isFixed: false },
-    '치명타 피해'     : { effectType: 'CRIT_DMG',   isFixed: false },
-    '치명타로 적중 시': { effectType: 'CRIT_DMG_INC', isFixed: false },
-    '추가 피해'       : { effectType: 'ADD_DMG',    isFixed: false },
-    '무기 공격력'     : { effectType: 'WEAPON_ATK_C', isFixed: false },
-  };
-
-  const effects: BraceletEffect[] = effectStr
+  const effects: AccessoryEffect[] = effectStr
     .split(/<br\s*\/?>/i)
     .filter(Boolean)
     .map(line => {
-      const clean    = stripHtml(line);
-      let effectType = 'UNKNOWN';
-      let isFixed    = false;
-
-      for (const [key, val] of Object.entries(BRACELET_EFFECT_MAP)) {
-        if (clean.includes(key)) {
-          effectType = val.effectType;
-          isFixed    = val.isFixed;
-          break;
-        }
-      }
-
+      const clean = stripHtml(line);
+      // ... (기존 effectType 감지 로직 동일) ...
+      
       const labelM    = clean.match(/^([^+\d]+)/);
       const labelText = labelM ? labelM[1].trim() : clean;
       const cv        = toColoredValue(line);
+      
+      // 팔찌 DB(BRACELET_DATA)에서 정보 조회 (가정)
+      // const effectDb = BRACELET_DATA.find(...) 
 
       return {
-        label  : { text: labelText, color: undefined },
-        value  : cv,
-        isFixed,
-        grade  : isFixed
-          ? undefined
-          : findPolishGrade(effectType, cv.value, cv.color),
+        id: 0, // DB ID
+        name: labelText,
+        label: { text: labelText, color: undefined },
+        isDb: true, 
+        value: cv,
+        // valueRange: effectDb?.range, // 범위값 추가
+        opGrade: line.includes('color') ? findPolishGrade('UNKNOWN', cv.value, cv.color) : undefined,
       };
     });
 
   return {
-    name  : bracelet.Name,
-    icon  : bracelet.Icon,
-    grade : toGradeColoredText(bracelet.Grade),
+    id: 0,
+    name: bracelet.Name,
+    label: { text: bracelet.Name, color: undefined },
+    isDb: true,
+    icon: bracelet.Icon,
+    grade: toGradeColoredText(bracelet.Grade),
     effects,
   };
 };

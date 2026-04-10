@@ -37,10 +37,12 @@ export interface BaseDisplay {
   name: string;         // UI용 요약 명칭
   label: ColoredText;   // API 원본 텍스트
   isDb: boolean;        // DB 매칭 성공 여부
+  idDiff: boolean;      // DB 범위수치 벗어날 경우 true
   icon?: string;
   value?: ColoredValue;
-  opGrade?: OptionGrade; // 상/중/하 (악세, 팔찌 등)
-  eqGrade?: ColoredText; // 유물, 고대 등 (장비 등급 명칭)
+  valueRange?: {min: number; max: number};
+  opGrade?: OptionGrade; // 상/중/하 옵션
+  eqGrade?: ColoredText; // 장비 등급(유물, 고대 등)
 }
 
 // ============================================================
@@ -81,8 +83,8 @@ export interface CombatStatsDisplay {
 
 export interface EquipmentDisplay extends BaseDisplay {
   itemLv: number;
-  refineStep: number;
-  adv_refine?: number;
+  refineLv: number;
+  advRefineLv?: number;
   quality: number;
   itemTier: number;
   setType: EquipmentSetType;

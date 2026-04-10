@@ -25,24 +25,48 @@ export const ID = {
 };
 
 export const NAMES = {
-  [ID.F1_1]: '주스탯', [ID.F1_2]: '체력',
+  // ── 기본 효과 & 전투 특성 ──────────────────
+  [ID.F1_1]: '주스탯 +{v1}', [ID.F1_2]: '체력 +{v1}',
+  [ID.F2_1]: '치명 +{v1}', [ID.F2_2]: '특화 +{v1}', [ID.F2_3]: '제압 +{v1}',
+  [ID.F2_4]: '신속 +{v1}', [ID.F2_5]: '인내 +{v1}', [ID.F2_6]: '숙련 +{v1}',
+  // ── 특수 효과 (복합 및 서술형 요약) ──────────────────
+  [ID.F3_1]:  '공이속 +{v1}%',
+  [ID.F3_11]: '치적 +{v1}% & 치명타시 피증 +{v2}%', [ID.F3_12]: '치피 +{v1}% & 치명타시 피증 +{v2}%',
+  [ID.F3_13]: '피증 +{v1}% & 무력화시 피증 +{v2}%', [ID.F3_14]: '추피 +{v1}% & (대)악추피 +{v2}%',
+  [ID.F3_15]: '피증 +{v1}% & 쿨증 +{v2}%', [ID.F3_16]: '방감 -{v1}% & 아공강 +{v2}%',
+  [ID.F3_17]: '치명타 저항 -{v1}% & 아공강 +{v2}%', [ID.F3_19]: '치피 저항 -{v1}% & 아공강 +{v2}%',
+  [ID.F3_20]: '무공 +{v1} & 공이속 +{v2}% (풀 스택 기준)', [ID.F3_21]: '무공 +{v1} & (생50%↑)무공 +{v2}',
+  [ID.F3_22]: '무공 +{v1} & (적중시)무공 +{v2} (풀 스택 기준)',
+  // 단일 계열
+  [ID.F3_23]: '피해 증가 +{v1}%', [ID.F3_24]: '추가 피해 +{v1}%', [ID.F3_25]: '백 피증 +{v1}%',
+  [ID.F3_26]: '헤드 피증 +{v1}%', [ID.F3_27]: '타대 피증 +{v1}%', [ID.F3_31]: '치적 +{v1}%',
+  [ID.F3_32]: '치피 +{v1}%', [ID.F3_33]: '무공 +{v1}',
+} as const;
 
+export const LABELS = {
+  [ID.F1_1]: '힘|민첩|지능', [ID.F1_2]: '체력',
   [ID.F2_1]: '치명', [ID.F2_2]: '특화', [ID.F2_3]: '제압',
   [ID.F2_4]: '신속', [ID.F2_5]: '인내', [ID.F2_6]: '숙련',
 
-  [ID.F3_1]: '공이속', [ID.F3_11]: '치적 + 치피시 피증', [ID.F3_12]: '치피 + 치피시 피증',
-  [ID.F3_13]: '피증 + 무력시 피증', [ID.F3_14]: '추피 + 악마대악마 피증', [ID.F3_15]: '피증 + 쿨증',
-  [ID.F3_16]: '방감 + 아공강', [ID.F3_17]: '치적 + 아공강', [ID.F3_19]: '치피 + 아공강',
-  [ID.F3_20]: '무공 + 공이속', [ID.F3_21]: '무공 + 생50무공', [ID.F3_22]: '무공 + 적중시 무공',
-  [ID.F3_23]: '피해 증가', [ID.F3_24]: '추가 피해', [ID.F3_25]: '백 피증',
-  [ID.F3_26]: '헤드 피증', [ID.F3_27]: '타대 피증', [ID.F3_31]: '치적',
-  [ID.F3_32]: '치피', [ID.F3_33]: '무공',
+  // 서술형 매칭 (문장 앞부분 혹은 핵심 키워드)
+  [ID.F3_1]:  '공격 및 이동 속도가',
+  [ID.F3_11]: '치명타 적중률이', [ID.F3_12]: '치명타 피해가',
+  [ID.F3_13]: '무력화 상태의 적에게', [ID.F3_14]: '악마 및 대악마 계열', 
+  [ID.F3_15]: '재사용 대기 시간이', [ID.F3_16]: '대상의 방어력을',
+  [ID.F3_17]: '대상의 치명타 저항을', [ID.F3_19]: '치명타 피해 저항을',
+  [ID.F3_20]: '매 초 마다 10초 동안 무기 공격력이', [ID.F3_21]: '자신의 생명력이 50% 이상일 경우',
+  [ID.F3_22]: '30초 마다 120초 동안 무기 공격력이',
+  // 단일 계열
+  [ID.F3_23]: '적에게 주는 피해가', [ID.F3_24]: '추가 피해', [ID.F3_25]: '백어택 스킬이',
+  [ID.F3_26]: '헤드어택 스킬이', [ID.F3_27]: '방향성 공격이 아닌 스킬이', [ID.F3_31]: '치명타 적중률',
+  [ID.F3_32]: '치명타 피해', [ID.F3_33]: '무기 공격력',
 } as const;
 
 export const BRACELET_DATA: BaseSimData[] = [
   // ── 주스탯 (Main Stat) ──────────────────────────────────
   {
     id: ID.F1_1,
+    label: LABELS[ID.F1_1],
     name: NAMES[ID.F1_1],
     effects: [
       {
@@ -56,7 +80,8 @@ export const BRACELET_DATA: BaseSimData[] = [
   },
   // ── 체력 (HP) ──────────────────────────────────
   {
-    id: ID.F1_2, // 유물(R1_2)과 고대(A1_2)를 이 ID로 통합
+    id: ID.F1_2,
+    label: LABELS[ID.F1_2],
     name: NAMES[ID.F1_2],
     effects: [
       {
@@ -72,6 +97,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 치명 (Critical) ──────────────────────────────────
   {
     id: ID.F2_1,
+    label: LABELS[ID.F2_1],
     name: NAMES[ID.F2_1],
     effects: [
       {
@@ -86,6 +112,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 특화 (Specialization) ──────────────────────────────────
   {
     id: ID.F2_2,
+    label: LABELS[ID.F2_2],
     name: NAMES[ID.F2_2],
     effects: [
       {
@@ -100,6 +127,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 제압 (Domination) ──────────────────────────────────
   {
     id: ID.F2_3,
+    label: LABELS[ID.F2_3],
     name: NAMES[ID.F2_3],
     effects: [
       {
@@ -114,6 +142,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 신속 (Swiftness) ──────────────────────────────────
   {
     id: ID.F2_4,
+    label: LABELS[ID.F2_4],
     name: NAMES[ID.F2_4],
     effects: [
       {
@@ -128,6 +157,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 인내 (Endurance) ──────────────────────────────────
   {
     id: ID.F2_5,
+    label: LABELS[ID.F2_5],
     name: NAMES[ID.F2_5],
     effects: [
       {
@@ -142,6 +172,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 숙련 (Expertise) ──────────────────────────────────
   {
     id: ID.F2_6,
+    label: LABELS[ID.F2_6],
     name: NAMES[ID.F2_6],
     effects: [
       {
@@ -157,6 +188,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 공이속 ──────────────────────────────────
   {
     id: ID.F3_1,
+    label: LABELS[ID.F3_1],
     name: NAMES[ID.F3_1],
     effects: [
       {
@@ -178,6 +210,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 치명타 적중률 + 치명타 시 피해 증가 ────────────────────────
   {
     id: ID.F3_11,
+    label: LABELS[ID.F3_11],
     name: NAMES[ID.F3_11],
     effects: [
       {
@@ -196,6 +229,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 치명타 피해 + 치명타 시 피해 증가 ──────────────────────────
   {
     id: ID.F3_12,
+    label: LABELS[ID.F3_12],
     name: NAMES[ID.F3_12],
     effects: [
       {
@@ -214,6 +248,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 피해 증가 + 무력화시 피해 증가 ────────────────────────────
   {
     id: ID.F3_13,
+    label: LABELS[ID.F3_13],
     name: NAMES[ID.F3_13],
     effects: [
       {
@@ -228,6 +263,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 추가 피해 + 악마대악마 피해 증가 ──────────────────────────────────
   {
     id: ID.F3_14,
+    label: LABELS[ID.F3_14],
     name: NAMES[ID.F3_14],
     effects: [
       {
@@ -242,6 +278,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 피해 증가 + 쿨타임 증가 ──────────────────────────────────
   {
     id: ID.F3_15,
+    label: LABELS[ID.F3_15],
     name: NAMES[ID.F3_15],
     effects: [
       {
@@ -260,6 +297,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 방어력 감소 + 아군 공격력 강화 ──────────────────────────────────
   {
     id: ID.F3_16,
+    label: LABELS[ID.F3_16],
     name: NAMES[ID.F3_16],
     effects: [
       {
@@ -274,6 +312,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 치명타 저항 + 아군 공격력 강화 ──────────────────────────────────
   {
     id: ID.F3_17,
+    label: LABELS[ID.F3_17],
     name: NAMES[ID.F3_17],
     effects: [
       {
@@ -288,6 +327,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 치명타 피해 저항 + 아군 공격력 강화 ──────────────────────────────────
   {
     id: ID.F3_19,
+    label: LABELS[ID.F3_19],
     name: NAMES[ID.F3_19],
     effects: [
       {
@@ -302,6 +342,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 무기 공격력 증가 + 공이속 증가 ──────────────────────────────────
   {
     id: ID.F3_20,
+    label: LABELS[ID.F3_20],
     name: NAMES[ID.F3_20],
     effects: [
       {
@@ -324,6 +365,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 무기 공격력 증가 + 생명력 50퍼 이상 무기 공격력 증가 ──────────────────────────────────
   {
     id: ID.F3_21,
+    label: LABELS[ID.F3_21],
     name: NAMES[ID.F3_21],
     effects: [
       {
@@ -338,6 +380,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 무기 공격력 증가 + 적중시 무기 공격력 증가 ──────────────────────────────────
   {
     id: ID.F3_22,
+    label: LABELS[ID.F3_22],
     name: NAMES[ID.F3_22],
     effects: [
       {
@@ -352,6 +395,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 피해 증가 ──────────────────────────────────
   {
     id: ID.F3_23,
+    label: LABELS[ID.F3_23],
     name: NAMES[ID.F3_23],
     effects: [
       {
@@ -366,6 +410,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 추가 피해 ──────────────────────────────────
   {
     id: ID.F3_24,
+    label: LABELS[ID.F3_24],
     name: NAMES[ID.F3_24],
     effects: [
       {
@@ -380,6 +425,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 백어택 시 피해 증가 ──────────────────────────────────
   {
     id: ID.F3_25,
+    label: LABELS[ID.F3_25],
     name: NAMES[ID.F3_25],
     effects: [
       {
@@ -394,6 +440,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 헤드어택 시 피해 증가 ──────────────────────────────────
   {
     id: ID.F3_26,
+    label: LABELS[ID.F3_26],
     name: NAMES[ID.F3_26],
     effects: [
       {
@@ -408,6 +455,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 비방향성 시  피해 증가 ──────────────────────────────────
   {
     id: ID.F3_27,
+    label: LABELS[ID.F3_27],
     name: NAMES[ID.F3_27],
     effects: [
       {
@@ -422,6 +470,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 치명타 적중률 ──────────────────────────────────
   {
     id: ID.F3_31,
+    label: LABELS[ID.F3_31],
     name: NAMES[ID.F3_31],
     effects: [
       {
@@ -436,6 +485,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 치명타 피해 ──────────────────────────────────
   {
     id: ID.F3_32,
+    label: LABELS[ID.F3_32],
     name: NAMES[ID.F3_32],
     effects: [
       {
@@ -450,6 +500,7 @@ export const BRACELET_DATA: BaseSimData[] = [
   // ── 무기 공격력 ──────────────────────────────────
   {
     id: ID.F3_33,
+    label: LABELS[ID.F3_33],
     name: NAMES[ID.F3_33],
     effects: [
       {

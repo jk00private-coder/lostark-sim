@@ -887,7 +887,6 @@ export const COMBAT_EQUIP_DATA: CombatEquipData[] = [
       }
     ]
   },
-
   
   { // 무기
     id: ID.WEAPON,
