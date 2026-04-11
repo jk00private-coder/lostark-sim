@@ -1,6 +1,6 @@
 // @/types/combat-equip.ts
 
-import { BaseSimData, EffectEntry } from '@/types/sim-types';
+import { BaseSimData, EffectEntry, MultiKey } from '@/types/sim-types';
 
 // 이미지 경로 생성 헬퍼
 export const GET_ICON = (type: 'HEAD' | 'SHOULDER' | 'CHEST' | 'PANTS' | 'GLOVE' | 'WEAPON') => `/images/equipment/icon_${type.toLowerCase()}.webp`;
@@ -16,7 +16,7 @@ export interface AdvRefineEffect {
 }
 
 export interface CombatEquipData extends BaseSimData {
-  multiName: { relic?: string, ancient?: string, serca?: string };
-  initItemLv: { relic?: number, ancient?: number, serca?: number };
+  multiName: Partial<Record<MultiKey, string>>; 
+  initItemLv: Partial<Record<MultiKey, number>>; 
   adv_refine: AdvRefineEffect[];
 }

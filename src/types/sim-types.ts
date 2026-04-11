@@ -199,6 +199,8 @@ export const OPTION_GRADE_COLORS = {
   high: '#FE9600',  // 주황
 } as const;
 
+export type MultiKey = 'RELIC' | 'ANCIENT' | 'ANCIENT_2';
+
 export type EffectEntry = {
   type       : EffectTypeId;
   valueColor?: string;
@@ -208,11 +210,11 @@ export type EffectEntry = {
   | { value: number[]; grades?: never; multiValues?: never; multiGrades?: never }
   | { grades: OptionGrades; value?: never; multiValues?: never; multiGrades?: never }
   | { 
-      multiValues: { relic?: number[]; ancient?: number[]; serca?: number[] };
+      multiValues: Partial<Record<MultiKey, number[]>>; 
       value?: never; grades?: never; multiGrades?: never
     } 
   | { 
-      multiGrades: { relic?: OptionGrades; ancient?: OptionGrades };
+      multiGrades: Partial<Record<MultiKey, OptionGrades>>;
       value?: never; grades?: never; multiValues?: never;
     }
 );

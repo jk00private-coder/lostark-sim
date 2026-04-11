@@ -8,6 +8,8 @@
 // 유틸리티 및 공통 타입
 // ============================================================
 
+import { MultiKey } from '@/types/sim-types';
+
 export interface ColoredValue {
   value: number;
   color?: string;
@@ -20,13 +22,6 @@ export interface ColoredText {
 
 /** 상/중/하 옵션 등급 */
 export type OptionGrade = 'HIGH' | 'MID' | 'LOW';
-
-/** 장비 세트 타입 */
-export type EquipmentSetType =
-  | 'NORMAL_RELIC'
-  | 'AEGIR_ANCIENT'
-  | 'SERCA_ANCIENT'
-  | 'UNKNOWN';
 
 /**
  * 모든 표시용 데이터의 최상위 규격 (Base)
@@ -87,7 +82,7 @@ export interface EquipmentDisplay extends BaseDisplay {
   advRefineLv?: number;
   quality: number;
   itemTier: number;
-  setType: EquipmentSetType;
+  setType: MultiKey;
 }
 
 // ============================================================

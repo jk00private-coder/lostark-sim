@@ -23,7 +23,7 @@ export const AVATAR_DATA: BaseSimData[] = [
     id: ID.AVATAR,
     name: NAMES[ID.AVATAR],
     effects: [
-      { type: "MAIN_STAT_P", multiValues: {relic:[0.01], ancient:[0.02]} }
+      { type: "MAIN_STAT_P", multiValues: {RELIC:[0.01], ANCIENT:[0.02]} }
     ]
   }
 ]
