@@ -199,7 +199,7 @@ export const OPTION_GRADE_COLORS = {
   high: '#FE9600',  // 주황
 } as const;
 
-export type MultiKey = 'RELIC' | 'ANCIENT' | 'ANCIENT_2';
+export type MultiKey = 'HERO' | 'LEGEND' | 'RELIC' | 'ANCIENT' | 'ANCIENT_2';
 
 export type EffectEntry = {
   type       : EffectTypeId;

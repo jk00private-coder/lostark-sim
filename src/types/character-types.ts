@@ -124,7 +124,8 @@ export interface BoJuDisplay extends BaseDisplay {
 }
 /**
  * todo: 자동화할려면 API에서 넘어오는 IsSet, IsInner 필요 여부?
- *       아니면 모든 아바타를 스캔후 같은 부위에 여러 아바타 일경우 Grade가 높은 아바타만 표시?
+ *       아바타 상하의 세트는 type은 상의와 동일한데 효과만 2배임 처리해야함.
+ *       같은 type의 아바타가 2개면 IsInner가 있는 얘를 처리하는 식으로 진행
  */
 export interface AvatarDisplay extends BaseDisplay {
   mainStatBonus: number;

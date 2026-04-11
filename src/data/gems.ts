@@ -14,8 +14,6 @@ export const NAMES = {
     [ID.GEMS_T3]: '3티어 보석', [ID.GEMS_T4]: '4티어 보석'
 }
 
-// todo: target은 사용자가 선택한 스킬 ID를 계산 시점에 동적으로 넣어준다.
-// 좀더 만저야함. 겁화, 멸화, 작열, 홍염, 광희 종류가 있음.
 export const GEM_DATA: BaseSimData[] = [
   {
     id: ID.GEMS_T3,
