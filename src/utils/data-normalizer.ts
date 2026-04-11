@@ -5,7 +5,7 @@
  */
 
 import { RawCharacterData } from '@/types/raw-types';
-import { COMMON_EFFECT_TYPES } from '@/types/sim-types';
+import { COMMON_EFFECT_TYPES, MultiKey } from '@/types/sim-types';
 import {
   ColoredText,
   ColoredValue,
@@ -13,7 +13,6 @@ import {
   CharacterProfileDisplay,
   CombatStatsDisplay,
   EquipmentDisplay,
-  EquipmentSetType,
   AccessoryDisplay, AccessoryEffect,
   OptionGrade,
   BraceletDisplay,
@@ -31,12 +30,12 @@ import {
   EquippedRuneDisplay,
 } from '@/types/character-types';
 
-import { COMBAT_EQUIP_DATA } from '@/data/equipment/combat-equip';
+import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
 import { ACCESSORY_DATA }    from '@/data/equipment/accessory';
 
 
 // ============================================================
-// 내부 파싱 유틸
+// 1. 기초 문자열 처리 유틸
 // ============================================================
 
 /** HTML 태그 제거 */
@@ -49,46 +48,79 @@ const extractColor = (html: string): string | undefined => {
   return m ? m[1] : undefined;
 };
 
-/** 문자열에서 첫 번째 숫자 추출 */
-const extractRawNumber = (str: string): number => {
-  const m = stripHtml(str).match(/([\d.]+)/);
+/** * 문자열에서 특정 키워드 뒤의 숫자 추출 (재련, 티어, 아이템 레벨 등 공용)
+ * @param str 원본 문자열
+ * @param regex 추출할 패턴 (기본값은 숫자만)
+ */
+const extractNum = (str: string, regex: RegExp = /([\d.]+)/): number => {
+  const clean = stripHtml(str).replace(/,/g, '');
+  const m = clean.match(regex);
   return m ? parseFloat(m[1]) : 0;
 };
 
-/** 퍼센트 문자열 → 소수 */
-const extractPercent = (str: string): number =>
-  extractRawNumber(str) / 100;
+/** 툴팁을 한 번만 순회하여 필요한 정보를 매핑 */
+const scanTooltipFeatures = (tooltip: Record<string, any>) => {
+  const features = {
+    advRefine: '', // 상급 재련
+    elixir: '',    // 엘릭서 (확장용)
+    trans: '',     // 초월 (확장용)
+  };
 
-/** HTML 수치 문자열 → ColoredValue */
+  // 툴팁의 모든 Element를 한 번만 훑습니다.
+  Object.values(tooltip).forEach((obj) => {
+    if (obj?.type === 'SingleTextBox' && typeof obj.value === 'string') {
+      const val = obj.value;
+      if (val.includes('[상급 재련]')) features.advRefine = val;
+      // 향후 필요한 키워드를 여기에 추가만 하면 됩니다.
+      // else if (val.includes('[엘릭서]')) features.elixir = val;
+    }
+  });
+
+  return features;
+};
+
+// ============================================================
+// 2. 장비 전용 파싱 유틸
+// ============================================================
+
+const extractRefineStep = (name: string) => extractNum(name, /\+(\d+)/);
+const extractItemTier   = (str: string)  => extractNum(str, /티어\s*(\d+)/);
+const extractItemLevel  = (str: string)  => extractNum(str, /아이템 레벨\s*(\d+)/);
+const extractAdvRefineLv = (str: string) => extractNum(str, /\[상급 재련\]\s*(\d+)/);
+
+// ============================================================
+// 3. 데이터 규격 변환 유틸
+// ============================================================
+
+/** 퍼센트 문자열 → 소수 (10% -> 0.1) */
+const extractPercent = (str: string): number =>
+  extractNum(str) / 100; // extractRawNumber 대신 extractNum 사용
+
+/** HTML 수치 문자열 → ColoredValue (수치 + 색상) */
 const toColoredValue = (html: string): ColoredValue => {
   const isPercent = html.includes('%');
-  const value     = isPercent ? extractPercent(html) : extractRawNumber(html);
+  // 기본 정규식을 사용하도록 인자를 비워두면 extractNum 내부의 기본값 /([\d.]+)/ 가 작동합니다.
+  const value = isPercent ? extractPercent(html) : extractNum(html);
   return { value, color: extractColor(html) };
 };
 
-/** HTML 문자열 → ColoredText */
+/** HTML 문자열 → ColoredText (텍스트 + 색상) */
 const toColoredText = (html: string): ColoredText => ({
   text : stripHtml(html),
   color: extractColor(html),
 });
 
-/** Tooltip JSON 파싱 */
+/** Tooltip JSON 파싱 (안전 장치) */
 const parseTooltip = (tooltipStr: string): Record<string, any> => {
-  try { return JSON.parse(tooltipStr); }
-  catch { return {}; }
+  try { 
+    return JSON.parse(tooltipStr); 
+  } catch { 
+    return {}; 
+  }
 };
 
-/** 장비 이름에서 재련 단계 추출 */
-const extractRefineStep = (name: string): number => {
-  const m = name.match(/^\+(\d+)/);
-  return m ? parseInt(m[1]) : 0;
-};
 
-/** leftStr2에서 아이템 티어 추출 */
-const extractItemTier = (leftStr2: string): number => {
-  const m = leftStr2.match(/티어\s*(\d+)/);
-  return m ? parseInt(m[1]) : 0;
-};
+
 
 /** 등급명 → 색상 상수 */
 const GRADE_COLORS: Record<string, string> = {
@@ -120,21 +152,15 @@ const SKILL_CATEGORY_COLORS: Record<string, string> = {
 
 /**
  * 장비 이름으로 세트 타입 판별
- *
- * combat-equip.ts의 multiName을 기준으로 매칭합니다.
- * multiName 예: { ancient: '운명의 업화 투구', serca: '운명의 전율 투구' }
- * "운명의 업화" → AEGIR_ANCIENT
- * "운명의 전율" → SERCA_ANCIENT
- * 매칭 없음    → UNKNOWN
  */
-const findEquipSetType = (itemName: string): EquipmentSetType => {
-  for (const db of COMBAT_EQUIP_DATA) {
-    if (db.multiName.serca   && itemName.includes(db.multiName.serca.split(' ')[2]   ?? '')) return 'SERCA_ANCIENT';
-    if (db.multiName.ancient && itemName.includes(db.multiName.ancient.split(' ')[2] ?? '')) return 'AEGIR_ANCIENT';
-    if (db.multiName.relic   && itemName.includes(db.multiName.relic.split(' ')[2]   ?? '')) return 'NORMAL_RELIC';
-  }
-  return 'UNKNOWN';
+const findEquipSetType = (itemName: string): MultiKey => {
+  if (itemName.includes('전율')) return 'ANCIENT_2';
+  if (itemName.includes('업화')) return 'ANCIENT';
+  if (itemName.includes('결단')) return 'RELIC';
+
+  return 'COMMON'; // 기본값
 };
+
 
 /**
  * 연마효과 수치로 상/중/하 등급 판별
@@ -240,23 +266,31 @@ export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay 
 
 export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] => {
   const weaponTypes = ['무기', '투구', '상의', '하의', '장갑', '어깨'];
-  return raw.equipment
+
+  const result = raw.equipment
     .filter(eq => weaponTypes.includes(eq.Type))
     .map(eq => {
       const tooltip = parseTooltip(eq.Tooltip);
       const titleEl = tooltip['Element_001']?.value ?? {};
-      const tier    = extractItemTier(titleEl.leftStr2 ?? '');
+      const features = scanTooltipFeatures(tooltip);
+      const dbMatch = COMBAT_EQUIP_DB[eq.Type];
       return {
-        type      : eq.Type,
-        name      : eq.Name,
-        icon      : eq.Icon,
-        grade     : toGradeColoredText(eq.Grade),
-        refineStep: extractRefineStep(eq.Name),
-        quality   : titleEl.qualityValue ?? 0,
-        itemTier  : tier,
-        setType   : findEquipSetType(eq.Name),
+        id: dbMatch?.id || 0,
+        name: dbMatch?.name || eq.Type,
+        label: eq.Name,
+        isDb: !!dbMatch,
+        icon: eq.Icon,
+        itemLv: extractItemLevel(titleEl.leftStr2 ?? ''),
+        refineLv: extractRefineStep(eq.Name),
+        advRefineLv: extractAdvRefineLv(features.advRefine),
+        quality: titleEl.qualityValue ?? 0,
+        itemTier: extractItemTier(titleEl.leftStr2 ?? ''),
+        setType: findEquipSetType(eq.Name),
       };
     });
+
+  console.table(result);
+  return result;
 };
 
 // ── 악세서리 ────────────────────────────────────────────────
@@ -655,15 +689,16 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   profile     : normalizeProfile(raw),
   combatStats : normalizeCombatStats(raw),
   equipment   : normalizeEquipment(raw),
-  accessories : normalizeAccessories(raw),
-  bracelet    : normalizeBracelet(raw),
-  abilityStone: normalizeAbilityStone(raw),
-  boJu        : normalizeBoJu(raw),
-  avatars     : normalizeAvatars(raw),
-  engravings  : normalizeEngravings(raw),
-  gems        : normalizeGems(raw),
-  cards       : normalizeCards(raw),
-  arkPassive  : normalizeArkPassive(raw),
-  arkGrid     : normalizeArkGrid(raw),
-  skills      : normalizeSkills(raw),
+  // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
+  // accessories : normalizeAccessories(raw),
+  // bracelet    : normalizeBracelet(raw),
+  // abilityStone: normalizeAbilityStone(raw),
+  // boJu        : normalizeBoJu(raw),
+  // avatars     : normalizeAvatars(raw),
+  // engravings  : normalizeEngravings(raw),
+  // gems        : normalizeGems(raw),
+  // cards       : normalizeCards(raw),
+  // arkPassive  : normalizeArkPassive(raw),
+  // arkGrid     : normalizeArkGrid(raw),
+  // skills      : normalizeSkills(raw),
 });

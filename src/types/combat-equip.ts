@@ -16,7 +16,6 @@ export interface AdvRefineEffect {
 }
 
 export interface CombatEquipData extends BaseSimData {
-  multiName: Partial<Record<MultiKey, string>>; 
   initItemLv: Partial<Record<MultiKey, number>>; 
   adv_refine: AdvRefineEffect[];
 }

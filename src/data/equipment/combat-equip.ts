@@ -1,9 +1,5 @@
 /**
- * - DB에 필요한 데이터
- * 
- * - ID로 구분해야할 것
- * 부위, 장비등급(유물, 에기르고대, 세르카고대)
- * 아이템 명으로 해당 아이템 종류 구분,
+ * @/data/equipmet/combat-equip.ts
  * 
  * 품질이 0일 경우, +10%의 추가 피해 능력치를 갖고 있으며,
  * 품질이 100일 경우, +30%의 추가 피해 능력치를 갖고 있습니다.
@@ -35,16 +31,15 @@ export const ID = {
 } as const;
 
 export const NAMES = {
-  [ID.HEAD]: '투구', [ID.SHOULDER]: '견갑',[ID.CHEST]: '상의',
+  [ID.HEAD]: '투구', [ID.SHOULDER]: '어깨',[ID.CHEST]: '상의',
   [ID.PANTS]: '하의', [ID.GLOVE]: '장갑', [ID.WEAPON]: '무기',
 } as const;
 
-export const COMBAT_EQUIP_DATA: CombatEquipData[] = [
+const COMBAT_EQUIP_DATA: CombatEquipData[] = [
   { // 투구
     id: ID.HEAD,
     name: NAMES[ID.HEAD],
     iconPath: GET_ICON('HEAD'),
-    multiName: { ANCIENT: '운명의 업화 투구', ANCIENT_2: '운명의 전율 투구' },
     initItemLv: { ANCIENT: 1590, ANCIENT_2: 1675 },
     adv_refine: [
       { // 6
@@ -213,7 +208,6 @@ export const COMBAT_EQUIP_DATA: CombatEquipData[] = [
     id: ID.SHOULDER,
     name: NAMES[ID.SHOULDER],
     iconPath: GET_ICON('SHOULDER'),
-    multiName: { ANCIENT: '운명의 업화 견갑', ANCIENT_2: '운명의 전율 견갑' },
     initItemLv: { ANCIENT: 1590, ANCIENT_2: 1675 },
     adv_refine: [
       { // 6
@@ -384,7 +378,6 @@ export const COMBAT_EQUIP_DATA: CombatEquipData[] = [
     id: ID.CHEST,
     name: NAMES[ID.CHEST],
     iconPath: GET_ICON('CHEST'),
-    multiName: { ANCIENT: '운명의 업화 상의', ANCIENT_2: '운명의 전율 상의' },
     initItemLv: { ANCIENT: 1590, ANCIENT_2: 1675 },
     adv_refine: [
       { // 6
@@ -553,7 +546,6 @@ export const COMBAT_EQUIP_DATA: CombatEquipData[] = [
     id: ID.PANTS,
     name: NAMES[ID.PANTS],
     iconPath: GET_ICON('PANTS'),
-    multiName: { ANCIENT: '운명의 업화 하의', ANCIENT_2: '운명의 전율 하의' },
     initItemLv: { ANCIENT: 1590, ANCIENT_2: 1675 },
     adv_refine: [
       { // 6
@@ -722,7 +714,6 @@ export const COMBAT_EQUIP_DATA: CombatEquipData[] = [
     id: ID.GLOVE,
     name: NAMES[ID.GLOVE],
     iconPath: GET_ICON('GLOVE'),
-    multiName: { ANCIENT: '운명의 업화 장갑', ANCIENT_2: '운명의 전율 장갑' },
     initItemLv: { ANCIENT: 1590, ANCIENT_2: 1675 },
     adv_refine: [
       { // 6
@@ -892,7 +883,6 @@ export const COMBAT_EQUIP_DATA: CombatEquipData[] = [
     id: ID.WEAPON,
     name: NAMES[ID.WEAPON],
     iconPath: GET_ICON('WEAPON'),
-    multiName: { ANCIENT: '운명의 업화 무기', ANCIENT_2: '운명의 전율 무기' },
     initItemLv: { ANCIENT: 1590, ANCIENT_2: 1675 },
     adv_refine: [
       { // 6
@@ -991,3 +981,8 @@ export const COMBAT_EQUIP_DATA: CombatEquipData[] = [
     ]
   },
 ]
+
+export const COMBAT_EQUIP_DB = COMBAT_EQUIP_DATA.reduce((acc, cur) => {
+  if (cur.name) acc[cur.name] = cur;
+  return acc;
+}, {} as Record<string, typeof COMBAT_EQUIP_DATA[0]>);

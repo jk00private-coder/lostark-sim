@@ -28,7 +28,7 @@ import {
 } from '@/types/sim-types';
 import { ENGRAVINGS_DB } from '@/data/engravings';
 import { calcAllAtk }    from '@/engine/atk-calculator';
-import { COMBAT_EQUIP_DATA } from '@/data/equipment/combat-equip';
+import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
 
 
 // ============================================================

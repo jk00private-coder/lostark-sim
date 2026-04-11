@@ -30,14 +30,14 @@ export type OptionGrade = 'HIGH' | 'MID' | 'LOW';
 export interface BaseDisplay {
   id: number;           // DB 매칭 ID (실패 시 0)
   name: string;         // UI용 요약 명칭
-  label: ColoredText;   // API 원본 텍스트
+  label: ColoredText | string;   // API 원본 텍스트, 규칙이있는 색상은 이름만
   isDb: boolean;        // DB 매칭 성공 여부
-  idDiff: boolean;      // DB 범위수치 벗어날 경우 true
+  idDiff?: boolean;      // DB 범위수치 벗어날 경우 true
   icon?: string;
   value?: ColoredValue;
   valueRange?: {min: number; max: number};
   opGrade?: OptionGrade; // 상/중/하 옵션
-  eqGrade?: ColoredText; // 장비 등급(유물, 고대 등)
+  eqGrade?: string; // 장비 등급(유물, 고대 등)
 }
 
 // ============================================================
@@ -217,18 +217,19 @@ export interface CharacterDisplayData {
   profile: CharacterProfileDisplay;
   combatStats: CombatStatsDisplay;
   equipment: EquipmentDisplay[];
-  accessories: AccessoryDisplay[];
-  bracelet: BraceletDisplay | null;
-  abilityStone: AbilityStoneDisplay | null;
-  boJu: BoJuDisplay | null;
-  avatars: AvatarDisplay[];
-  engravings: EngravingDisplay[];
-  gems: GemDisplay[]; // GemSummaryDisplay 제거 후 배열로 관리
-  cards: CardSetDisplay | null;
-  arkPassive: {
-    points: ArkPassivePointDisplay;
-    effects: ArkPassiveEffectDisplay[];
-  };
-  arkGrid: ArkGridDisplay;
-  skills: SkillDisplay[];
+  // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
+  // accessories: AccessoryDisplay[];
+  // bracelet: BraceletDisplay | null;
+  // abilityStone: AbilityStoneDisplay | null;
+  // boJu: BoJuDisplay | null;
+  // avatars: AvatarDisplay[];
+  // engravings: EngravingDisplay[];
+  // gems: GemDisplay[]; // GemSummaryDisplay 제거 후 배열로 관리
+  // cards: CardSetDisplay | null;
+  // arkPassive: {
+  //   points: ArkPassivePointDisplay;
+  //   effects: ArkPassiveEffectDisplay[];
+  // };
+  // arkGrid: ArkGridDisplay;
+  // skills: SkillDisplay[];
 }

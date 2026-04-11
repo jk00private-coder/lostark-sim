@@ -199,7 +199,10 @@ export const OPTION_GRADE_COLORS = {
   high: '#FE9600',  // 주황
 } as const;
 
-export type MultiKey = 'HERO' | 'LEGEND' | 'RELIC' | 'ANCIENT' | 'ANCIENT_2';
+/**
+ * 'ACINET_2': 세르카 고대 장비
+ */
+export type MultiKey = 'COMMON' | 'HERO' | 'LEGEND' | 'RELIC' | 'ANCIENT' | 'ANCIENT_2';
 
 export type EffectEntry = {
   type       : EffectTypeId;
