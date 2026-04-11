@@ -86,15 +86,19 @@ export const ID_BB = {
   GUARDIANKNIGHT: 81, // 가디언나이트
 } as const;
 
+/**
+ * ID_C 분류가 파일별로 분류되면 여기에 정의
+ * 한 파일에 ID_C 분류가 다 적히면 파일에 정의
+ */
 export const ID_C = {
-  // 10. EQUIPMENT 소분류
+  // 10. EQUIPMENT
   EQ_COMBAT: 1,     // 전투 장비 (머리, 어깨, 상의, 하의, 장갑, 무기)
   EQ_ACCESSORY: 2,  // 악세서리 (목걸이, 귀걸이, 반지)
   EQ_STONE: 3,      // 어빌리티 스톤
   EQ_BRACELET: 4,   // 팔찌
   EQ_ORB: 5,        // 보주 (엘릭서/초월 등 특수 장비 포함 가능)
 
-  // 70. ARK_PASSIVE 소분류
+  // 70. ARK_PASSIVE
   ARK_EVOLUTION: 1,  // 진화
   ARK_ENLIGHTEN: 2,  // 깨달음
   ARK_LEAP     : 3,  // 도약
