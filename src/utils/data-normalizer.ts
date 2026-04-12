@@ -58,21 +58,37 @@ const extractNum = (str: string, regex: RegExp = /([\d.]+)/): number => {
   return m ? parseFloat(m[1]) : 0;
 };
 
-/** 툴팁을 한 번만 순회하여 필요한 정보를 매핑 */
+/** 문자열 추출 (에스더 이름 등) */
+const extractStr = (str: string, regex: RegExp): string => {
+  const m = str.match(regex);
+  return m ? m[1] : '';
+};
+
+/** 툴팁 단일 순회 스캐너 */
 const scanTooltipFeatures = (tooltip: Record<string, any>) => {
   const features = {
-    advRefine: '', // 상급 재련
-    elixir: '',    // 엘릭서 (확장용)
-    trans: '',     // 초월 (확장용)
+    advRaw: '', 
+    estherRaw: '', 
+    ellaRaw: '',   
   };
 
-  // 툴팁의 모든 Element를 한 번만 훑습니다.
-  Object.values(tooltip).forEach((obj) => {
-    if (obj?.type === 'SingleTextBox' && typeof obj.value === 'string') {
-      const val = obj.value;
-      if (val.includes('[상급 재련]')) features.advRefine = val;
-      // 향후 필요한 키워드를 여기에 추가만 하면 됩니다.
-      // else if (val.includes('[엘릭서]')) features.elixir = val;
+  Object.keys(tooltip).forEach((key) => {
+    const obj = tooltip[key];
+    if (!obj) return;
+
+    if (obj.type === 'SingleTextBox' && typeof obj.value === 'string') {
+      if (obj.value.includes('[상급 재련]')) {
+        features.advRaw = obj.value;
+      }
+    }
+
+    if (obj.type === 'IndentStringGroup' && obj.value?.Element_000) {
+      const target = obj.value.Element_000;
+      
+      if (target.topStr?.includes('에스더 효과')) {
+        features.estherRaw = target.topStr; // "[실리안]" 추출용
+        features.ellaRaw = JSON.stringify(target.contentStr || {}); // "3 단계" 추출용
+      }
     }
   });
 
@@ -80,16 +96,7 @@ const scanTooltipFeatures = (tooltip: Record<string, any>) => {
 };
 
 // ============================================================
-// 2. 장비 전용 파싱 유틸
-// ============================================================
-
-const extractRefineStep = (name: string) => extractNum(name, /\+(\d+)/);
-const extractItemTier   = (str: string)  => extractNum(str, /티어\s*(\d+)/);
-const extractItemLevel  = (str: string)  => extractNum(str, /아이템 레벨\s*(\d+)/);
-const extractAdvRefineLv = (str: string) => extractNum(str, /\[상급 재련\]\s*(\d+)/);
-
-// ============================================================
-// 3. 데이터 규격 변환 유틸
+// 2. 데이터 규격 변환 유틸
 // ============================================================
 
 /** 퍼센트 문자열 → 소수 (10% -> 0.1) */
@@ -119,9 +126,6 @@ const parseTooltip = (tooltipStr: string): Record<string, any> => {
   }
 };
 
-
-
-
 /** 등급명 → 색상 상수 */
 const GRADE_COLORS: Record<string, string> = {
   '고대': '#E3C7A1', '유물': '#FA5D00', '전설': '#F99200',
@@ -150,10 +154,9 @@ const SKILL_CATEGORY_COLORS: Record<string, string> = {
 // DB 조회 헬퍼
 // ============================================================
 
-/**
- * 장비 이름으로 세트 타입 판별
- */
-const findEquipSetType = (itemName: string): MultiKey => {
+/** 아이템 이름과 등급을 기반으로 세트 타입을 결정 */
+const findEquipSetType = (itemName: string, grade: string): MultiKey => {
+  if (grade === '에스더') return 'ESTHER';
   if (itemName.includes('전율')) return 'ANCIENT_2';
   if (itemName.includes('업화')) return 'ANCIENT';
   if (itemName.includes('결단')) return 'RELIC';
@@ -195,35 +198,11 @@ const findPolishGrade = (
   return 'LOW';
 };
 
-/**
- * 연마효과 label → effectType 감지
- * 순서 중요 — 무기공격력을 공격력보다 먼저 검사
- */
-const POLISH_EFFECT_TYPE_LIST: Array<[string, string]> = [
-  ['적에게 주는 피해', 'DMG_INC'     ],
-  ['추가 피해'       , 'ADD_DMG'     ],
-  ['무기 공격력'     , 'WEAPON_ATK_P'],
-  ['공격력'          , 'ATK_P'       ],
-  ['치명타 피해'     , 'CRIT_DMG'    ],
-  ['치명타 적중률'   , 'CRIT_CHANCE' ],
-];
-
-const detectPolishEffectType = (label: string, value: number): string => {
-  // 공격력 C/P 구분: % 여부로 판단 (value < 1이면 퍼센트)
-  if (label.includes('공격력') && !label.includes('무기') && value >= 1) return 'ATK_C';
-  for (const [key, typeId] of POLISH_EFFECT_TYPE_LIST) {
-    if (label.includes(key)) return typeId;
-  }
-  return 'UNKNOWN';
-};
-
-
 // ============================================================
 // 섹션별 정규화
 // ============================================================
 
 // ── 프로필 ──────────────────────────────────────────────────
-
 export const normalizeProfile = (raw: RawCharacterData): CharacterProfileDisplay => {
   const p = raw.profile;
   return {
@@ -245,7 +224,6 @@ export const normalizeProfile = (raw: RawCharacterData): CharacterProfileDisplay
 };
 
 // ── 전투 특성 ────────────────────────────────────────────────
-
 export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay => {
   const statsMap = Object.fromEntries(
     raw.profile.Stats.map(s => [s.Type, parseInt(s.Value.replace(/,/g, ''))])
@@ -263,32 +241,40 @@ export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay 
 };
 
 // ── 전투 장비 ────────────────────────────────────────────────
-
 export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] => {
-  const weaponTypes = ['무기', '투구', '상의', '하의', '장갑', '어깨'];
+  const equipTypes = ['무기', '투구', '상의', '하의', '장갑', '어깨'];
 
+  //return raw.equipment
   const result = raw.equipment
-    .filter(eq => weaponTypes.includes(eq.Type))
+    .filter(eq => equipTypes.includes(eq.Type))
     .map(eq => {
       const tooltip = parseTooltip(eq.Tooltip);
       const titleEl = tooltip['Element_001']?.value ?? {};
       const features = scanTooltipFeatures(tooltip);
       const dbMatch = COMBAT_EQUIP_DB[eq.Type];
-      return {
+
+      // 기본 데이터 구조
+      const displayData: EquipmentDisplay = {
         id: dbMatch?.id || 0,
         name: dbMatch?.name || eq.Type,
         label: eq.Name,
         isDb: !!dbMatch,
         icon: eq.Icon,
-        itemLv: extractItemLevel(titleEl.leftStr2 ?? ''),
-        refineLv: extractRefineStep(eq.Name),
-        advRefineLv: extractAdvRefineLv(features.advRefine),
+        itemLv: extractNum(titleEl.leftStr2 ?? '', /아이템 레벨\s*(\d+)/),
+        itemTier: extractNum(titleEl.leftStr2 ?? '', /티어\s*(\d+)/),
+        refineLv: extractNum(eq.Name, /\+(\d+)/),
+        advRefineLv: extractNum(features.advRaw, /\[상급 재련\]\s*(\d+)/),
         quality: titleEl.qualityValue ?? 0,
-        itemTier: extractItemTier(titleEl.leftStr2 ?? ''),
-        setType: findEquipSetType(eq.Name),
+        setType: findEquipSetType(eq.Name, eq.Grade),
       };
-    });
 
+      if (eq.Grade === '에스더') {
+        displayData.estherName = extractStr(features.estherRaw, /\[(.*?)\]/);
+        displayData.ellaLv = extractNum(features.ellaRaw, /(\d+)\s*단계/);
+      }
+
+      return displayData;
+    });
   console.table(result);
   return result;
 };
@@ -351,7 +337,7 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
       });
 
       return {
-        id: 0, // 악세서리 자체 ID는 필요 시 정의
+        id: 0,
         name: eq.Name,
         label: { text: eq.Name, color: undefined },
         isDb: true,

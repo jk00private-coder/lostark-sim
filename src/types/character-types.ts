@@ -83,6 +83,10 @@ export interface EquipmentDisplay extends BaseDisplay {
   quality: number;
   itemTier: number;
   setType: MultiKey;
+
+  // --- 에스더 전용 필드 추가 ---
+  estherName?: string;    // 에스더 효과 이름
+  ellaLv?: number;        // 엘라 부여 단계 (0~3)
 }
 
 // ============================================================
@@ -95,11 +99,11 @@ export interface AccessoryEffect extends BaseDisplay {}
 export interface AccessoryDisplay extends BaseDisplay {
   quality: number;
   itemTier: number;
-  effects: AccessoryEffect[]; // 기본 효과 및 연마 효과 통합
+  effects: AccessoryEffect[];
 }
 
 export interface BraceletDisplay extends BaseDisplay {
-  effects: AccessoryEffect[]; // isFixed 제거 후 통합 규격 사용
+  effects: AccessoryEffect[];
 }
 
 // ============================================================
@@ -217,7 +221,7 @@ export interface CharacterDisplayData {
   profile: CharacterProfileDisplay;
   combatStats: CombatStatsDisplay;
   equipment: EquipmentDisplay[];
-  // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
+  // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
   // accessories: AccessoryDisplay[];
   // bracelet: BraceletDisplay | null;
   // abilityStone: AbilityStoneDisplay | null;

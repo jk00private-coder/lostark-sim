@@ -201,8 +201,14 @@ export const OPTION_GRADE_COLORS = {
 
 /**
  * 'ACINET_2': 세르카 고대 장비
+ * ESTHER: 기본 에스더 등급,
+ * ESTHER_E0, E1 제외(re: 3티어 장비)
+ * ESTHER_E2, E3: 엘라2, 엘라3
  */
-export type MultiKey = 'COMMON' | 'HERO' | 'LEGEND' | 'RELIC' | 'ANCIENT' | 'ANCIENT_2';
+export type MultiKey =
+| 'COMMON'
+| 'HERO' | 'LEGEND' | 'RELIC' | 'ANCIENT' | 'ANCIENT_2'
+| 'ESTHER' | 'ESTHER_E2' | 'ESTHER_E3';
 
 export type EffectEntry = {
   type       : EffectTypeId;
