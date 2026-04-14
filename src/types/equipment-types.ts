@@ -1,4 +1,4 @@
-// @/types/combat-equip.ts
+// @/types/equipment-types.ts
 
 import { BaseSimData, EffectEntry, MultiKey } from '@/types/sim-types';
 
@@ -19,3 +19,11 @@ export interface CombatEquipData extends BaseSimData {
 }
 
 export interface EstherSkillData extends BaseSimData { }
+
+/** 악세서리 데이터 */
+export interface AccessoryRawData extends BaseSimData { }
+export interface AccessoryData extends AccessoryRawData {
+  type: '목걸이' | '귀걸이' | '반지';
+  category: 'BASE' | 'POLISH'; 
+  tier: 4|5;
+}

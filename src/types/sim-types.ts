@@ -301,7 +301,7 @@ export interface MemoParam {
  */
 export interface BaseSimData {
   id        : number;
-  name     ?: string;
+  name      : string;
   label    ?: string;
   nameColor?: string;
   iconPath ?: string;

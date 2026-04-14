@@ -1,6 +1,6 @@
 // @/data/equipment/accessory.ts
 
-import { BaseSimData } from '@/types/sim-types';
+import { AccessoryRawData, AccessoryData } from '@/types/equipment-types';
 import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
 
 // 공통 Base ID (10 10 2 0 00)
@@ -43,22 +43,62 @@ export const NAMES = {
 
 export const LABELS = {
   // ── 등급: 고대 ──────────────────────────────────
-  [ID.AN_1]: '힘|민첩|지능', [ID.AN_2]: '체력',
+  [ID.AN_1]: '힘', [ID.AN_2]: '체력',
   [ID.AN_3]: '추가 피해', [ID.AN_4]: '적에게 주는 피해', [ID.AN_8]: '공격력',
   [ID.AN_9]: '무기 공격력',
   
-  [ID.AE_1]: '힘|민첩|지능', [ID.AE_2]: '체력',
+  [ID.AE_1]: '힘', [ID.AE_2]: '체력',
   [ID.AE_3]: '공격력', [ID.AE_4]: '무기 공격력', [ID.AE_8]: '공격력',
   [ID.AE_9]: '무기 공격력',
   
   
-  [ID.AR_1]: '힘|민첩|지능', [ID.AR_2]: '체력',
+  [ID.AR_1]: '힘', [ID.AR_2]: '체력',
   [ID.AR_3]: '치명타 적중률', [ID.AR_4]: '치명타 피해', [ID.AR_8]: '공격력',
   [ID.AR_9]: '무기 공격력',
 };
 
+
+const ID_TIER_MAP: Record<number, AccessoryData['tier']> = {
+  1: 4, // 4티어 유물 라인
+  2: 4, // 4티어 고대 라인
+  // 3: 4, // 4티어 신화 라인
+  // 4: 5, // 5티어 유물 라인
+  // 5: 5, // 5티어 고대 라인
+};
+
+/** ID 규칙에 따라 부위, 티어, 카테고리를 추출 */
+export const decodeAccessoryId = (id: number): Pick<AccessoryData, 'type' | 'category' | 'tier'> => {
+  const last3 = id % 1000;
+  const tierCode = Math.floor(last3 / 100); 
+  const offset = last3 % 100;
+  const itemIndex = offset % 20;
+
+  // 1. 티어 결정 (기본값 4티어)
+  const tier = ID_TIER_MAP[tierCode];
+
+  // 2. 부위(Type) 결정
+  let type: AccessoryData['type'];
+  if (offset >= 41) type = '반지';
+  else if (offset >= 21) type = '귀걸이';
+  else type = '목걸이';
+
+  // 3. 카테고리(Category) 결정
+  const category: AccessoryData['category'] = (itemIndex === 1 || itemIndex === 2) 
+    ? 'BASE' 
+    : 'POLISH';
+
+  return {
+    type,
+    category,
+    tier,
+  };
+};
+
+
+
+
 //todo: 모든 품질은 colorValue가 상중하로 안나뉘고 5개의 범위로 나뉜다.
-export const ACCESSORY_DATA: BaseSimData[] = [
+const ACCESSORY_DATA: AccessoryRawData[] = [
   // ── 목걸이 ──────────────────────────────────
   { // 주스탯
     id: ID.AN_1,
@@ -66,7 +106,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AN_1],
     effects: [{
         type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
-        grades: { low: [15178, 17068], mid: [17069, 17589], high: [17590, 17857] }
+        multiGrades: { ANCIENT: { low: [15178, 17068], mid: [17069, 17589], high: [17590, 17857] } }
       }]
   },
   { // 체력
@@ -75,7 +115,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AN_2],
     effects: [{
         type: "STAT_HP_C",
-        grades: { low: [3754, 3860], mid: [3861, 3999], high: [4000, 4103] }
+        multiGrades: { ANCIENT: { low: [3754, 3860], mid: [3861, 3999], high: [4000, 4103] } }
       }]
   },
   { // 추가 피해
@@ -84,7 +124,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AN_3],
     effects: [{
         type: "ADD_DMG",
-        grades: { low: [0.007, 0.007], mid: [0.016, 0.016], high: [0.026, 0.026] }
+        multiGrades: { ANCIENT: { low: [0.007, 0.007], mid: [0.016, 0.016], high: [0.026, 0.026] } }
       }]
   },
   { // 적에게 주는 피해
@@ -93,7 +133,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AN_4],
     effects: [{
         type: "DMG_INC",
-        grades: { low: [0.0055, 0.0055], mid: [0.012, 0.012], high: [0.02, 0.02] }
+        multiGrades: { ANCIENT: { low: [0.0055, 0.0055], mid: [0.012, 0.012], high: [0.02, 0.02] } }
       }]
   },
   { // 공격력C
@@ -102,7 +142,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AN_8],
     effects: [{
         type: "ATK_C",
-        grades: { low: [80, 80], mid: [195, 195], high: [390, 390] }
+        multiGrades: { ANCIENT: { low: [80, 80], mid: [195, 195], high: [390, 390] } }
       }]
   },
   { // 무기 공격력C
@@ -111,7 +151,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AN_9],
     effects: [{
         type: "WEAPON_ATK_C",
-        grades: { low: [195, 195], mid: [480, 480], high: [960, 960] }
+        multiGrades: { ANCIENT: { low: [195, 195], mid: [480, 480], high: [960, 960] } }
       }]
   },
 
@@ -122,7 +162,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AE_1],
     effects: [{
         type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
-        grades: { low: [11806, 12446], mid: [12447, 13275], high: [13276, 13889] }
+        multiGrades: { ANCIENT: { low: [11806, 12446], mid: [12447, 13275], high: [13276, 13889] } }
       }]
   },
   { // 체력
@@ -131,7 +171,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AE_2],
     effects: [{
         type: "STAT_HP_C",
-        grades: { low: [2682, 2758], mid: [2759, 2857], high: [2858, 2931] }
+        multiGrades: { ANCIENT: { low: [2682, 2758], mid: [2759, 2857], high: [2858, 2931] } }
       }]
   },
   { // 공격력P
@@ -140,7 +180,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AE_3],
     effects: [{
         type: "ATK_P",
-        grades: { low: [0.004, 0.004], mid: [0.0095, 0.0095], high: [0.0155, 0.0155] }
+        multiGrades: { ANCIENT: { low: [0.004, 0.004], mid: [0.0095, 0.0095], high: [0.0155, 0.0155] } }
       }]
   },
   { // 무기 공격력P
@@ -149,7 +189,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AE_4],
     effects: [{
         type: "WEAPON_ATK_P",
-        grades: { low: [0.008, 0.008], mid: [0.018, 0.018], high: [0.03, 0.03] }
+        multiGrades: { ANCIENT: { low: [0.008, 0.008], mid: [0.018, 0.018], high: [0.03, 0.03] } }
       }]
   },
   { // 공격력C
@@ -158,7 +198,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AE_8],
     effects: [{
         type: "ATK_C",
-        grades: { low: [80, 80], mid: [195, 195], high: [390, 390] }
+        multiGrades: { ANCIENT: { low: [80, 80], mid: [195, 195], high: [390, 390] } }
       }]
   },
   { // 무기 공격력C
@@ -167,7 +207,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AE_9],
     effects: [{
         type: "WEAPON_ATK_C",
-        grades: { low: [195, 195], mid: [480, 480], high: [960, 960] }
+        multiGrades: { ANCIENT: { low: [195, 195], mid: [480, 480], high: [960, 960] } }
       }]
   },
 
@@ -178,7 +218,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AR_1],
     effects: [{
         type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
-        grades: { low: [10962, 11556], mid: [11557, 12327], high: [12328, 12897] }
+        multiGrades: { ANCIENT: { low: [10962, 11556], mid: [11557, 12327], high: [12328, 12897] } }
       }]
   },
   { // 체력
@@ -187,7 +227,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AR_2],
     effects: [{
         type: "STAT_HP_C",
-        grades: { low: [2146, 2206], mid: [2207, 2285], high: [2286, 2345] }
+        multiGrades: { ANCIENT: { low: [2146, 2206], mid: [2207, 2285], high: [2286, 2345] } }
       }]
   },
   { // 치명타 적중률
@@ -196,7 +236,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AR_3],
     effects: [{
         type: "CRIT_CHANCE",
-        grades: { low: [0.004, 0.004], mid: [0.0095, 0.0095], high: [0.0155, 0.0155] }
+        multiGrades: { ANCIENT: { low: [0.004, 0.004], mid: [0.0095, 0.0095], high: [0.0155, 0.0155] } }
       }]
   },
   { // 치명타 피해
@@ -205,7 +245,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AR_4],
     effects: [{
         type: "CRIT_DMG",
-        grades: { low: [0.011, 0.011], mid: [0.024, 0.024], high: [0.04, 0.04] }
+        multiGrades: { ANCIENT: { low: [0.011, 0.011], mid: [0.024, 0.024], high: [0.04, 0.04] } }
       }]
   },
   { // 공격력C
@@ -214,7 +254,7 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AR_8],
     effects: [{
         type: "ATK_C",
-        grades: { low: [80, 80], mid: [195, 195], high: [390, 390] }
+        multiGrades: { ANCIENT: { low: [80, 80], mid: [195, 195], high: [390, 390] } }
       }]
   },
   { // 무기공격력C
@@ -223,7 +263,12 @@ export const ACCESSORY_DATA: BaseSimData[] = [
     label: LABELS[ID.AR_9],
     effects: [{
         type: "WEAPON_ATK_C",
-        grades: { low: [195, 195], mid: [480, 480], high: [960, 960] }
+        multiGrades: { ANCIENT: { low: [195, 195], mid: [480, 480], high: [960, 960] } }
       }]
   },
 ]
+
+export const ACCESSORY_DB = ACCESSORY_DATA.map(item => ({
+  ...item,
+  ...decodeAccessoryId(item.id) // 여기서 알아서 부위, 티어 다 붙여줌
+})) as AccessoryData[];

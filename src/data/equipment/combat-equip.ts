@@ -15,7 +15,7 @@
  * 
  */
 
-import { GET_ICON, CombatEquipData, EstherSkillData } from '@/types/combat-equip';
+import { GET_ICON, CombatEquipData, EstherSkillData } from '@/types/equipment-types';
 import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
 
 

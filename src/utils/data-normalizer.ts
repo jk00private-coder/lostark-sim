@@ -31,7 +31,7 @@ import {
 } from '@/types/character-types';
 
 import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
-import { ACCESSORY_DATA }    from '@/data/equipment/accessory';
+import { ACCESSORY_DB }    from '@/data/equipment/accessory';
 
 
 // ============================================================
@@ -42,10 +42,20 @@ import { ACCESSORY_DATA }    from '@/data/equipment/accessory';
 const stripHtml = (html: string): string =>
   html.replace(/<[^>]+>/g, '').trim();
 
+/** * 어떤 색상 형식이 들어와도 #이 붙은 대문자 헥사코드로 통일 
+ * 예: 'FE9600' -> '#FE9600', '#fe9600' -> '#FE9600'
+ */
+const normalizeColor = (color?: string): string | undefined => {
+  if (!color) return undefined;
+  // 따옴표, # 기호 제거 후 대문자로 변환
+  const cleanColor = color.replace(/['"#]/g, '').toUpperCase();
+  return `#${cleanColor}`;
+};
+
 /** 첫 번째 font color 추출 */
 const extractColor = (html: string): string | undefined => {
-  const m = html.match(/color='([^']+)'/i);
-  return m ? m[1] : undefined;
+  const m = html.match(/color=['"]?#?([0-9A-F]+)['"]?/i);
+  return m ? normalizeColor(m[1]) : undefined;
 };
 
 /** * 문자열에서 특정 키워드 뒤의 숫자 추출 (재련, 티어, 아이템 레벨 등 공용)
@@ -106,9 +116,12 @@ const extractPercent = (str: string): number =>
 /** HTML 수치 문자열 → ColoredValue (수치 + 색상) */
 const toColoredValue = (html: string): ColoredValue => {
   const isPercent = html.includes('%');
-  // 기본 정규식을 사용하도록 인자를 비워두면 extractNum 내부의 기본값 /([\d.]+)/ 가 작동합니다.
   const value = isPercent ? extractPercent(html) : extractNum(html);
-  return { value, color: extractColor(html) };
+  
+  return { 
+    value, 
+    color: extractColor(html) // 여기서 정규화된 색상이 들어감 (#FE9600 등)
+  };
 };
 
 /** HTML 문자열 → ColoredText (텍스트 + 색상) */
@@ -165,37 +178,13 @@ const findEquipSetType = (itemName: string, grade: string): MultiKey => {
 };
 
 
-/**
- * 연마효과 수치로 상/중/하 등급 판별
- *
- * accessory.ts의 grades 범위를 기준으로 판별합니다.
- * grades.high[0] 이상 → HIGH
- * grades.mid[0]  이상 → MID
- * 그 외           → LOW
- *
- * color가 명시된 경우 color 우선 적용 (API가 색상을 직접 주는 경우)
- */
-const findPolishGrade = (
-  effectType : string,
-  value      : number,
-  colorHint ?: string,
-): OptionGrade => {
-  // API 색상이 있으면 색상 기준으로 우선 판별
-  if (colorHint === '#FE9600') return 'HIGH';
-  if (colorHint === '#CE43FC') return 'MID';
-  if (colorHint === '#00B5FF') return 'LOW';
+/** 연마효과 수치로 상/중/하 등급 판별 */
+const findPolishGrade = (colorHint?: string): OptionGrade => {
+  if (colorHint === '#FE9600') return 'HIGH'; // 주황색 (상)
+  if (colorHint === '#CE43FC') return 'MID';  // 보라색 (중)
+  if (colorHint === '#00B5FF') return 'LOW';  // 하늘색 (하)
 
-  // DB grades 범위로 판별
-  for (const db of ACCESSORY_DATA) {
-    const eff = db.effects?.find(e => e.type === effectType && e.grades);
-    if (!eff?.grades) continue;
-    if (value >= eff.grades.high[0]) return 'HIGH';
-    if (value >= eff.grades.mid[0])  return 'MID';
-    return 'LOW';
-  }
-
-  // DB에 해당 타입 없으면 LOW 기본값
-  return 'LOW';
+  return 'LOW'; // 기본값
 };
 
 // ============================================================
@@ -275,6 +264,7 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
 
       return displayData;
     });
+  console.log("--- normalizeEquipment ---");
   console.table(result);
   return result;
 };
@@ -282,73 +272,113 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
 // ── 악세서리 ────────────────────────────────────────────────
 export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] => {
   const accTypes = ['목걸이', '귀걸이', '반지'];
-  return raw.equipment
-    .filter(eq => accTypes.includes(eq.Type))
+  
+  // API 등급명을 DB 키값으로 매핑
+  const gradeMap: Record<string, MultiKey> = {
+    '고대': 'ANCIENT',
+    '유물': 'RELIC'
+  };
+
+  const result = raw.equipment
+    .filter(eq => accTypes.includes(eq.Type as any))
     .map(eq => {
       const tooltip = parseTooltip(eq.Tooltip);
       const titleEl = tooltip['Element_001']?.value ?? {};
-      const tier    = extractItemTier(titleEl.leftStr2 ?? '');
+      const itemTier = extractNum(titleEl.leftStr2 ?? '', /티어\s*(\d+)/);
+      const currentType = eq.Type;
+      const currentGradeKey = gradeMap[eq.Grade];
 
       const effects: AccessoryEffect[] = [];
+      let mainStatProcessed = false;
 
-      // 1) 기본 효과 파싱 (힘/민첩/지능/체력)
-      const baseStr: string = tooltip['Element_004']?.value?.Element_001 ?? '';
-      baseStr.split(/<br\s*\/?>/i).filter(Boolean).forEach(line => {
-        const clean = stripHtml(line);
-        const m     = clean.match(/(힘|민첩|지능|체력)\s*\+(\d+)/);
-        if (m) {
-          const name = m[1];
-          const value = parseInt(m[2]);
-          const isNonMain = line.toLowerCase().includes('#686660'); // 비주스탯(회색) 체크
+      const findFromDb = (label: string, isPercent: boolean) => {
+        return ACCESSORY_DB.find(d => 
+          d.tier === itemTier && 
+          d.type === currentType && 
+          d.label === label &&
+          (d.name.includes('%') === isPercent)
+        );
+      };
+
+      // 1) 기본 효과 파싱
+      const basePart = tooltip['Element_004']?.value;
+      if (basePart?.Element_001) {
+        const lines = basePart.Element_001.split(/<BR\s*\/?>/i);
+        lines.forEach((line: string) => {
+          const clean = stripHtml(line);
+          const m = clean.match(/(힘|민첩|지능|체력)\s*\+(\d+)/);
+          if (!m) return;
+
+          let label = m[1];
+          if (label === '힘' || label === '민첩' || label === '지능') {
+            if (mainStatProcessed) return;
+            label = '힘';
+            mainStatProcessed = true;
+          }
+
+          const db = findFromDb(label, false);
+          const effectDb = db?.effects?.[0]; 
+          const gradeData = effectDb?.multiGrades?.[currentGradeKey];
 
           effects.push({
-            id: 0, // 필요 시 DB ID 매칭 (예: MAIN_STAT)
-            name: name,
-            label: { text: name, color: isNonMain ? '#686660' : undefined },
-            isDb: true,
-            value: { value, color: undefined },
-            // 주스탯은 범위값이 없으므로 생략
+            id: db?.id ?? 0,
+            name: db?.name || label,
+            label: label,
+            isDb: !!db,
+            value: { value: parseInt(m[2]), color: '' },  
+            valueRange: gradeData ? {
+              min: gradeData.low[0],
+              max: gradeData.high[1] || gradeData.high[0]
+            } : undefined
           });
-        }
-      });
+        });
+      }
 
       // 2) 연마 효과 파싱
-      const polishStr: string = tooltip['Element_006']?.value?.Element_001 ?? '';
-      polishStr.split(/<br\s*\/?>/i).filter(Boolean).forEach(line => {
-        const clean     = stripHtml(line);
-        const labelM    = clean.match(/^([가-힣\s]+)/);
-        const labelText = labelM ? labelM[1].trim() : clean;
-        const cv        = toColoredValue(line);
-        const effectType = detectPolishEffectType(labelText, cv.value);
+      const polishPart = tooltip['Element_006']?.value;
+      if (polishPart?.Element_001) {
+        const lines = polishPart.Element_001.split(/<br\s*\/?>/i);
+        lines.forEach((line: string) => {
+          const clean = stripHtml(line);
+          const labelM = clean.match(/^([가-힣\s]+)/);
+          if (!labelM) return;
 
-        // TODO: ACCESSORY_DATA에서 해당 effectType의 min/max를 가져오는 로직 추가
-        const dbInfo = ACCESSORY_DATA.find(d => d.effects?.some(e => e.type === effectType));
-        const effectDb = dbInfo?.effects?.find(e => e.type === effectType);
+          const labelText = labelM[1].trim();
+          const cv = toColoredValue(line);
+          const isPercent = line.includes('%');
 
-        effects.push({
-          id: effectDb?.id ?? 0,
-          name: labelText,
-          label: { text: labelText, color: undefined },
-          isDb: !!effectDb,
-          value: cv,
-          valueRange: effectDb?.range, // { min, max }
-          opGrade: findPolishGrade(effectType, cv.value, cv.color),
+          const db = findFromDb(labelText, isPercent);
+
+          if (db) {
+            effects.push({
+              id: db.id,
+              name: db.name,
+              label: labelText,
+              isDb: true,
+              value: cv,
+              opGrade: findPolishGrade(cv.color),
+            });
+          }
         });
-      });
+      }
 
       return {
-        id: 0,
+        id: 0, 
         name: eq.Name,
-        label: { text: eq.Name, color: undefined },
+        label: eq.Name,
         isDb: true,
         icon: eq.Icon,
-        type: eq.Type,
-        grade: toGradeColoredText(eq.Grade),
         quality: titleEl.qualityValue ?? 0,
-        itemTier: tier,
-        effects, // 통합된 배열
+        itemTier,
+        type: currentType,
+        eqGrade: eq.Grade,
+        effects,
       };
     });
+  console.log("--- accessoryEquipment ---");
+  console.table(result);
+
+  return result;
 };
 
 // ── 팔찌 ────────────────────────────────────────────────────
@@ -675,8 +705,8 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   profile     : normalizeProfile(raw),
   combatStats : normalizeCombatStats(raw),
   equipment   : normalizeEquipment(raw),
+  accessories : normalizeAccessories(raw),
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-  // accessories : normalizeAccessories(raw),
   // bracelet    : normalizeBracelet(raw),
   // abilityStone: normalizeAbilityStone(raw),
   // boJu        : normalizeBoJu(raw),

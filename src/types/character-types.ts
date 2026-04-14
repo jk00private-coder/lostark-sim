@@ -221,8 +221,8 @@ export interface CharacterDisplayData {
   profile: CharacterProfileDisplay;
   combatStats: CombatStatsDisplay;
   equipment: EquipmentDisplay[];
+  accessories: AccessoryDisplay[];
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // accessories: AccessoryDisplay[];
   // bracelet: BraceletDisplay | null;
   // abilityStone: AbilityStoneDisplay | null;
   // boJu: BoJuDisplay | null;
