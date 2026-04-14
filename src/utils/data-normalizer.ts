@@ -5,7 +5,7 @@
  */
 
 import { RawCharacterData } from '@/types/raw-types';
-import { BaseSimData, COMMON_EFFECT_TYPES, MultiKey } from '@/types/sim-types';
+import { MultiKey } from '@/types/sim-types';
 import {
   ColoredText,
   ColoredValue,
@@ -33,7 +33,7 @@ import {
 
 import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
 import { ACCESSORY_DB }    from '@/data/equipment/accessory';
-import { BRACELET_DATA }    from '@/data/equipment/bracelet';
+import { BRACELET_DB }    from '@/data/equipment/bracelet';
 
 
 // ============================================================
@@ -116,21 +116,40 @@ const extractPercent = (str: string): number =>
   extractNum(str) / 100; // extractRawNumber 대신 extractNum 사용
 
 /** HTML 수치 문자열 → ColoredValue (수치 + 색상) */
-const toColoredValue = (html: string): ColoredValue => {
-  const isPercent = html.includes('%');
-  const value = isPercent ? extractPercent(html) : extractNum(html);
+export const extractColoredValues = (text: string): ColoredValue[] => {
+  const values: ColoredValue[] = [];
+  const colorMatches = text.matchAll(/<FONT COLOR='([^']+)'>([^<]+)<\/FONT>/gi);
   
-  return { 
-    value, 
-    color: extractColor(html) // 여기서 정규화된 색상이 들어감 (#FE9600 등)
+  for (const m of colorMatches) {
+    values.push({
+      color: normalizeColor(m[1]) || '',
+      value: parseFloat(m[2].replace(/[+%]/g, ''))
+    });
+  }
+  return values;
+};
+
+// ============================================================
+// 3. 공통 유틸
+// ============================================================
+
+/** DB의 multiGrades 데이터를 기반으로 ValueRange 생성 */
+export const createValueRange = (gradeData: any) => {
+  if (!gradeData) return undefined;
+  return {
+    min: gradeData.low[0],
+    max: gradeData.high[1] || gradeData.high[0]
   };
 };
 
-/** HTML 문자열 → ColoredText (텍스트 + 색상) */
-const toColoredText = (html: string): ColoredText => ({
-  text : stripHtml(html),
-  color: extractColor(html),
-});
+/** API 등급명을 시스템 MultiKey로 변환 */
+export const GRADE_MAP: Record<string, MultiKey> = {
+  '고대': 'ANCIENT',
+  '유물': 'RELIC'
+};
+export const getGradeKey = (gradeName: string): MultiKey => {
+  return GRADE_MAP[gradeName] || 'RELIC';
+};
 
 /** Tooltip JSON 파싱 (안전 장치) */
 const parseTooltip = (tooltipStr: string): Record<string, any> => {
@@ -141,17 +160,15 @@ const parseTooltip = (tooltipStr: string): Record<string, any> => {
   }
 };
 
+// ============================================================
+// 4. 공통 색상 정의
+// ============================================================
+
 /** 등급명 → 색상 상수 */
 const GRADE_COLORS: Record<string, string> = {
   '고대': '#E3C7A1', '유물': '#FA5D00', '전설': '#F99200',
   '영웅': '#CE43FC', '희귀': '#00B0FA', '일반': '#FFFFFF',
 };
-
-/** 등급명 → ColoredText */
-const toGradeColoredText = (grade: string): ColoredText => ({
-  text : grade,
-  color: GRADE_COLORS[grade],
-});
 
 /** 아크패시브 카테고리 색상 */
 const ARK_PASSIVE_COLORS: Record<string, string> = {
@@ -181,12 +198,40 @@ const findEquipSetType = (itemName: string, grade: string): MultiKey => {
 
 
 /** 연마효과 수치로 상/중/하 등급 판별 */
-const findPolishGrade = (colorHint?: string): OptionGrade => {
-  if (colorHint === '#FE9600') return 'HIGH'; // 주황색 (상)
-  if (colorHint === '#CE43FC') return 'MID';  // 보라색 (중)
-  if (colorHint === '#00B5FF') return 'LOW';  // 하늘색 (하)
+const findPolishGrade = (values: ColoredValue[]): OptionGrade => {
+  // 1. 값이 없으면 기본값 반환
+  if (!values || values.length === 0) return 'LOW';
 
-  return 'LOW'; // 기본값
+  // 2. 등급 가중치 정의
+  const gradeWeight: Record<OptionGrade, number> = {
+    'HIGH': 3,
+    'MID': 2,
+    'LOW': 1
+  };
+
+  // 3. 각 색상별 등급 판별 로직 (내부 헬퍼)
+  const getGradeByColor = (color?: string): OptionGrade => {
+    if (color === '#FE9600') return 'HIGH'; // 주황색 (상)
+    if (color === '#CE43FC') return 'MID';  // 보라색 (중)
+    if (color === '#00B5FF') return 'LOW';  // 하늘색 (하)
+    return 'LOW';
+  };
+
+  // 4. 전체 values를 돌면서 가장 높은 등급의 가중치를 찾음
+  let bestWeight = 0;
+  let bestGrade: OptionGrade = 'LOW';
+
+  for (const v of values) {
+    const currentGrade = getGradeByColor(v.color);
+    const currentWeight = gradeWeight[currentGrade];
+
+    if (currentWeight > bestWeight) {
+      bestWeight = currentWeight;
+      bestGrade = currentGrade;
+    }
+  }
+
+  return bestGrade;
 };
 
 // ============================================================
@@ -274,12 +319,6 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
 // ── 악세서리 ────────────────────────────────────────────────
 export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] => {
   const accTypes = ['목걸이', '귀걸이', '반지'];
-  
-  // API 등급명을 DB 키값으로 매핑
-  const gradeMap: Record<string, MultiKey> = {
-    '고대': 'ANCIENT',
-    '유물': 'RELIC'
-  };
 
   const result = raw.equipment
     .filter(eq => accTypes.includes(eq.Type as any))
@@ -288,7 +327,7 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
       const titleEl = tooltip['Element_001']?.value ?? {};
       const itemTier = extractNum(titleEl.leftStr2 ?? '', /티어\s*(\d+)/);
       const currentType = eq.Type;
-      const currentGradeKey = gradeMap[eq.Grade];
+      const currentGradeKey = getGradeKey(eq.Grade);
 
       const effects: BaseDisplay[] = [];
       let mainStatProcessed = false;
@@ -327,11 +366,8 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
             name: db?.name || label,
             label: label,
             isDb: !!db,
-            value: { value: parseInt(m[2]), color: '' },  
-            valueRange: gradeData ? {
-              min: gradeData.low[0],
-              max: gradeData.high[1] || gradeData.high[0]
-            } : undefined
+            values: [{ value: parseInt(m[2]), color: '' }],  
+            valueRange: createValueRange(gradeData),
           });
         });
       }
@@ -346,9 +382,11 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
           if (!labelM) return;
 
           const labelText = labelM[1].trim();
-          const cv = toColoredValue(line);
-          const isPercent = line.includes('%');
+          const cv = extractColoredValues(line);
 
+          if (cv.length === 0) return;
+
+          const isPercent = line.includes('%');
           const db = findFromDb(labelText, isPercent);
 
           if (db) {
@@ -357,8 +395,8 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
               name: db.name,
               label: labelText,
               isDb: true,
-              value: cv,
-              opGrade: findPolishGrade(cv.color),
+              values: cv,
+              opGrade: findPolishGrade(cv),
             });
           }
         });
@@ -388,15 +426,9 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
   const bracelet = raw.equipment.find(eq => eq.Type === '팔찌');
   if (!bracelet) return null;
 
-  // API 등급명을 DB 키값으로 매핑
-  const gradeMap: Record<string, MultiKey> = {
-    '고대': 'ANCIENT',
-    '유물': 'RELIC'
-  };
-
   const tooltip = parseTooltip(bracelet.Tooltip);
   const effectStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
-  const currentGradeKey = gradeMap[bracelet.Grade];
+  const currentGradeKey = getGradeKey(bracelet.Grade);
 
   const rawChunks = effectStr.split(/<img[^>]*>/).filter(c => c.trim());
 
@@ -409,7 +441,7 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
 
     if (['힘', '민첩', '지능'].includes(labelText)) labelText = '주스탯';
 
-    // 2. 수치 추출
+    // 2. 수치 추출 (ColoredValue 배열로 생성)
     const values: ColoredValue[] = [];
     const colorMatches = chunk.matchAll(/<FONT COLOR='([^']+)'>([^<]+)<\/FONT>/gi);
     for (const m of colorMatches) {
@@ -420,37 +452,35 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
     }
 
     // 3. 매칭 로직
-    const db = BRACELET_DATA
-      .filter(d => {
-        if (d.label === '주스탯') return labelText === '주스탯';
+    const filteredDb = BRACELET_DB.filter((d): d is typeof d & { label: string } => {
+      if (!d.label) return false;
+      if (d.label === '주스탯') return labelText === '주스탯';
 
-        const cleanDbLabel = d.label.replace(/\s+/g, '');
-        const cleanTargetLine = cleanLine.replace(/\s+/g, '');
+      const cleanDbLabel = d.label.replace(/\s+/g, '');
+      const cleanTargetLine = cleanLine.replace(/\s+/g, '');
+      return cleanTargetLine.includes(cleanDbLabel);
+    });
 
-        return cleanTargetLine.includes(cleanDbLabel);
-      })
-      .sort((a, b) => {
-        if (b.label.length !== a.label.length) {
-          return b.label.length - a.label.length;
-        }
-        return cleanLine.indexOf(a.label) - cleanLine.indexOf(b.label);
-      })[0];
+    const db = filteredDb.sort((a, b) => {
+      if (b.label.length !== a.label.length) {
+        return b.label.length - a.label.length;
+      }
+      return cleanLine.indexOf(a.label) - cleanLine.indexOf(b.label);
+    })[0];
 
     const effectDb = db?.effects?.[0];
     const gradeData = effectDb?.multiGrades?.[currentGradeKey];
+    const showRange = db?.category === 'BASE' || db?.category === 'COMBAT';
 
     return {
       id: db?.id ?? 0,
       name: db?.name || labelText,
       label: db?.label || labelText,
       isDb: !!db,
-      value: values[0] || { value: 0, color: '' },
-      values: values,
-      valueRange: gradeData ? {
-        min: gradeData.low[0],
-        max: gradeData.high[1] || gradeData.high[0]
-      } : undefined,
-      opGrade: values[0] ? findPolishGrade(values[0].color) : undefined,
+      values: values, 
+      valueRange: showRange ? createValueRange(gradeData) : undefined,
+      eqGrade: currentGradeKey as any,
+      opGrade: findPolishGrade(values),
     } as any;
   });
 
@@ -461,7 +491,7 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
     isDb: true,
     icon: bracelet.Icon,
     itemTier: extractNum(tooltip['Element_001']?.value?.leftStr2 ?? '', /티어\s*(\d+)/) || 4,
-    eqGrade: currentGradeKey,
+    eqGrade: currentGradeKey as any,
     effects,
   };
 
@@ -469,54 +499,8 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
   console.log(result);
   return result;
 };
-// export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null => {
-//   const bracelet = raw.equipment.find(eq => eq.Type === '팔찌');
-//   if (!bracelet) return null;
-
-//   const tooltip = parseTooltip(bracelet.Tooltip);
-//   const effectStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
-
-//   const effects: AccessoryEffect[] = effectStr
-//     .split(/<br\s*\/?>/i)
-//     .filter(Boolean)
-//     .map(line => {
-//       const clean = stripHtml(line);
-//       // ... (기존 effectType 감지 로직 동일) ...
-      
-//       const labelM    = clean.match(/^([^+\d]+)/);
-//       const labelText = labelM ? labelM[1].trim() : clean;
-//       const cv        = toColoredValue(line);
-      
-//       // 팔찌 DB(BRACELET_DATA)에서 정보 조회 (가정)
-//       // const effectDb = BRACELET_DATA.find(...) 
-
-//       return {
-//         id: 0, // DB ID
-//         name: labelText,
-//         label: { text: labelText, color: undefined },
-//         isDb: true, 
-//         value: cv,
-//         // valueRange: effectDb?.range, // 범위값 추가
-//         opGrade: line.includes('color') ? findPolishGrade(cv.color) : undefined,
-//       };
-//     });
-
-//   return {
-//     id: 0,
-//     name: bracelet.Name,
-//     label: { text: bracelet.Name, color: undefined },
-//     isDb: true,
-//     icon: bracelet.Icon,
-//     eqGrade: '',
-//     itemTier: 4,
-//     effects,
-//   };
-//   console.log("--- bracelet ---");
-//   console.table(bracelet);
-// };
 
 // ── 어빌리티 스톤 ────────────────────────────────────────────
-
 export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDisplay | null => {
   const stone = raw.equipment.find(eq => eq.Type === '어빌리티 스톤');
   if (!stone) return null;
@@ -560,7 +544,6 @@ export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDispla
 };
 
 // ── 보주 ────────────────────────────────────────────────────
-
 export const normalizeBoJu = (raw: RawCharacterData): BoJuDisplay | null => {
   const boju = raw.equipment.find(eq => eq.Type === '보주');
   if (!boju) return null;
@@ -579,7 +562,6 @@ export const normalizeBoJu = (raw: RawCharacterData): BoJuDisplay | null => {
 };
 
 // ── 아바타 ──────────────────────────────────────────────────
-
 export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
   const targetTypes = ['무기 아바타', '상의 아바타', '하의 아바타'];
   const grouped: Record<string, typeof raw.avatars> = {};
@@ -609,7 +591,6 @@ export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
 };
 
 // ── 각인 ────────────────────────────────────────────────────
-
 export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] =>
   raw.engravings.ArkPassiveEffects.map(eff => ({
     name             : { text: eff.Name,  color: '#FFFFAC' },
@@ -621,7 +602,6 @@ export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] =
   }));
 
 // ── 보석 ────────────────────────────────────────────────────
-
 export const normalizeGems = (raw: RawCharacterData): GemSummaryDisplay => {
   const gemMap = Object.fromEntries(raw.gems.Gems.map(g => [g.Slot, g]));
   const gems: GemDisplay[] = raw.gems.Effects.Skills.map(skill => {
@@ -647,7 +627,6 @@ export const normalizeGems = (raw: RawCharacterData): GemSummaryDisplay => {
 };
 
 // ── 카드 ────────────────────────────────────────────────────
-
 export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => {
   if (!raw.cards.Effects?.length) return null;
   const effect     = raw.cards.Effects[0];
@@ -679,7 +658,6 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
 };
 
 // ── 아크패시브 ───────────────────────────────────────────────
-
 export const normalizeArkPassive = (raw: RawCharacterData) => {
   const p = raw.arkPassive;
 
@@ -718,7 +696,6 @@ export const normalizeArkPassive = (raw: RawCharacterData) => {
 };
 
 // ── 아크그리드 ───────────────────────────────────────────────
-
 export const normalizeArkGrid = (raw: RawCharacterData): ArkGridDisplay => {
   const cores = raw.arkGrid.Slots.map(slot => ({
     index: slot.Index,
@@ -738,7 +715,6 @@ export const normalizeArkGrid = (raw: RawCharacterData): ArkGridDisplay => {
 };
 
 // ── 스킬 ────────────────────────────────────────────────────
-
 export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
   const gemSkillNames = raw.gems.Effects.Skills.map(s => s.Name);
 

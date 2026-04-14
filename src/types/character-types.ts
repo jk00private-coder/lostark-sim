@@ -34,7 +34,7 @@ export interface BaseDisplay {
   isDb: boolean;        // DB 매칭 성공 여부
   idDiff?: boolean;      // DB 범위수치 벗어날 경우 true
   icon?: string;
-  value?: ColoredValue;
+  values?: ColoredValue[];
   valueRange?: {min: number; max: number};
   opGrade?: OptionGrade; // 상/중/하 옵션
   eqGrade?: MultiKey; // 장비 등급(유물, 고대 등)
