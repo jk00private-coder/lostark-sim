@@ -37,7 +37,7 @@ export interface BaseDisplay {
   value?: ColoredValue;
   valueRange?: {min: number; max: number};
   opGrade?: OptionGrade; // 상/중/하 옵션
-  eqGrade?: string; // 장비 등급(유물, 고대 등)
+  eqGrade?: MultiKey; // 장비 등급(유물, 고대 등)
 }
 
 // ============================================================
@@ -82,7 +82,6 @@ export interface EquipmentDisplay extends BaseDisplay {
   advRefineLv?: number;
   quality: number;
   itemTier: number;
-  setType: MultiKey;
 
   // --- 에스더 전용 필드 추가 ---
   estherName?: string;    // 에스더 효과 이름
@@ -94,16 +93,15 @@ export interface EquipmentDisplay extends BaseDisplay {
 // ============================================================
 
 /** 악세서리 및 팔찌의 개별 효과 (Base 상속) */
-export interface AccessoryEffect extends BaseDisplay {}
-
 export interface AccessoryDisplay extends BaseDisplay {
   quality: number;
   itemTier: number;
-  effects: AccessoryEffect[];
+  effects: BaseDisplay[];
 }
 
 export interface BraceletDisplay extends BaseDisplay {
-  effects: AccessoryEffect[];
+  itemTier: number;
+  effects: BaseDisplay[];
 }
 
 // ============================================================
@@ -222,8 +220,8 @@ export interface CharacterDisplayData {
   combatStats: CombatStatsDisplay;
   equipment: EquipmentDisplay[];
   accessories: AccessoryDisplay[];
+  bracelet: BraceletDisplay | null;
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // bracelet: BraceletDisplay | null;
   // abilityStone: AbilityStoneDisplay | null;
   // boJu: BoJuDisplay | null;
   // avatars: AvatarDisplay[];

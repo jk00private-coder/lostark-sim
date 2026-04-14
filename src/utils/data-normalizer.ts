@@ -5,15 +5,16 @@
  */
 
 import { RawCharacterData } from '@/types/raw-types';
-import { COMMON_EFFECT_TYPES, MultiKey } from '@/types/sim-types';
+import { BaseSimData, COMMON_EFFECT_TYPES, MultiKey } from '@/types/sim-types';
 import {
   ColoredText,
   ColoredValue,
+  BaseDisplay,
   CharacterDisplayData,
   CharacterProfileDisplay,
   CombatStatsDisplay,
   EquipmentDisplay,
-  AccessoryDisplay, AccessoryEffect,
+  AccessoryDisplay,
   OptionGrade,
   BraceletDisplay,
   AbilityStoneDisplay,
@@ -32,6 +33,7 @@ import {
 
 import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
 import { ACCESSORY_DB }    from '@/data/equipment/accessory';
+import { BRACELET_DATA }    from '@/data/equipment/bracelet';
 
 
 // ============================================================
@@ -254,7 +256,7 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         refineLv: extractNum(eq.Name, /\+(\d+)/),
         advRefineLv: extractNum(features.advRaw, /\[상급 재련\]\s*(\d+)/),
         quality: titleEl.qualityValue ?? 0,
-        setType: findEquipSetType(eq.Name, eq.Grade),
+        eqGrade: findEquipSetType(eq.Name, eq.Grade),
       };
 
       if (eq.Grade === '에스더') {
@@ -288,7 +290,7 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
       const currentType = eq.Type;
       const currentGradeKey = gradeMap[eq.Grade];
 
-      const effects: AccessoryEffect[] = [];
+      const effects: BaseDisplay[] = [];
       let mainStatProcessed = false;
 
       const findFromDb = (label: string, isPercent: boolean) => {
@@ -371,7 +373,7 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
         quality: titleEl.qualityValue ?? 0,
         itemTier,
         type: currentType,
-        eqGrade: eq.Grade,
+        eqGrade: currentGradeKey,
         effects,
       };
     });
@@ -386,44 +388,132 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
   const bracelet = raw.equipment.find(eq => eq.Type === '팔찌');
   if (!bracelet) return null;
 
+  // API 등급명을 DB 키값으로 매핑
+  const gradeMap: Record<string, MultiKey> = {
+    '고대': 'ANCIENT',
+    '유물': 'RELIC'
+  };
+
   const tooltip = parseTooltip(bracelet.Tooltip);
   const effectStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
+  const currentGradeKey = gradeMap[bracelet.Grade];
 
-  const effects: AccessoryEffect[] = effectStr
-    .split(/<br\s*\/?>/i)
-    .filter(Boolean)
-    .map(line => {
-      const clean = stripHtml(line);
-      // ... (기존 effectType 감지 로직 동일) ...
-      
-      const labelM    = clean.match(/^([^+\d]+)/);
-      const labelText = labelM ? labelM[1].trim() : clean;
-      const cv        = toColoredValue(line);
-      
-      // 팔찌 DB(BRACELET_DATA)에서 정보 조회 (가정)
-      // const effectDb = BRACELET_DATA.find(...) 
+  const rawChunks = effectStr.split(/<img[^>]*>/).filter(c => c.trim());
 
-      return {
-        id: 0, // DB ID
-        name: labelText,
-        label: { text: labelText, color: undefined },
-        isDb: true, 
-        value: cv,
-        // valueRange: effectDb?.range, // 범위값 추가
-        opGrade: line.includes('color') ? findPolishGrade('UNKNOWN', cv.value, cv.color) : undefined,
-      };
-    });
+  const effects: BaseDisplay[] = rawChunks.map(chunk => {
+    const cleanLine = stripHtml(chunk.replace(/<br\s*\/?>/gi, ' ')).trim();
+    
+    // 1. 라벨 추출 및 주스탯 치환
+    const labelMatch = cleanLine.match(/^[^+\d%]+/);
+    let labelText = labelMatch ? labelMatch[0].trim() : cleanLine;
 
-  return {
+    if (['힘', '민첩', '지능'].includes(labelText)) labelText = '주스탯';
+
+    // 2. 수치 추출
+    const values: ColoredValue[] = [];
+    const colorMatches = chunk.matchAll(/<FONT COLOR='([^']+)'>([^<]+)<\/FONT>/gi);
+    for (const m of colorMatches) {
+      values.push({
+        color: normalizeColor(m[1]) || '',
+        value: parseFloat(m[2].replace(/[+%]/g, ''))
+      });
+    }
+
+    // 3. 매칭 로직
+    const db = BRACELET_DATA
+      .filter(d => {
+        if (d.label === '주스탯') return labelText === '주스탯';
+
+        const cleanDbLabel = d.label.replace(/\s+/g, '');
+        const cleanTargetLine = cleanLine.replace(/\s+/g, '');
+
+        return cleanTargetLine.includes(cleanDbLabel);
+      })
+      .sort((a, b) => {
+        if (b.label.length !== a.label.length) {
+          return b.label.length - a.label.length;
+        }
+        return cleanLine.indexOf(a.label) - cleanLine.indexOf(b.label);
+      })[0];
+
+    const effectDb = db?.effects?.[0];
+    const gradeData = effectDb?.multiGrades?.[currentGradeKey];
+
+    return {
+      id: db?.id ?? 0,
+      name: db?.name || labelText,
+      label: db?.label || labelText,
+      isDb: !!db,
+      value: values[0] || { value: 0, color: '' },
+      values: values,
+      valueRange: gradeData ? {
+        min: gradeData.low[0],
+        max: gradeData.high[1] || gradeData.high[0]
+      } : undefined,
+      opGrade: values[0] ? findPolishGrade(values[0].color) : undefined,
+    } as any;
+  });
+
+  const result: BraceletDisplay = {
     id: 0,
-    name: bracelet.Name,
-    label: { text: bracelet.Name, color: undefined },
+    name: stripHtml(tooltip['Element_000']?.value ?? bracelet.Name),
+    label: stripHtml(tooltip['Element_000']?.value ?? bracelet.Name),
     isDb: true,
     icon: bracelet.Icon,
-    grade: toGradeColoredText(bracelet.Grade),
+    itemTier: extractNum(tooltip['Element_001']?.value?.leftStr2 ?? '', /티어\s*(\d+)/) || 4,
+    eqGrade: currentGradeKey,
     effects,
   };
+
+  console.log("--- bracelet ---");
+  console.log(result);
+  return result;
 };
+// export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null => {
+//   const bracelet = raw.equipment.find(eq => eq.Type === '팔찌');
+//   if (!bracelet) return null;
+
+//   const tooltip = parseTooltip(bracelet.Tooltip);
+//   const effectStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
+
+//   const effects: AccessoryEffect[] = effectStr
+//     .split(/<br\s*\/?>/i)
+//     .filter(Boolean)
+//     .map(line => {
+//       const clean = stripHtml(line);
+//       // ... (기존 effectType 감지 로직 동일) ...
+      
+//       const labelM    = clean.match(/^([^+\d]+)/);
+//       const labelText = labelM ? labelM[1].trim() : clean;
+//       const cv        = toColoredValue(line);
+      
+//       // 팔찌 DB(BRACELET_DATA)에서 정보 조회 (가정)
+//       // const effectDb = BRACELET_DATA.find(...) 
+
+//       return {
+//         id: 0, // DB ID
+//         name: labelText,
+//         label: { text: labelText, color: undefined },
+//         isDb: true, 
+//         value: cv,
+//         // valueRange: effectDb?.range, // 범위값 추가
+//         opGrade: line.includes('color') ? findPolishGrade(cv.color) : undefined,
+//       };
+//     });
+
+//   return {
+//     id: 0,
+//     name: bracelet.Name,
+//     label: { text: bracelet.Name, color: undefined },
+//     isDb: true,
+//     icon: bracelet.Icon,
+//     eqGrade: '',
+//     itemTier: 4,
+//     effects,
+//   };
+//   console.log("--- bracelet ---");
+//   console.table(bracelet);
+// };
 
 // ── 어빌리티 스톤 ────────────────────────────────────────────
 
@@ -706,8 +796,8 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   combatStats : normalizeCombatStats(raw),
   equipment   : normalizeEquipment(raw),
   accessories : normalizeAccessories(raw),
+  bracelet    : normalizeBracelet(raw),
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-  // bracelet    : normalizeBracelet(raw),
   // abilityStone: normalizeAbilityStone(raw),
   // boJu        : normalizeBoJu(raw),
   // avatars     : normalizeAvatars(raw),

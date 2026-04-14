@@ -1,6 +1,6 @@
 // @/data/equipment/bracelet.ts
 
-import { BaseSimData } from '@/types/sim-types';
+import { BraceletRawData, BraceletData } from '@/types/equipment-types';
 import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
 
 // 공통 Base ID (10 10 4 0 00)
@@ -44,25 +44,47 @@ export const NAMES = {
 } as const;
 
 export const LABELS = {
-  [ID.F1_1]: '힘|민첩|지능', [ID.F1_2]: '체력',
+  [ID.F1_1]: '주스탯', [ID.F1_2]: '체력',
   [ID.F2_1]: '치명', [ID.F2_2]: '특화', [ID.F2_3]: '제압',
   [ID.F2_4]: '신속', [ID.F2_5]: '인내', [ID.F2_6]: '숙련',
 
   // 서술형 매칭 (문장 앞부분 혹은 핵심 키워드)
-  [ID.F3_1]:  '공격 및 이동 속도가',
+  [ID.F3_1]:  '공격 및 이동 속도',
   [ID.F3_11]: '치명타 적중률이', [ID.F3_12]: '치명타 피해가',
-  [ID.F3_13]: '무력화 상태의 적에게', [ID.F3_14]: '악마 및 대악마 계열', 
-  [ID.F3_15]: '재사용 대기 시간이', [ID.F3_16]: '대상의 방어력을',
-  [ID.F3_17]: '대상의 치명타 저항을', [ID.F3_19]: '치명타 피해 저항을',
-  [ID.F3_20]: '매 초 마다 10초 동안 무기 공격력이', [ID.F3_21]: '자신의 생명력이 50% 이상일 경우',
-  [ID.F3_22]: '30초 마다 120초 동안 무기 공격력이',
+  [ID.F3_13]: '무력화 상태의 적에게 주는 피해가', [ID.F3_14]: '악마 및 대악마 계열 피해량이', 
+  [ID.F3_15]: '스킬의 재사용 대기 시간이', [ID.F3_16]: '대상의 방어력을',
+  [ID.F3_17]: '대상의 치명타 저항을', [ID.F3_19]: '대상의 치명타 피해 저항을',
+  [ID.F3_20]: '공격 적중 시 매 초마다', [ID.F3_21]: '자신의 생명력이 50% 이상일 경우',
+  [ID.F3_22]: '공격 적중 시 30초 마다',
   // 단일 계열
-  [ID.F3_23]: '적에게 주는 피해가', [ID.F3_24]: '추가 피해', [ID.F3_25]: '백어택 스킬이',
-  [ID.F3_26]: '헤드어택 스킬이', [ID.F3_27]: '방향성 공격이 아닌 스킬이', [ID.F3_31]: '치명타 적중률',
+  [ID.F3_23]: '적에게 주는', [ID.F3_24]: '추가 피해', [ID.F3_25]: '백어택 스킬이 적에게 주는 피해가',
+  [ID.F3_26]: '헤드어택 스킬이 적에게 주는 피해가', [ID.F3_27]: '방향성 공격이 아닌 스킬이 적에게 주는 피해가', [ID.F3_31]: '치명타 적중률',
   [ID.F3_32]: '치명타 피해', [ID.F3_33]: '무기 공격력',
 } as const;
 
-export const BRACELET_DATA: BaseSimData[] = [
+const ID_TIER_MAP: Record<number, BraceletData['tier']> = {
+  1: 4, 2: 5,
+};
+
+export const decodeBraceletId = (id: number): Pick<BraceletData, 'category' | 'tier'> => {
+  const last3 = id % 1000;
+  const tierCode = Math.floor(last3 / 100); 
+  const offset = last3 % 100;
+
+  const tier = ID_TIER_MAP[tierCode];
+
+  let category: BraceletData['category'];
+  if (offset >= 21) category = 'POLISH';
+  else if (offset >= 11) category = 'COMBAT';
+  else category = 'BASE';
+
+  return {
+    category,
+    tier,
+  };
+};
+
+export const BRACELET_DATA: BraceletRawData[] = [
   // ── 주스탯 (Main Stat) ──────────────────────────────────
   {
     id: ID.F1_1,
@@ -513,3 +535,8 @@ export const BRACELET_DATA: BaseSimData[] = [
     ]
   },
 ];
+
+export const BRACELET_DB = BRACELET_DATA.map(item => ({
+  ...item,
+  ...decodeBraceletId(item.id)
+})) as BraceletData[];

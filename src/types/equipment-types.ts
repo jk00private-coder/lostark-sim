@@ -27,3 +27,10 @@ export interface AccessoryData extends AccessoryRawData {
   category: 'BASE' | 'POLISH'; 
   tier: 4|5;
 }
+
+/** 팔찌 데이터 */
+export interface BraceletRawData extends BaseSimData { }
+export interface BraceletData extends AccessoryRawData {
+  category: 'BASE' | 'COMBAT' | 'POLISH'; 
+  tier: 4|5;
+}
