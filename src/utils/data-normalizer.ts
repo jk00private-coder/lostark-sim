@@ -37,6 +37,7 @@ import { BRACELET_DB }    from '@/data/equipment/bracelet';
 import { ENGRAVINGS_DB }    from '@/data/engravings';
 import { AVATAR_DATA }    from '@/data/avatars';
 import { GEM_DATA }    from '@/data/gems';
+import { CARD_DATA } from '@/data/cards';
 
 
 // ============================================================
@@ -700,32 +701,26 @@ export const normalizeGems = (raw: RawCharacterData): GemDisplay[] => {
 // ── 카드 ────────────────────────────────────────────────────
 export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => {
   if (!raw.cards.Effects?.length) return null;
-  const effect     = raw.cards.Effects[0];
-  const totalAwake = raw.cards.Cards.reduce((sum: number, c: any) => sum + c.AwakeCount, 0);
-  const setNameM   = effect.Items[0]?.Name.match(/^(.+?)\s+\d+세트/);
 
-  const activeItems = effect.Items
-    .filter(item => {
-      const awakeM = item.Name.match(/\((\d+)각성합계\)/);
-      if (!awakeM) {
-        const setM = item.Name.match(/(\d+)세트$/);
-        return setM ? totalAwake >= parseInt(setM[1]) * 5 : true;
-      }
-      return totalAwake >= parseInt(awakeM[1]);
-    })
-    .map(item => ({
-      name       : item.Name,
-      description: stripHtml(item.Description),
-      value      : item.Description.includes('%')
-        ? toColoredValue(item.Description)
-        : undefined,
-    }));
+  const effect = raw.cards.Effects[0];
+  const items = effect.Items;
+  if (!items.length) return null;
+  const lastItem = items[items.length - 1];
+  const dbMatch = CARD_DATA[0];
 
-  return {
-    setName: setNameM ? setNameM[1] : '',
-    totalAwake,
-    activeItems,
+  const setName = lastItem.Name
+    .replace(/\s*\d+세트/, '')
+    .replace(/\s*\((\d+)각성합계\)/, ' $1각')
+    .trim();
+
+  const result: CardSetDisplay = {
+    id: dbMatch?.id ?? 0,
+    label: lastItem.Name,
+    name: setName,
+    isDb: !!dbMatch,
   };
+  console.log("--- [DEBUG] normalizeCards Result ---", result);
+  return result;
 };
 
 // ── 아크패시브 ───────────────────────────────────────────────
@@ -849,8 +844,8 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   avatars     : normalizeAvatars(raw),
   engravings  : normalizeEngravings(raw),
   gems        : normalizeGems(raw),
+  cards       : normalizeCards(raw),
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-  // cards       : normalizeCards(raw),
   // arkPassive  : normalizeArkPassive(raw),
   // arkGrid     : normalizeArkGrid(raw),
   // skills      : normalizeSkills(raw),

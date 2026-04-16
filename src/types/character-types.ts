@@ -150,12 +150,6 @@ export interface GemDisplay extends BaseDisplay {
 // ============================================================
 
 export interface CardSetDisplay extends BaseDisplay {
-  totalAwake: number;
-  activeItems: {
-    name: string;
-    description: string;
-    value?: ColoredValue;
-  }[];
 }
 
 export interface ArkPassivePointDisplay {
@@ -222,8 +216,8 @@ export interface CharacterDisplayData {
   avatars: AvatarDisplay[];
   engravings: EngravingDisplay[];
   gems: GemDisplay[];
+  cards: CardSetDisplay | null;
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // cards: CardSetDisplay | null;
   // arkPassive: {
   //   points: ArkPassivePointDisplay;
   //   effects: ArkPassiveEffectDisplay[];
