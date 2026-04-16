@@ -221,8 +221,8 @@ export interface CharacterDisplayData {
   equipment: EquipmentDisplay[];
   accessories: AccessoryDisplay[];
   bracelet: BraceletDisplay | null;
+  abilityStone: AbilityStoneDisplay | null;
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // abilityStone: AbilityStoneDisplay | null;
   // boJu: BoJuDisplay | null;
   // avatars: AvatarDisplay[];
   // engravings: EngravingDisplay[];

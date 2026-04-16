@@ -1,7 +1,7 @@
 // @/data/gems.ts
 
 import { BaseSimData } from '@/types/sim-types';
-import { ID_AA, ID_BB, ID_C } from '@/constants/id-config';
+import { ID_AA, ID_BB } from '@/constants/id-config';
 
 // 공통 Base ID (60 10 0 0 00)
 const BASE = (ID_AA.GEM * 1000000) + (ID_BB.COMMON * 10000);

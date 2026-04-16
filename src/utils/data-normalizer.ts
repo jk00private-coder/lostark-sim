@@ -34,6 +34,7 @@ import {
 import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
 import { ACCESSORY_DB }    from '@/data/equipment/accessory';
 import { BRACELET_DB }    from '@/data/equipment/bracelet';
+import { ENGRAVINGS_DB }    from '@/data/engravings';
 
 
 // ============================================================
@@ -181,7 +182,6 @@ const SKILL_CATEGORY_COLORS: Record<string, string> = {
   '화신 스킬': '#FF0000', '각성기'  : '#E73517', '초각성기': '#E73517',
 };
 
-
 // ============================================================
 // DB 조회 헬퍼
 // ============================================================
@@ -195,7 +195,6 @@ const findEquipSetType = (itemName: string, grade: string): MultiKey => {
 
   return 'COMMON'; // 기본값
 };
-
 
 /** 연마효과 수치로 상/중/하 등급 판별 */
 const findPolishGrade = (values: ColoredValue[]): OptionGrade => {
@@ -505,42 +504,66 @@ export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDispla
   const stone = raw.equipment.find(eq => eq.Type === '어빌리티 스톤');
   if (!stone) return null;
 
-  const tooltip        = parseTooltip(stone.Tooltip);
+  const tooltip = parseTooltip(stone.Tooltip);
   const engravingGroup = tooltip['Element_007']?.value?.Element_000?.contentStr ?? {};
-  const bonusStr: string = tooltip['Element_006']?.value?.Element_001 ?? '';
-  const baseAtkBonus   = bonusStr.includes('기본 공격력')
-    ? extractPercent(bonusStr)
-    : 0;
-
   const engravings: AbilityStoneDisplay['engravings'] = [];
-  let   penalty:    AbilityStoneDisplay['penalty']    = null;
+  let penalty: AbilityStoneDisplay['penalty'] = null;
+  let baseAtkBonus = 0;
 
   Object.values(engravingGroup).forEach((item: any) => {
     const content: string = item?.contentStr ?? '';
-    const clean = stripHtml(content);
-    const m     = clean.match(/\[([^\]]+)\]\s*Lv\.(\d+)/);
-    if (!m) return;
-    const name  = m[1];
-    const level = parseInt(m[2]);
+    
+    if (content.includes('기본 공격력')) {
+      baseAtkBonus = extractPercent(content);
+      return;
+    }
 
-    if (content.toLowerCase().includes('#fe2e2e')) {
-      penalty = {
-        name : { text: name, color: '#FE2E2E' },
-        level: { value: level, color: undefined },
-      };
+    // [각인 이름 추출]
+    const clean = stripHtml(content);
+    const m = clean.match(/\[([^\]]+)\]\s*Lv\.(\d+)/);
+    if (!m) return;
+
+    const labelName = m[1];
+    const levelValue = parseInt(m[2]);
+    const cvs = extractColoredValues(content);
+    const db = ENGRAVINGS_DB.find(d => d.name === labelName);
+
+    // 데이터 조립 (UI용)
+    const engravingData = {
+      id: db?.id ?? 0,
+      isDb: !!db,
+      name: { 
+        text: db?.name || labelName, 
+        color: cvs[0]?.color || '' 
+      },
+      level: { 
+        value: levelValue, 
+        color: '' 
+      },
+    };
+
+    // [페널티 판별] 빨간색이면 penalty로, 아니면 engravings로
+    if (engravingData.name.color.toUpperCase() === '#FE2E2E') {
+      penalty = engravingData;
     } else {
-      engravings.push({
-        name : { text: name, color: '#FFFFAC' },
-        level: { value: level, color: undefined },
-      });
+      engravings.push(engravingData);
     }
   });
 
-  return {
-    name: stone.Name, icon: stone.Icon,
-    grade: toGradeColoredText(stone.Grade),
-    baseAtkBonus, engravings, penalty,
-  };
+  const result: AbilityStoneDisplay = {
+    id: 0,
+    name: stone.Name,
+    label: stone.Name,
+    isDb: true,
+    icon: stone.Icon,
+    eqGrade: getGradeKey(stone.Grade), // 기존 공통함수
+    baseAtkBonus,
+    engravings,
+    penalty,
+  } as any;
+
+  console.log("--- AbilityStone Result ---", result);
+  return result;
 };
 
 // ── 보주 ────────────────────────────────────────────────────
@@ -773,8 +796,8 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   equipment   : normalizeEquipment(raw),
   accessories : normalizeAccessories(raw),
   bracelet    : normalizeBracelet(raw),
+  abilityStone: normalizeAbilityStone(raw),
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-  // abilityStone: normalizeAbilityStone(raw),
   // boJu        : normalizeBoJu(raw),
   // avatars     : normalizeAvatars(raw),
   // engravings  : normalizeEngravings(raw),
