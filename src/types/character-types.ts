@@ -139,9 +139,9 @@ export interface EngravingDisplay extends BaseDisplay {
 }
 
 export interface GemDisplay extends BaseDisplay {
-  slot: number;
   level: number;
-  skillName: ColoredText;
+  skillName: string;
+  effectType: '피해 증가' | '쿨타임 감소';
   baseAtkBonus: number;
 }
 
@@ -221,8 +221,8 @@ export interface CharacterDisplayData {
   boJu: BoJuDisplay | null;
   avatars: AvatarDisplay[];
   engravings: EngravingDisplay[];
+  gems: GemDisplay[];
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // gems: GemDisplay[]; // GemSummaryDisplay 제거 후 배열로 관리
   // cards: CardSetDisplay | null;
   // arkPassive: {
   //   points: ArkPassivePointDisplay;

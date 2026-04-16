@@ -36,6 +36,7 @@ import { ACCESSORY_DB }    from '@/data/equipment/accessory';
 import { BRACELET_DB }    from '@/data/equipment/bracelet';
 import { ENGRAVINGS_DB }    from '@/data/engravings';
 import { AVATAR_DATA }    from '@/data/avatars';
+import { GEM_DATA }    from '@/data/gems';
 
 
 // ============================================================
@@ -321,7 +322,7 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
   const accTypes = ['목걸이', '귀걸이', '반지'];
 
   const result = raw.equipment
-    .filter(eq => accTypes.includes(eq.Type as any))
+    .filter(eq => accTypes.includes(eq.Type))
     .map(eq => {
       const tooltip = parseTooltip(eq.Tooltip);
       const titleEl = tooltip['Element_001']?.value ?? {};
@@ -479,9 +480,9 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
       isDb: !!db,
       values: values, 
       valueRange: showRange ? createValueRange(gradeData) : undefined,
-      eqGrade: currentGradeKey as any,
+      eqGrade: currentGradeKey,
       opGrade: findPolishGrade(values),
-    } as any;
+    };
   });
 
   const result: BraceletDisplay = {
@@ -491,7 +492,7 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
     isDb: true,
     icon: bracelet.Icon,
     itemTier: extractNum(tooltip['Element_001']?.value?.leftStr2 ?? '', /티어\s*(\d+)/) || 4,
-    eqGrade: currentGradeKey as any,
+    eqGrade: currentGradeKey,
     effects,
   };
 
@@ -561,7 +562,7 @@ export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDispla
     baseAtkBonus,
     engravings,
     penalty,
-  } as any;
+  };
 
   console.log("--- AbilityStone Result ---", result);
   return result;
@@ -585,7 +586,7 @@ export const normalizeBoJu = (raw: RawCharacterData): BoJuDisplay | null => {
     eqGrade: getGradeKey(boju.Grade),
     seasonLabel: seasonM ? `시즌 ${seasonM[1]}` : '',
     paradoxPower: seasonM ? parseInt(seasonM[2].replace(/,/g, '')) : 0,
-  } as any;
+  };
 
   console.log("--- BoJu Result ---", result);
   return result;
@@ -628,7 +629,7 @@ export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
       icon: av.Icon,
       eqGrade: getGradeKey(av.Grade),
       mainStatBonus: bonusStr.includes('%') ? extractPercent(bonusStr) : 0,
-    } as any;
+    };
   });
 
   console.log("--- [DEBUG] Avatar Result List ---");
@@ -651,7 +652,7 @@ export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] =
       eqGrade: getGradeKey(eff.Grade),
       level: eff.Level,
       abilityStoneLevel: eff.AbilityStoneLevel || 0,
-    } as any;
+    };
   });
 
   console.log("--- [DEBUG] Engraving Final Result ---");
@@ -660,28 +661,40 @@ export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] =
 };
 
 // ── 보석 ────────────────────────────────────────────────────
-export const normalizeGems = (raw: RawCharacterData): GemSummaryDisplay => {
+export const normalizeGems = (raw: RawCharacterData): GemDisplay[] => {
   const gemMap = Object.fromEntries(raw.gems.Gems.map(g => [g.Slot, g]));
+  
   const gems: GemDisplay[] = raw.gems.Effects.Skills.map(skill => {
-    const gem     = gemMap[skill.GemSlot];
-    const desc    = skill.Description[0] ?? '';
-    const isDmg   = desc.includes('피해');
-    const effectValue = extractPercent(desc);
+    const gem = gemMap[skill.GemSlot];
+    const rawDesc = skill.Description[0] ?? '';
+    const isDmg = rawDesc.includes('피해');
+    
+    const gemName = stripHtml(gem?.Name || ''); 
+    const pureName = gemName.replace(/^\d+레벨\s+/, ''); 
+    const effectType: GemDisplay['effectType'] = isDmg ? '피해 증가' : '쿨타임 감소';
+
+    let matchLabel = pureName;
+    if (pureName === "광휘의 보석 (귀속)" || "광휘의 보석") {
+      matchLabel = isDmg ? "겁화의 보석" : "작열의 보석";
+    }
+    const dbMatch = GEM_DATA.find(d => (d.label || d.name) === matchLabel);
     return {
-      slot        : skill.GemSlot,
-      level       : gem?.Level  ?? 0,
-      grade       : toGradeColoredText(gem?.Grade ?? ''),
-      icon        : gem?.Icon   ?? skill.Icon,
-      skillName   : { text: skill.Name, color: '#FFD200' },
-      effectLabel : { text: isDmg ? '피해' : '재사용 대기시간', color: undefined },
-      effectValue : { value: effectValue, color: isDmg ? '#99ff99' : '#87CEEB' },
-      baseAtkBonus: extractPercent(skill.Option),
+      id: dbMatch?.id ?? 0,
+      name: gemName,
+      label: matchLabel,
+      value: extractPercent(rawDesc),
+      isDb: !!dbMatch,
+      icon: gem?.Icon || skill.Icon,
+      eqGrade: getGradeKey(gem?.Grade ?? ''),
+      level: gem?.Level ?? 0,
+      skillName: skill.Name,
+      effectType,
+      baseAtkBonus: extractPercent(skill.Option || ''),
     };
   });
-  return {
-    gems,
-    totalBaseAtk: { value: extractPercent(raw.gems.Effects.Description), color: '#B7FB00' },
-  };
+
+  console.log("--- [DEBUG] normalizeGems Final Output ---", gems);
+  return gems;
 };
 
 // ── 카드 ────────────────────────────────────────────────────
@@ -835,8 +848,8 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   boJu        : normalizeBoJu(raw),
   avatars     : normalizeAvatars(raw),
   engravings  : normalizeEngravings(raw),
+  gems        : normalizeGems(raw),
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-  // gems        : normalizeGems(raw),
   // cards       : normalizeCards(raw),
   // arkPassive  : normalizeArkPassive(raw),
   // arkGrid     : normalizeArkGrid(raw),
