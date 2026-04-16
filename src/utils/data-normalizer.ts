@@ -35,6 +35,7 @@ import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
 import { ACCESSORY_DB }    from '@/data/equipment/accessory';
 import { BRACELET_DB }    from '@/data/equipment/bracelet';
 import { ENGRAVINGS_DB }    from '@/data/engravings';
+import { AVATAR_DATA }    from '@/data/avatars';
 
 
 // ============================================================
@@ -566,51 +567,74 @@ export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDispla
   return result;
 };
 
-// ── 보주 ────────────────────────────────────────────────────
+// ── 보주 ────────────────────────────────────────────
 export const normalizeBoJu = (raw: RawCharacterData): BoJuDisplay | null => {
   const boju = raw.equipment.find(eq => eq.Type === '보주');
   if (!boju) return null;
 
-  const tooltip   = parseTooltip(boju.Tooltip);
+  const tooltip = parseTooltip(boju.Tooltip);
   const effectStr: string = tooltip['Element_004']?.value?.Element_001 ?? '';
-  const seasonM   = effectStr.match(/시즌(\d+)\s*달성\s*최대\s*낙원력\s*:\s*([\d,]+)/);
+  const seasonM = effectStr.match(/시즌(\d+)\s*달성\s*최대\s*낙원력\s*:\s*([\d,]+)/);
 
-  return {
-    name        : boju.Name,
-    icon        : boju.Icon,
-    grade       : toGradeColoredText(boju.Grade),
-    seasonLabel : seasonM ? `시즌${seasonM[1]}` : '',
+  const result: BoJuDisplay = {
+    id: 0,
+    name: boju.Name,
+    label: boju.Name,
+    isDb: false,
+    icon: boju.Icon,
+    eqGrade: getGradeKey(boju.Grade),
+    seasonLabel: seasonM ? `시즌 ${seasonM[1]}` : '',
     paradoxPower: seasonM ? parseInt(seasonM[2].replace(/,/g, '')) : 0,
-  };
+  } as any;
+
+  console.log("--- BoJu Result ---", result);
+  return result;
 };
 
 // ── 아바타 ──────────────────────────────────────────────────
 export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
-  const targetTypes = ['무기 아바타', '상의 아바타', '하의 아바타'];
-  const grouped: Record<string, typeof raw.avatars> = {};
+  const targetTypes = ['무기 아바타', '머리 아바타', '상의 아바타', '하의 아바타'];
 
-  raw.avatars
+  // 1. 우선순위를 고려하여 부위별로 '하나의' 아바타만 선택
+  const dbMatch = AVATAR_DATA[0];
+  const representativeAvatars = raw.avatars
     .filter(av => targetTypes.includes(av.Type))
-    .forEach(av => {
-      if (!grouped[av.Type]) grouped[av.Type] = [];
-      grouped[av.Type].push(av);
-    });
+    .reduce((acc: any[], current) => {
+      // 이미 같은 부위(Type)가 등록되어 있는지 확인
+      const existingIdx = acc.findIndex(a => a.Type === current.Type);
 
-  return Object.entries(grouped).map(([type, avatars]) => {
-    const bonuses = avatars.map(av => {
-      const tooltip  = parseTooltip(av.Tooltip);
-      const bonusStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
-      return { avatar: av, bonus: bonusStr.includes('%') ? extractPercent(bonusStr) : 0 };
-    });
-    const best = bonuses.reduce((a, b) => a.bonus >= b.bonus ? a : b);
+      if (existingIdx > -1) {
+        // 이미 있다면: 현재 아바타가 IsInner인 경우에만 교체 (능력치 아바타 우선)
+        if (current.IsInner) {
+          acc[existingIdx] = current;
+        }
+      } else {
+        // 없다면: 일단 추가
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+
+  // 2. 선택된 아바타들만 가지고 최종 배열 생성 (전투장비와 동일한 map 구조)
+  const result = representativeAvatars.map(av => {
+    const tooltip = parseTooltip(av.Tooltip);
+    const bonusStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
+    
     return {
-      type         : type,
-      name         : best.avatar.Name,
-      icon         : best.avatar.Icon,
-      grade        : toGradeColoredText(best.avatar.Grade),
-      mainStatBonus: best.bonus,
-    };
+      id: dbMatch.id,
+      name: av.Name,
+      label: av.Name,
+      isDb: !!dbMatch,
+      icon: av.Icon,
+      eqGrade: getGradeKey(av.Grade),
+      mainStatBonus: bonusStr.includes('%') ? extractPercent(bonusStr) : 0,
+    } as any;
   });
+
+  console.log("--- [DEBUG] Avatar Result List ---");
+  console.table(result);
+
+  return result;
 };
 
 // ── 각인 ────────────────────────────────────────────────────
@@ -797,9 +821,9 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   accessories : normalizeAccessories(raw),
   bracelet    : normalizeBracelet(raw),
   abilityStone: normalizeAbilityStone(raw),
+  boJu        : normalizeBoJu(raw),
+  avatars     : normalizeAvatars(raw),
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-  // boJu        : normalizeBoJu(raw),
-  // avatars     : normalizeAvatars(raw),
   // engravings  : normalizeEngravings(raw),
   // gems        : normalizeGems(raw),
   // cards       : normalizeCards(raw),

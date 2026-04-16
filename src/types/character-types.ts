@@ -222,9 +222,9 @@ export interface CharacterDisplayData {
   accessories: AccessoryDisplay[];
   bracelet: BraceletDisplay | null;
   abilityStone: AbilityStoneDisplay | null;
+  boJu: BoJuDisplay | null;
+  avatars: AvatarDisplay[];
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // boJu: BoJuDisplay | null;
-  // avatars: AvatarDisplay[];
   // engravings: EngravingDisplay[];
   // gems: GemDisplay[]; // GemSummaryDisplay 제거 후 배열로 관리
   // cards: CardSetDisplay | null;
