@@ -638,15 +638,26 @@ export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
 };
 
 // ── 각인 ────────────────────────────────────────────────────
-export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] =>
-  raw.engravings.ArkPassiveEffects.map(eff => ({
-    name             : { text: eff.Name,  color: '#FFFFAC' },
-    grade            : toGradeColoredText(eff.Grade),
-    level            : eff.Level,
-    abilityStoneLevel: eff.AbilityStoneLevel,
-    description      : stripHtml(eff.Description),
-    icon             : '',
-  }));
+export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] => {
+  const arkEngravings = raw.engravings?.ArkPassiveEffects ?? [];
+  const result: EngravingDisplay[] = arkEngravings.map(eff => {
+    const dbMatch = ENGRAVINGS_DB.find(d => (d.label || d.name) === eff.Name);
+    return {
+      id: dbMatch?.id ?? 0,
+      name: eff.Name,
+      label: eff.Name, 
+      isDb: !!dbMatch,
+      icon: dbMatch?.iconPath || '',
+      eqGrade: getGradeKey(eff.Grade),
+      level: eff.Level,
+      abilityStoneLevel: eff.AbilityStoneLevel || 0,
+    } as any;
+  });
+
+  console.log("--- [DEBUG] Engraving Final Result ---");
+  console.table(result);
+  return result;
+};
 
 // ── 보석 ────────────────────────────────────────────────────
 export const normalizeGems = (raw: RawCharacterData): GemSummaryDisplay => {
@@ -823,8 +834,8 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
   abilityStone: normalizeAbilityStone(raw),
   boJu        : normalizeBoJu(raw),
   avatars     : normalizeAvatars(raw),
+  engravings  : normalizeEngravings(raw),
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-  // engravings  : normalizeEngravings(raw),
   // gems        : normalizeGems(raw),
   // cards       : normalizeCards(raw),
   // arkPassive  : normalizeArkPassive(raw),

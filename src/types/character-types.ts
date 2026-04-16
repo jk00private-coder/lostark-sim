@@ -124,11 +124,7 @@ export interface BoJuDisplay extends BaseDisplay {
   seasonLabel: string;
   paradoxPower: number;
 }
-/**
- * todo: 자동화할려면 API에서 넘어오는 IsSet, IsInner 필요 여부?
- *       아바타 상하의 세트는 type은 상의와 동일한데 효과만 2배임 처리해야함.
- *       같은 type의 아바타가 2개면 IsInner가 있는 얘를 처리하는 식으로 진행
- */
+
 export interface AvatarDisplay extends BaseDisplay {
   mainStatBonus: number;
 }
@@ -224,8 +220,8 @@ export interface CharacterDisplayData {
   abilityStone: AbilityStoneDisplay | null;
   boJu: BoJuDisplay | null;
   avatars: AvatarDisplay[];
+  engravings: EngravingDisplay[];
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // engravings: EngravingDisplay[];
   // gems: GemDisplay[]; // GemSummaryDisplay 제거 후 배열로 관리
   // cards: CardSetDisplay | null;
   // arkPassive: {
