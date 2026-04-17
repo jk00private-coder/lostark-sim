@@ -193,11 +193,9 @@ export interface EquippedRuneDisplay extends BaseDisplay { }
 
 export interface SkillDisplay extends BaseDisplay {
   level: number;
-  skillType: number;
   category: ColoredText;
-  isUsed: boolean;
   selectedTripods: SelectedTripodDisplay[];
-  rune: EquippedRuneDisplay | null;
+  rune: EquippedRuneDisplay;
 }
 
 // ============================================================
@@ -221,6 +219,5 @@ export interface CharacterDisplayData {
     effects: ArkPassiveEffectDisplay[];
   } | null;
   arkGrid: ArkGridDisplay;
-  // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // skills: SkillDisplay[];
+  skills: SkillDisplay[];
 }

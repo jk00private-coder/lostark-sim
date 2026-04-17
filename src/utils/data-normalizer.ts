@@ -44,6 +44,7 @@ import { ELIGHTEN_GUARDIAN_KNIGHT_DATA } from '@/data/arc-passive/elighten/guard
 import { getLeapDataByName } from '@/data/arc-passive';
 import { ARKGRID_COMMON_DATA } from '@/data/arc-grid/common';
 import { ARKGRID_GUARDIAN_KNIGHT_DATA } from '@/data/arc-grid/guardian-knight';
+import { SKILLS_GUARDIAN_KNIGHT_DB } from '@/data/skills/guardian-knight-skills';
 
 
 // ============================================================
@@ -734,7 +735,7 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
 };
 
 // ── 아크패시브 ───────────────────────────────────────────────
-const JOB_ENLIGHTEN_MAP: Record<string, any> = {
+const JOB_ENLIGHTEN_MAP: Record<string, typeof ELIGHTEN_GUARDIAN_KNIGHT_DATA> = {
   '가디언나이트': ELIGHTEN_GUARDIAN_KNIGHT_DATA,
   // '검사': ELIGHTEN_SWORD_MASTER_DATA, // 이런 식으로 추가
 };
@@ -811,13 +812,13 @@ const findArkPassiveDb = (category: string, name: string, job: string) => {
   // 2. 깨달음 (직업 매핑 테이블 참조)
   if (category === '깨달음') {
     const jobData = JOB_ENLIGHTEN_MAP[job];
-    return jobData?.nodes.find((n: any) => n.name === name);
+    return jobData?.nodes.find(n => n.name === name);
   }
 
   // 3. 도약 (공통 + 직업 2티어 병합 데이터 참조)
   if (category === '도약') {
     const leapData = getLeapDataByName(job);
-    return leapData?.nodes.find((n: any) => n.name === name);
+    return leapData?.nodes.find(n => n.name === name);
   }
 
   return null;
@@ -868,53 +869,98 @@ export const normalizeArkGrid = (raw: RawCharacterData, jobName: string): ArkGri
 };
 
 // ── 스킬 ────────────────────────────────────────────────────
-export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
-  const gemSkillNames = raw.gems.Effects.Skills.map(s => s.Name);
+const JOB_SKILL_MAP: Record<string, typeof SKILLS_GUARDIAN_KNIGHT_DB> = {
+  '가디언나이트': SKILLS_GUARDIAN_KNIGHT_DB,
+  // 추가 직업들...
+};
 
+// ── 스킬 ────────────────────────────────────────────────────
+export const normalizeSkills = (raw: RawCharacterData, jobName: string): SkillDisplay[] => {
+  const gemSkillNames = raw.gems.Effects.Skills.map(s => s.Name); // 보석이 박힌 스킬 이름들 (필터링 조건용)
+  const skillDb = JOB_SKILL_MAP[jobName];
+  const clean = (str: string) => str.replace(/\s+/g, ''); // 비교용 공백 제거 헬퍼
+
+
+  const activeTitle = raw.arkPassive?.Title || '';
   const isSkillUsed = (skill: typeof raw.skills[0]): boolean => {
-    if (skill.SkillType === 100 || skill.SkillType === 101) return true;
+    const dbMatch = skillDb?.find(d => d.label || d.name === skill.Name);
+
+    // [수정] requiredTitle 조건 체크
+    /**
+     * todo: 도약 2티어 노드로 조건을 변경해서 고도화해야함,
+     *       데빌헌터같은 경우는 초각성스킬이 3개라서 title로는 구분 불가능
+     */
+    if (dbMatch?.requiredTitle) {
+      // 캐릭터의 아크 패시브 Title과 DB의 요구 Title이 다르면 미사용 스킬로 간주
+      if (activeTitle !== dbMatch.requiredTitle) return false;
+    }
+    if (skill.SkillType === 100 || skill.SkillType === 101 || skill.SkillType === 1) return true;
     if (skill.Level >= 4 || skill.Rune !== null) return true;
     return gemSkillNames.some(
       name => skill.Name.includes(name) || name.includes(skill.Name)
     );
   };
 
-  return raw.skills.filter(isSkillUsed).map(skill => {
-    const tooltip      = parseTooltip(skill.Tooltip);
-    const titleEl      = tooltip['Element_001']?.value ?? {};
-    const levelStr     : string = titleEl.level ?? '';
-    const categoryM    = levelStr.match(/\[([^\]]+)\]/);
-    const categoryText = categoryM ? categoryM[1] : '일반 스킬';
+  const skills: SkillDisplay[] = raw.skills.filter(isSkillUsed).map(skill => {
+    const dbMatch = skillDb?.find(d => d.label || d.name === skill.Name);
+    const tooltip = parseTooltip(skill.Tooltip);
+    const titleEl = tooltip['Element_001']?.value ?? {};
+    const rawLevelText = titleEl.level || ''; 
+    const cleanLevelText = rawLevelText.replace(/<[^>]*>/g, '').trim(); // 태그 제거 및 공백 제거
+    
+    let categoryText = '일반';
+    if (cleanLevelText) {
+      const categoryM = cleanLevelText.match(/\[([^\]]+)\]/);
+      // 대괄호가 있으면 그 안의 내용을, 없으면 텍스트 전체(각성기 등)를 사용
+      categoryText = categoryM ? categoryM[1] : cleanLevelText;
+    }
 
     const selectedTripods: SelectedTripodDisplay[] = skill.Tripods
       .filter(t => t.IsSelected)
-      .map(t => ({
-        tier: t.Tier,
-        slot: t.Slot,
-        name: { text: t.Name, color: '#FFBB63' },
-        icon: t.Icon,
-      }));
+      .map(t => {
+        const tripodDbMatch = dbMatch?.tripods?.find(td => td.label || td.name === t.Name);
+
+        return {
+          // BaseDisplay 필드
+          id: tripodDbMatch?.id ?? 0,
+          label: t.Name,
+          name: tripodDbMatch?.name || t.Name,
+          icon: t.Icon,
+          isDb: !!tripodDbMatch,
+          tier: tripodDbMatch?.tier || t.Tier,
+          slot: tripodDbMatch?.slot || t.Slot,
+        };
+      });
 
     const rune: EquippedRuneDisplay | null = skill.Rune ? {
-      name : { text: skill.Rune.Name,  color: GRADE_COLORS[skill.Rune.Grade] },
-      grade: toGradeColoredText(skill.Rune.Grade),
-      icon : skill.Rune.Icon,
+      id: 0,
+      label: skill.Rune.Name,
+      name: skill.Rune.Name,
+      eqGrade: getGradeKey(skill.Rune.Grade),
+      icon: skill.Rune.Icon,
+      isDb: false,
     } : null;
 
     return {
-      name           : skill.Name,
-      icon           : skill.Icon,
-      level          : skill.Level,
-      type           : skill.Type,
-      skillType      : skill.SkillType,
-      category       : { text: categoryText, color: SKILL_CATEGORY_COLORS[categoryText] },
-      isUsed         : true,
+      id: dbMatch?.id ?? 0,
+      label: skill.Name,
+      name: dbMatch?.name || skill.Name,
+      icon: skill.Icon,
+      isDb: !!dbMatch,
+      
+      level: skill.Level,
+      category: { 
+        text: categoryText, 
+        color: SKILL_CATEGORY_COLORS[categoryText] || '#ffffff' 
+      },
       selectedTripods,
-      rune,
+      rune: rune as EquippedRuneDisplay,
     };
   });
+  console.log(`--- [DEBUG] normalizeSkills (${jobName}) ---`);
+  console.log(skills);
+  return skills;
 };
-
 
 // ============================================================
 // 최상위 통합
@@ -936,7 +982,6 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
     cards       : normalizeCards(raw),
     arkPassive  : normalizeArkPassive(raw, jobName),
     arkGrid     : normalizeArkGrid(raw, jobName),
-    // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-    // skills      : normalizeSkills(raw),
+    skills      : normalizeSkills(raw, jobName),
   };
 };

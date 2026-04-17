@@ -90,14 +90,14 @@ export interface TripodCase {
  * link → 특정트포끼리 연동되어있을 때(ex 가디언나이트 발현/화신 스킬) 
  */
 export interface TripodData extends BaseSimData {
+  tier : 1 | 2 | 3;
   slot : 1 | 2 | 3;
-  index: 1 | 2 | 3;
 
   effects?         : EffectEntry[];
   addDamageSources?: DamageSource[];
   overrides?       : TripodOverride;
   cases?           : TripodCase[];
-  link?            : { slot: number; index: number };
+  link?            : { tier: number; slot: number };
   memo?            : MemoParam[];
 }
 
@@ -117,4 +117,5 @@ export interface SkillData extends BaseSimData {
   cooldown    : number;
   levels      : DamageSource[];
   tripods?    : TripodData[];
+  requiredTitle?: string;
 }
