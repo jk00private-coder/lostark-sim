@@ -149,13 +149,12 @@ export interface GemDisplay extends BaseDisplay {
 // 카드 및 아크 패시브
 // ============================================================
 
-export interface CardSetDisplay extends BaseDisplay {
-}
+export interface CardSetDisplay extends BaseDisplay { }
 
 export interface ArkPassivePointDisplay {
-  evolution: { value: number; description: string };
-  insight: { value: number; description: string };
-  leap: { value: number; description: string };
+  evolution: { level: number; description: string };
+  insight: { level: number; description: string };
+  leap: { level: number; description: string };
   title: string;
 }
 
@@ -163,7 +162,7 @@ export interface ArkPassiveEffectDisplay extends BaseDisplay {
   category: ColoredText;
   tier: number;
   level: number;
-  description: string;
+  description: string;  
 }
 
 export interface ArkGridCoreDisplay extends BaseDisplay {
@@ -217,11 +216,11 @@ export interface CharacterDisplayData {
   engravings: EngravingDisplay[];
   gems: GemDisplay[];
   cards: CardSetDisplay | null;
+  arkPassive: {
+    points: ArkPassivePointDisplay;
+    effects: ArkPassiveEffectDisplay[];
+  } | null;
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // arkPassive: {
-  //   points: ArkPassivePointDisplay;
-  //   effects: ArkPassiveEffectDisplay[];
-  // };
   // arkGrid: ArkGridDisplay;
   // skills: SkillDisplay[];
 }

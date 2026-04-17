@@ -14,7 +14,6 @@ export const NAMES = {
     [ID.CARDS]: '카드',
 }
 
-// todo: 카드도 어떻게할지 고민, 그냥 18각은 8퍼, 24각 12퍼 30각 15퍼 이렇게만 표현해도 됨.
 export const CARD_DATA: BaseSimData[] = [
   {
     id: ID.CARDS,

@@ -38,6 +38,9 @@ import { ENGRAVINGS_DB }    from '@/data/engravings';
 import { AVATAR_DATA }    from '@/data/avatars';
 import { GEM_DATA }    from '@/data/gems';
 import { CARD_DATA } from '@/data/cards';
+import { EVOLUTION_DATA } from '@/data/arc-passive/evolution';
+import { ELIGHTEN_GUARDIAN_KNIGHT_DATA } from '@/data/arc-passive/elighten/guardian-knight';
+import { getLeapDataByName } from '@/data/arc-passive';
 
 
 // ============================================================
@@ -724,41 +727,94 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
 };
 
 // ── 아크패시브 ───────────────────────────────────────────────
-export const normalizeArkPassive = (raw: RawCharacterData) => {
-  const p = raw.arkPassive;
+/** 매핑 테이블 정의 (새로운 직업 추가 시 여기만 업데이트) */
+const JOB_ENLIGHTEN_MAP: Record<string, any> = {
+  '가디언나이트': ELIGHTEN_GUARDIAN_KNIGHT_DATA,
+  // '검사': ELIGHTEN_SWORD_MASTER_DATA, // 이런 식으로 추가
+};
 
-  const getPoint = (name: string) => {
+export const normalizeArkPassive = (raw: RawCharacterData, jobName: string) => {
+  const p = raw.arkPassive;
+  if (!p) return null;
+
+  // 포인트 레벨 파싱 (Description에서 숫자만)
+  const getPointLevel = (name: string) => {
     const found = p.Points.find(pt => pt.Name === name);
-    return { value: found?.Value ?? 0, description: found?.Description ?? '' };
+    if (!found) return { level: 0, description: '' };
+    const levelMatch = found.Description.match(/(\d+)레벨/);
+    return {
+      level: levelMatch ? parseInt(levelMatch[1]) : 0,
+      description: '', 
+    };
   };
 
   const points: ArkPassivePointDisplay = {
-    evolution: getPoint('진화'),
-    insight  : getPoint('깨달음'),
-    leap     : getPoint('도약'),
-    title    : p.Title,
+    evolution: getPointLevel('진화'),
+    insight: getPointLevel('깨달음'),
+    leap: getPointLevel('도약'),
+    title: p.Title,
   };
 
   const PATTERN = /(진화|깨달음|도약)\s+(\d+)티어\s+(.+?)\s+Lv\.(\d+)/;
 
   const effects: ArkPassiveEffectDisplay[] = p.Effects.map(eff => {
-    const clean    = stripHtml(eff.Description);
-    const m        = clean.match(PATTERN);
-    const ttJson   = parseTooltip(eff.ToolTip);
+    const cleanDesc = stripHtml(eff.Description);
+    const m = cleanDesc.match(PATTERN);
+    
+    const categoryName = m ? m[1] : eff.Name;
+    const tier = m ? parseInt(m[2]) : 0;
+    const nodeName = m ? m[3] : eff.Name;
+    const level = m ? parseInt(m[4]) : 0;
+
+    const ttJson = parseTooltip(eff.ToolTip);
     const descRaw: string = ttJson['Element_002']?.value ?? '';
-    const desc     = stripHtml(descRaw.split('||')[0]);
-    const category = m ? m[1] : eff.Name;
+    const finalDesc = stripHtml(descRaw.split('||')[0]).trim();
+
+    // DB 매칭
+    const dbMatch = findArkPassiveDb(categoryName, nodeName, jobName);
+
     return {
-      category   : { text: category, color: ARK_PASSIVE_COLORS[category] },
-      name       : { text: m ? m[3] : clean, color: undefined },
-      tier       : m ? parseInt(m[2]) : 0,
-      level      : m ? parseInt(m[4]) : 0,
-      description: desc,
-      icon       : eff.Icon,
+      id: dbMatch?.id ?? 0,
+      label: nodeName, 
+      name: nodeName,
+      isDb: !!dbMatch,
+      icon: eff.Icon,
+      category: { 
+        text: categoryName, 
+        color: ARK_PASSIVE_COLORS[categoryName] || '#ffffff' 
+      },
+      tier,
+      level,
+      description: finalDesc,
     };
   });
 
-  return { points, effects };
+  const result = { points, effects };
+  console.log("--- [DEBUG] normalizeArkPassive Result ---");
+  console.log(result);
+  return result;
+};
+
+/** 전 직업 대응 가능하도록 개선된 DB 매칭 헬퍼 */
+const findArkPassiveDb = (category: string, name: string, job: string) => {
+  // 1. 진화 (공통)
+  if (category === '진화') {
+    return EVOLUTION_DATA.nodes.find(n => n.name === name);
+  }
+
+  // 2. 깨달음 (직업 매핑 테이블 참조)
+  if (category === '깨달음') {
+    const jobData = JOB_ENLIGHTEN_MAP[job];
+    return jobData?.nodes.find((n: any) => n.name === name);
+  }
+
+  // 3. 도약 (공통 + 직업 2티어 병합 데이터 참조)
+  if (category === '도약') {
+    const leapData = getLeapDataByName(job);
+    return leapData?.nodes.find((n: any) => n.name === name);
+  }
+
+  return null;
 };
 
 // ── 아크그리드 ───────────────────────────────────────────────
@@ -833,20 +889,23 @@ export const normalizeSkills = (raw: RawCharacterData): SkillDisplay[] => {
 // 최상위 통합
 // ============================================================
 
-export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData => ({
-  profile     : normalizeProfile(raw),
-  combatStats : normalizeCombatStats(raw),
-  equipment   : normalizeEquipment(raw),
-  accessories : normalizeAccessories(raw),
-  bracelet    : normalizeBracelet(raw),
-  abilityStone: normalizeAbilityStone(raw),
-  boJu        : normalizeBoJu(raw),
-  avatars     : normalizeAvatars(raw),
-  engravings  : normalizeEngravings(raw),
-  gems        : normalizeGems(raw),
-  cards       : normalizeCards(raw),
-  // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-  // arkPassive  : normalizeArkPassive(raw),
-  // arkGrid     : normalizeArkGrid(raw),
-  // skills      : normalizeSkills(raw),
-});
+export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData => {
+  const jobName = raw.profile.CharacterClassName;
+  return {
+    profile     : normalizeProfile(raw),
+    combatStats : normalizeCombatStats(raw),
+    equipment   : normalizeEquipment(raw),
+    accessories : normalizeAccessories(raw),
+    bracelet    : normalizeBracelet(raw),
+    abilityStone: normalizeAbilityStone(raw),
+    boJu        : normalizeBoJu(raw),
+    avatars     : normalizeAvatars(raw),
+    engravings  : normalizeEngravings(raw),
+    gems        : normalizeGems(raw),
+    cards       : normalizeCards(raw),
+    arkPassive  : normalizeArkPassive(raw, jobName),
+    // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
+    // arkGrid     : normalizeArkGrid(raw),
+    // skills      : normalizeSkills(raw),
+  };
+};
