@@ -23,20 +23,32 @@ export const ID = {
 };
 
 export const NAMES = {
-  [ID.SNH_01]: '피니셔', [ID.SNH_02]: '매니페스트', [ID.SNH_03]: '붉은 날개',
-  [ID.SND_01]: '차지 인핸스', [ID.SND_02]: '브랜디쉬', [ID.SND_03]: '에이펙스',
+  [ID.SNH_01]: '[1]피니셔', [ID.SNH_02]: '[2]매니페스트', [ID.SNH_03]: '[3]붉은 날개',
+  [ID.SND_01]: '[1]차지 인핸스', [ID.SND_02]: '[2]브랜디쉬', [ID.SND_03]: '[3]에이펙스',
 
-  [ID.MNH_01]: '노바 플레임', [ID.MNH_02]: '리버레이션', [ID.MNH_03]: '복수귀',
-  [ID.MND_01]: '위압', [ID.MND_02]: '플러리쉬', [ID.MND_03]: '도미넌트',
+  [ID.MNH_01]: '[1]노바 플레임', [ID.MNH_02]: '[2]리버레이션', [ID.MNH_03]: '[3]복수귀',
+  [ID.MND_01]: '[1]위압', [ID.MND_02]: '[2]플러리쉬', [ID.MND_03]: '[3]도미넌트',
   
-  [ID.STH_01]: '라스트 스탠드', [ID.STH_02]: '엑스큐셔너', [ID.STH_03]: '추격 시작',
-  [ID.STD_01]: '그랜드 피날레', [ID.STD_02]: '일당백', [ID.STD_03]: '파멸',
+  [ID.STH_01]: '[1]라스트 스탠드', [ID.STH_02]: '[2]엑스큐셔너', [ID.STH_03]: '[3]추격 시작',
+  [ID.STD_01]: '[1]그랜드 피날레', [ID.STD_02]: '[2]일당백', [ID.STD_03]: '[3]파멸',
+} as const;
+
+export const LABELS = {
+  [ID.SNH_01]: '질서의 해 코어 : 피니셔', [ID.SNH_02]: '질서의 해 코어 : 매니페스트', [ID.SNH_03]: '질서의 해 코어 : 붉은 날개',
+  [ID.SND_01]: '질서의 해 코어 : 차지 인핸스', [ID.SND_02]: '질서의 해 코어 : 브랜디쉬', [ID.SND_03]: '질서의 해 코어 : 에이펙스',
+
+  [ID.MNH_01]: '질서의 달 코어 : 노바 플레임', [ID.MNH_02]: '질서의 달 코어 : 리버레이션', [ID.MNH_03]: '질서의 달 코어 : 복수귀',
+  [ID.MND_01]: '질서의 달 코어 : 위압', [ID.MND_02]: '질서의 달 코어 : 플러리쉬', [ID.MND_03]: '질서의 달 코어 : 도미넌트',
+
+  [ID.STH_01]: '질서의 별 코어 : 라스트 스탠드', [ID.STH_02]: '질서의 별 코어 : 엑스큐셔너', [ID.STH_03]: '질서의 별 코어 : 추격 시작',
+  [ID.STD_01]: '질서의 별 코어 : 그랜드 피날레', [ID.STD_02]: '질서의 별 코어 : 일당백', [ID.STD_03]: '질서의 별 코어 : 파멸',
 } as const;
 
 export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   // ── [🌞 해 코어] ──────────────────────────────────
   { // <해1> 피니셔 (업화의 계승자)
     id: ID.SNH_01,
+    label: LABELS[ID.SNH_01],
     name: NAMES[ID.SNH_01],
     iconPath: GET_GRID_ICON('O_SN'),
     thresholds: [
@@ -58,6 +70,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <해2> 메니페스트 (업화의 계승자)
     id: ID.SNH_02,
+    label: LABELS[ID.SNH_02],
     name: NAMES[ID.SNH_02],
     iconPath: GET_GRID_ICON('O_SN'),
     thresholds: [
@@ -99,6 +112,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <해3> 붉은날개 (업화의 계승자)
     id: ID.SNH_03,
+    label: LABELS[ID.SNH_03],
     name: NAMES[ID.SNH_03],
     iconPath: GET_GRID_ICON('O_SN'),
     thresholds: [
@@ -131,6 +145,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
 
   { // <해1> 차지 인핸스 (드레드 로어)
     id: ID.SND_01,
+    label: LABELS[ID.SND_01],
     name: NAMES[ID.SND_01],
     iconPath: GET_GRID_ICON('O_SN'),
     thresholds: [
@@ -160,6 +175,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <해2> 브랜디쉬 (드레드 로어)
     id: ID.SND_02,
+    label: LABELS[ID.SND_02],
     name: NAMES[ID.SND_02],
     iconPath: GET_GRID_ICON('O_SN'),
     thresholds: [
@@ -179,6 +195,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <해3> 에이펙스 (드레드 로어)
     id: ID.SND_03,
+    label: LABELS[ID.SND_03],
     name: NAMES[ID.SND_03],
     iconPath: GET_GRID_ICON('O_SN'),
     thresholds: [
@@ -195,6 +212,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   // ── [🌙 달 코어] ──────────────────────────────────
   { // <달1> 노바 플레임 (업화의 계승자)
     id: ID.MNH_01,
+    label: LABELS[ID.MNH_01],
     name: NAMES[ID.MNH_01],
     iconPath: GET_GRID_ICON('O_MN'),
     thresholds: [
@@ -209,6 +227,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <달2> 리버레이션 (업화의 계승자)
     id: ID.MNH_02,
+    label: LABELS[ID.MNH_02],
     name: NAMES[ID.MNH_02],
     iconPath: GET_GRID_ICON('O_MN'),
     thresholds: [
@@ -222,6 +241,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <달3> 복수귀 (업화의 계승자)
     id: ID.MNH_03,
+    label: LABELS[ID.MNH_03],
     name: NAMES[ID.MNH_03],
     iconPath: GET_GRID_ICON('O_MN'),
     thresholds: [
@@ -242,6 +262,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
 
   { // <달1> 위압 (드레드 로어)
     id: ID.MND_01,
+    label: LABELS[ID.MND_01],
     name: NAMES[ID.MND_01],
     iconPath: GET_GRID_ICON('O_MN'),
     thresholds: [
@@ -255,6 +276,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <달2> 플러리쉬 (드레드 로어)
     id: ID.MND_02,
+    label: LABELS[ID.MND_02],
     name: NAMES[ID.MND_02],
     iconPath: GET_GRID_ICON('O_MN'),
     thresholds: [
@@ -274,6 +296,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <달3> 도미넌트 (드레드 로어)
     id: ID.MND_03,
+    label: LABELS[ID.MND_03],
     name: NAMES[ID.MND_03],
     iconPath: GET_GRID_ICON('O_MN'),
     thresholds: [
@@ -290,6 +313,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   // ── [⭐ 별 코어] (업화의 계승자) ──────────────────────────────────
   { // <별1> 라스트 스탠드 (업화의 계승자)
     id: ID.STH_01,
+    label: LABELS[ID.STH_01],
     name: NAMES[ID.STH_01],
     iconPath: GET_GRID_ICON('O_ST'),
     thresholds: [
@@ -310,6 +334,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <별2> 엑스큐셔너 (업화의 계승자)
     id: ID.STH_02,
+    label: LABELS[ID.STH_02],
     name: NAMES[ID.STH_02],
     iconPath: GET_GRID_ICON('O_ST'),
     thresholds: [
@@ -324,6 +349,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <별3> 추격 시작 (업화의 계승자)
     id: ID.STH_03,
+    label: LABELS[ID.STH_03],
     name: NAMES[ID.STH_03],
     iconPath: GET_GRID_ICON('O_ST'),
     thresholds: [
@@ -339,6 +365,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
 
   { // <별1> 그랜드 피날레 (드레드 로어)
     id: ID.STD_01,
+    label: LABELS[ID.STD_01],
     name: NAMES[ID.STD_01],
     iconPath: GET_GRID_ICON('O_ST'),
     thresholds: [
@@ -361,6 +388,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <별2> 일당백 (드레드 로어)
     id: ID.STD_02,
+    label: LABELS[ID.STD_02],
     name: NAMES[ID.STD_02],
     iconPath: GET_GRID_ICON('O_ST'),
     thresholds: [
@@ -383,6 +411,7 @@ export const ARKGRID_GUARDIAN_KNIGHT_DATA: ArkGridCoreData[] = [
   },
   { // <별3> 파멸 (드레드 로어)
     id: ID.STD_03,
+    label: LABELS[ID.STD_03],
     name: NAMES[ID.STD_03],
     iconPath: GET_GRID_ICON('O_ST'),
     thresholds: [

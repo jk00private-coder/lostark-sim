@@ -163,6 +163,7 @@ export interface RawArkGridSlot {
   Point: number;
   Grade: string;
   Icon : string;
+  Tooltip: string;
 }
 
 export interface RawArkGridEffect {

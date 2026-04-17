@@ -207,7 +207,7 @@ export const OPTION_GRADE_COLORS = {
  */
 export type MultiKey =
 | 'COMMON'
-| 'HERO' | 'LEGEND' | 'RELIC' | 'ANCIENT' | 'ANCIENT_2'
+| 'RARE' | 'HERO' | 'LEGEND' | 'RELIC' | 'ANCIENT' | 'ANCIENT_2'
 | 'ESTHER' | 'ESTHER_E2' | 'ESTHER_E3';
 
 export type EffectEntry = {

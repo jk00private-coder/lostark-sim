@@ -166,11 +166,11 @@ export interface ArkPassiveEffectDisplay extends BaseDisplay {
 }
 
 export interface ArkGridCoreDisplay extends BaseDisplay {
-  point: ColoredValue;
-}
+  point: number;
+} 
 
 export interface ArkGridEffectDisplay {
-  label: ColoredText;
+  label: string;
   level: number;
   value: ColoredValue;
 }
@@ -220,7 +220,7 @@ export interface CharacterDisplayData {
     points: ArkPassivePointDisplay;
     effects: ArkPassiveEffectDisplay[];
   } | null;
+  arkGrid: ArkGridDisplay;
   // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨 test
-  // arkGrid: ArkGridDisplay;
   // skills: SkillDisplay[];
 }

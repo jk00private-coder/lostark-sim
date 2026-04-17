@@ -26,16 +26,30 @@ export const ID = {
 
 export const NAMES = {
   // [🌞 해 코어]
-  [ID.SN_01]: '현란한 공격', [ID.SN_02]: '안정적인 공격', [ID.SN_03]: '재빠른 공격',
-  [ID.SN_04]: '신념의 강화', [ID.SN_05]: '흐르는 마나', [ID.SN_06]: '불굴의 강화',
+  [ID.SN_01]: '[1]현란한 공격', [ID.SN_02]: '[2]안정적인 공격', [ID.SN_03]: '[3]재빠른 공격',
+  [ID.SN_04]: '[4]신념의 강화', [ID.SN_05]: '[5]흐르는 마나', [ID.SN_06]: '[6]불굴의 강화',
 
   // [🌙 달 코어]
-  [ID.MN_01]: '불타는 일격', [ID.MN_02]: '흡수의 일격', [ID.MN_03]: '부수는 일격',
-  [ID.MN_04]: '낙인의 흔적', [ID.MN_05]: '강철의 흔적', [ID.MN_06]: '치명적인 흔적',
+  [ID.MN_01]: '[1]불타는 일격', [ID.MN_02]: '[2]흡수의 일격', [ID.MN_03]: '[3]부수는 일격',
+  [ID.MN_04]: '[4]낙인의 흔적', [ID.MN_05]: '[5]강철의 흔적', [ID.MN_06]: '[6]치명적인 흔적',
 
   // [⭐ 별 코어]
-  [ID.ST_01]: '공격', [ID.ST_02]: '무기', [ID.ST_03]: '구원',
-  [ID.ST_04]: '생명', [ID.ST_05]: '속도', [ID.ST_06]: '방어',
+  [ID.ST_01]: '[1]공격', [ID.ST_02]: '[2]무기', [ID.ST_03]: '[3]구원',
+  [ID.ST_04]: '[4]생명', [ID.ST_05]: '[5]속도', [ID.ST_06]: '[6]방어',
+} as const;
+
+export const LABELS = {
+  // [🌞 해 코어]
+  [ID.SN_01]: '혼돈의 해 코어 : 현란한 공격', [ID.SN_02]: '혼돈의 해 코어 : 안정적인 공격', [ID.SN_03]: '혼돈의 해 코어 : 재빠른 공격',
+  [ID.SN_04]: '혼돈의 해 코어 : 신념의 강화', [ID.SN_05]: '혼돈의 해 코어 : 흐르는 마나', [ID.SN_06]: '혼돈의 해 코어 : 불굴의 강화',
+
+  // [🌙 달 코어]
+  [ID.MN_01]: '혼돈의 달 코어 : 불타는 일격', [ID.MN_02]: '혼돈의 달 코어 : 흡수의 일격', [ID.MN_03]: '혼돈의 달 코어 : 부수는 일격',
+  [ID.MN_04]: '혼돈의 달 코어 : 낙인의 흔적', [ID.MN_05]: '혼돈의 달 코어 : 강철의 흔적', [ID.MN_06]: '혼돈의 달 코어 : 치명적인 흔적',
+
+  // [⭐ 별 코어]
+  [ID.ST_01]: '혼돈의 별 코어 : 공격', [ID.ST_02]: '혼돈의 별 코어 : 무기', [ID.ST_03]: '혼돈의 별 코어 : 구원',
+  [ID.ST_04]: '혼돈의 별 코어 : 생명', [ID.ST_05]: '혼돈의 별 코어 : 속도', [ID.ST_06]: '혼돈의 별 코어 : 방어',
 } as const;
 
 
@@ -43,7 +57,7 @@ export const NAMES = {
 export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
   // ── [🌞 혼돈의 해 코어] ──────────────────────────────────
   { // <해1> 현란한 공격
-    id: ID.SN_01, name: NAMES[ID.SN_01], iconPath: GET_GRID_ICON('C_SN'),
+    id: ID.SN_01, label: LABELS[ID.SN_01], name: NAMES[ID.SN_01], iconPath: GET_GRID_ICON('C_SN'),
     thresholds: [
       { point: 10, effects: [{ type: 'CRIT_DMG_INC', value: [0.0055] }] },
       { point: 14, effects: [{ type: 'DMG_INC', value: [0.005] }] },
@@ -57,7 +71,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <해2> 안정적인 공격
-    id: ID.SN_02, name: NAMES[ID.SN_02], iconPath: GET_GRID_ICON('C_SN'),
+    id: ID.SN_02, label: LABELS[ID.SN_02], name: NAMES[ID.SN_02], iconPath: GET_GRID_ICON('C_SN'),
     thresholds: [
       { point: 10 }, // 받는 피해가 0.5% 감소한다.
       { point: 14, effects: [{ type: 'ADD_DMG', value: [0.007] }] },
@@ -68,7 +82,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <해3> 재빠른 공격
-    id: ID.SN_03, name: NAMES[ID.SN_03], iconPath: GET_GRID_ICON('C_SN'),
+    id: ID.SN_03, label: LABELS[ID.SN_03], name: NAMES[ID.SN_03], iconPath: GET_GRID_ICON('C_SN'),
     thresholds: [
       { point: 10, effects: [{ type: 'SPEED_ATK', value: [0.01] }] },
       { point: 14, effects: [{ type: 'CRIT_DMG', value: [0.014] }] },
@@ -82,7 +96,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <해4> 신념의 강화
-    id: ID.SN_04, name: NAMES[ID.SN_04], iconPath: GET_GRID_ICON('C_SN'),
+    id: ID.SN_04, label: LABELS[ID.SN_04], name: NAMES[ID.SN_04], iconPath: GET_GRID_ICON('C_SN'),
     thresholds: [
       { point: 10 },
       { point: 14 },
@@ -93,7 +107,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <해5> 흐르는 마나
-    id: ID.SN_05, name: NAMES[ID.SN_05], iconPath: GET_GRID_ICON('C_SN'),
+    id: ID.SN_05, label: LABELS[ID.SN_05], name: NAMES[ID.SN_05], iconPath: GET_GRID_ICON('C_SN'),
     thresholds: [
       { point: 10 },
       { point: 14, effects: [{ type: 'CDR_P', value: [0.004] }] },
@@ -104,7 +118,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <해6> 불굴의 강화
-    id: ID.SN_06, name: NAMES[ID.SN_06], iconPath: GET_GRID_ICON('C_SN'),
+    id: ID.SN_06, label: LABELS[ID.SN_06], name: NAMES[ID.SN_06], iconPath: GET_GRID_ICON('C_SN'),
     thresholds: [
       { point: 10 },
       { point: 14 },
@@ -117,7 +131,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
 
   // ── [🌙 혼돈의 달 코어] ──────────────────────────────────
   { // <달1> 불타는 일격
-    id: ID.MN_01, name: NAMES[ID.MN_01], iconPath: GET_GRID_ICON('C_MN'),
+    id: ID.MN_01, label: LABELS[ID.MN_01], name: NAMES[ID.MN_01], iconPath: GET_GRID_ICON('C_MN'),
     thresholds: [
       { point: 10}, //todo: 화상 도트 대미지 유틸
       { point: 14, effects: [{ type: 'DMG_INC', value: [0.005] }] },
@@ -128,7 +142,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <달2> 흡수의 일격
-    id: ID.MN_02, name: NAMES[ID.MN_02], iconPath: GET_GRID_ICON('C_MN'),
+    id: ID.MN_02, label: LABELS[ID.MN_02], name: NAMES[ID.MN_02], iconPath: GET_GRID_ICON('C_MN'),
     thresholds: [
       { point: 10 }, // 생명력 회복 유틸
       { point: 14, effects: [{ type: 'DMG_INC', value: [0.005] }] },
@@ -139,7 +153,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <달3> 부수는 일격
-    id: ID.MN_03, name: NAMES[ID.MN_03], iconPath: GET_GRID_ICON('C_MN'),
+    id: ID.MN_03, label: LABELS[ID.MN_03], name: NAMES[ID.MN_03], iconPath: GET_GRID_ICON('C_MN'),
     thresholds: [
       { point: 10 }, // 부위 파괴 유틸
       { point: 14, effects: [{ type: 'CRIT_CHANCE', value: [0.0065] }] },
@@ -150,7 +164,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <달4> 낙인의 흔적
-    id: ID.MN_04, name: NAMES[ID.MN_04], iconPath: GET_GRID_ICON('C_MN'),
+    id: ID.MN_04, label: LABELS[ID.MN_04], name: NAMES[ID.MN_04], iconPath: GET_GRID_ICON('C_MN'),
     thresholds: [
       { point: 10 },
       { point: 14 },
@@ -161,7 +175,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <달5> 강철의 흔적, todo: 방어력 감소 10p 17p 합인지 곱인지 검토
-    id: ID.MN_05, name: NAMES[ID.MN_05], iconPath: GET_GRID_ICON('C_MN'),
+    id: ID.MN_05, label: LABELS[ID.MN_05], name: NAMES[ID.MN_05], iconPath: GET_GRID_ICON('C_MN'),
     thresholds: [
       { point: 10, effects:[{ type: 'DEF_PENETRATION', value: [0.002] }] },
       { point: 14 },
@@ -172,7 +186,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <달6> 치명적인 흔적
-    id: ID.MN_06, name: NAMES[ID.MN_06], iconPath: GET_GRID_ICON('C_MN'),
+    id: ID.MN_06, label: LABELS[ID.MN_06], name: NAMES[ID.MN_06], iconPath: GET_GRID_ICON('C_MN'),
     thresholds: [
       { point: 10, effects: [{ type: 'CRIT_DMG', value: [0.003] }] },
       { point: 14, },
@@ -185,7 +199,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
 
   // ── [⭐ 혼돈의 별 코어] ──────────────────────────────────
   { // <별1> 공격
-    id: ID.ST_01, name: NAMES[ID.ST_01], iconPath: GET_GRID_ICON('C_ST'),
+    id: ID.ST_01, label: LABELS[ID.ST_01], name: NAMES[ID.ST_01], iconPath: GET_GRID_ICON('C_ST'),
     thresholds: [
       { point: 10, effects: [{ type: 'ATK_C', value: [900] }] },
       { point: 14, effects: [{ type: 'ATK_P', value: [0.0055] }] },
@@ -199,7 +213,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <별2> 무기
-    id: ID.ST_02, name: NAMES[ID.ST_02], iconPath: GET_GRID_ICON('C_ST'),
+    id: ID.ST_02, label: LABELS[ID.ST_02], name: NAMES[ID.ST_02], iconPath: GET_GRID_ICON('C_ST'),
     thresholds: [
       { point: 10, effects: [{ type: 'WEAPON_ATK_C', value: [1300] }] },
       { point: 14, effects: [{ type: 'WEAPON_ATK_P', value: [0.0075] }] },
@@ -213,7 +227,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <별3> 구원
-    id: ID.ST_03, name: NAMES[ID.ST_03], iconPath: GET_GRID_ICON('C_ST'),
+    id: ID.ST_03, label: LABELS[ID.ST_03], name: NAMES[ID.ST_03], iconPath: GET_GRID_ICON('C_ST'),
     thresholds: [
       { point: 10 },
       { point: 14 },
@@ -224,7 +238,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <별4> 생명
-    id: ID.ST_04, name: NAMES[ID.ST_04], iconPath: GET_GRID_ICON('C_ST'),
+    id: ID.ST_04, label: LABELS[ID.ST_04], name: NAMES[ID.ST_04], iconPath: GET_GRID_ICON('C_ST'),
     thresholds: [
       { point: 10 },
       { point: 14 },
@@ -235,7 +249,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <별5> 속도
-    id: ID.ST_05, name: NAMES[ID.ST_05], iconPath: GET_GRID_ICON('C_ST'),
+    id: ID.ST_05, label: LABELS[ID.ST_05], name: NAMES[ID.ST_05], iconPath: GET_GRID_ICON('C_ST'),
     thresholds: [
       { point: 10, effects: [{ type: 'SPEED_ATK', value: [0.009] }] },
       { point: 14, effects: [{ type: 'SPEED_MOV', value: [0.009] }] },
@@ -249,7 +263,7 @@ export const ARKGRID_COMMON_DATA: ArkGridCoreData[] = [
     ]
   },
   { // <별6> 방어
-    id: ID.ST_06, name: NAMES[ID.ST_06], iconPath: GET_GRID_ICON('C_ST'),
+    id: ID.ST_06, label: LABELS[ID.ST_06], name: NAMES[ID.ST_06], iconPath: GET_GRID_ICON('C_ST'),
     thresholds: [
       { point: 10 },
       { point: 14 },

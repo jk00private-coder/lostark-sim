@@ -29,6 +29,7 @@ import {
   SkillDisplay,
   SelectedTripodDisplay,
   EquippedRuneDisplay,
+  ArkGridCoreDisplay, ArkGridEffectDisplay
 } from '@/types/character-types';
 
 import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
@@ -41,6 +42,8 @@ import { CARD_DATA } from '@/data/cards';
 import { EVOLUTION_DATA } from '@/data/arc-passive/evolution';
 import { ELIGHTEN_GUARDIAN_KNIGHT_DATA } from '@/data/arc-passive/elighten/guardian-knight';
 import { getLeapDataByName } from '@/data/arc-passive';
+import { ARKGRID_COMMON_DATA } from '@/data/arc-grid/common';
+import { ARKGRID_GUARDIAN_KNIGHT_DATA } from '@/data/arc-grid/guardian-knight';
 
 
 // ============================================================
@@ -151,8 +154,12 @@ export const createValueRange = (gradeData: any) => {
 
 /** API 등급명을 시스템 MultiKey로 변환 */
 export const GRADE_MAP: Record<string, MultiKey> = {
+  '희귀': 'RARE',
+  '영웅': 'HERO',
+  '전설': 'LEGEND',
   '고대': 'ANCIENT',
-  '유물': 'RELIC'
+  '유물': 'RELIC',
+  '에스더': 'ESTHER',
 };
 export const getGradeKey = (gradeName: string): MultiKey => {
   return GRADE_MAP[gradeName] || 'RELIC';
@@ -727,7 +734,6 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
 };
 
 // ── 아크패시브 ───────────────────────────────────────────────
-/** 매핑 테이블 정의 (새로운 직업 추가 시 여기만 업데이트) */
 const JOB_ENLIGHTEN_MAP: Record<string, any> = {
   '가디언나이트': ELIGHTEN_GUARDIAN_KNIGHT_DATA,
   // '검사': ELIGHTEN_SWORD_MASTER_DATA, // 이런 식으로 추가
@@ -818,22 +824,47 @@ const findArkPassiveDb = (category: string, name: string, job: string) => {
 };
 
 // ── 아크그리드 ───────────────────────────────────────────────
-export const normalizeArkGrid = (raw: RawCharacterData): ArkGridDisplay => {
-  const cores = raw.arkGrid.Slots.map(slot => ({
-    index: slot.Index,
-    name : { text: slot.Name,   color: GRADE_COLORS[slot.Grade] },
-    point: { value: slot.Point, color: '#B7FB00' as string | undefined },
-    grade: toGradeColoredText(slot.Grade),
-    icon : slot.Icon,
-  }));
+const JOB_ARK_GRID_MAP: Record<string, typeof ARKGRID_GUARDIAN_KNIGHT_DATA> = {
+  '가디언나이트': ARKGRID_GUARDIAN_KNIGHT_DATA,
+  // 새로운 직업 추가 시 여기에 등록
+};
 
-  const effects = raw.arkGrid.Effects.map(eff => ({
-    label: { text: eff.Name, color: undefined as string | undefined },
-    level: eff.Level,
-    value: { value: extractPercent(eff.Tooltip), color: extractColor(eff.Tooltip) },
-  }));
+export const normalizeArkGrid = (raw: RawCharacterData, jobName: string): ArkGridDisplay => {
+  const g = raw.arkGrid;
+  const jobDb = JOB_ARK_GRID_MAP[jobName];
+  const commonDb = ARKGRID_COMMON_DATA;
 
-  return { cores, effects };
+  // 1. 코어(Cores) 파싱
+  const cores: ArkGridCoreDisplay[] = g.Slots.map(slot => {
+    const dbMatch = jobDb?.find(d => (d.label || d.name) === slot.Name) 
+                    || commonDb.find(d => (d.label || d.name) === slot.Name);
+    return {
+      id: dbMatch?.id ?? 0,
+      label: slot.Name,
+      name: dbMatch?.name || slot.Name,
+      isDb: !!dbMatch,
+      icon: slot.Icon,
+      eqGrade: getGradeKey(slot.Grade),
+      point: slot.Point,
+    };
+  });
+
+  // 2. 활성화 효과(Effects) 파싱
+  const effects: ArkGridEffectDisplay[] = g.Effects.map(eff => {
+    const tooltipValue = extractPercent(eff.Tooltip);
+    const tooltipColor = extractColor(eff.Tooltip);
+
+    return {
+      label: eff.Name,
+      level: eff.Level,
+      value: { value: tooltipValue, color: tooltipColor },
+    };
+  });
+
+  const result = { cores, effects };
+  console.log(`--- [DEBUG] normalizeArkGrid (${jobName}) ---`);
+  console.log(result);
+  return result;
 };
 
 // ── 스킬 ────────────────────────────────────────────────────
@@ -904,8 +935,8 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
     gems        : normalizeGems(raw),
     cards       : normalizeCards(raw),
     arkPassive  : normalizeArkPassive(raw, jobName),
+    arkGrid     : normalizeArkGrid(raw, jobName),
     // TODO: 함수 수정이 안되어 있어 아래 내용 있으면 웹검색이 안됨
-    // arkGrid     : normalizeArkGrid(raw),
     // skills      : normalizeSkills(raw),
   };
 };
