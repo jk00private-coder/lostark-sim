@@ -294,6 +294,7 @@ export const EVOLUTION_DATA: ArkPassiveSectionData = {
             id: ID.T5_1,
             name: NAMES[ID.T5_1],
             iconPath: `/images/arc-passive/evolution/${ID.T5_1}.webp`,
+            special: true,
             pointCost: 15,
             effects: [
                 { type: 'EVO_DMG', value: [0.075, 0.15] }
@@ -303,6 +304,7 @@ export const EVOLUTION_DATA: ArkPassiveSectionData = {
             id: ID.T5_2,
             name: NAMES[ID.T5_2],
             iconPath: `/images/arc-passive/evolution/${ID.T5_2}.webp`,
+            special: true,
             pointCost: 15,
             effects: [
                 { type: 'EVO_DMG', value: [0.04, 0.08] }
@@ -330,6 +332,7 @@ export const EVOLUTION_DATA: ArkPassiveSectionData = {
             id: ID.T5_5,
             name: NAMES[ID.T5_5],
             iconPath: `/images/arc-passive/evolution/${ID.T5_5}.webp`,
+            special: true,
             pointCost: 15,
             effects: [
                 { type: 'EVO_DMG', value: [0.12, 0.24] }

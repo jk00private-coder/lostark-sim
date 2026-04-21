@@ -298,6 +298,7 @@ export interface MemoParam {
  * 
  * label: API 툴팁 매칭용
  * name : UI 표시용
+ * special: 계산 로직이 필요한 데이터 식별자
  */
 export interface BaseSimData {
   id        : number;
@@ -305,6 +306,7 @@ export interface BaseSimData {
   label    ?: string;
   nameColor?: string;
   iconPath ?: string;
+  special  ?: boolean;
   effects  ?: EffectEntry[];
   memo     ?: MemoParam[];
 }
