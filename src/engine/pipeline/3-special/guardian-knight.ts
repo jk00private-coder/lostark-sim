@@ -21,7 +21,7 @@
  */
 
 import { PipelineEffectLog, SkillBuffer, SpecialCombatStats, ResolvedSkillMeta } from '../types';
-import { readBufferSum } from '../common-specials';
+import { readBufferSum } from './common-specials';
 
 
 // ============================================================

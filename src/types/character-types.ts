@@ -79,7 +79,7 @@ export interface CombatStatsDisplay {
 export interface EquipmentDisplay extends BaseDisplay {
   itemLv: number;
   refineLv: number;
-  advRefineLv?: number;
+  advRefineLv: number;
   quality: number;
   itemTier: number;
 
@@ -94,8 +94,9 @@ export interface EquipmentDisplay extends BaseDisplay {
 
 /** 악세서리 및 팔찌의 개별 효과 (Base 상속) */
 export interface AccessoryDisplay extends BaseDisplay {
+  type: string;
   quality: number;
-  itemTier: number;
+  tier: number;
   effects: BaseDisplay[];
 }
 
@@ -135,7 +136,7 @@ export interface AvatarDisplay extends BaseDisplay {
 
 export interface EngravingDisplay extends BaseDisplay {
   level: number;
-  abilityStoneLevel: number | null;
+  abilityStoneLevel: number;
 }
 
 export interface GemDisplay extends BaseDisplay {

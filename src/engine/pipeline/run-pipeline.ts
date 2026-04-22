@@ -57,7 +57,7 @@ const resolveSelectedTripods = (
 
   return displayTripods
     .map(dt => skillDb.tripods!.find(
-      t => t.slot === dt.slot && t.name === dt.name.text
+      t => t.slot === dt.slot && t.name === dt.name
     ))
     .filter((t): t is TripodData => t !== undefined);
 };

@@ -294,6 +294,10 @@ export const BRACELET_DATA: BraceletRawData[] = [
           RELIC: { low: [0.02, 0.02], mid: [0.025, 0.025], high: [0.03, 0.03] },
           ANCIENT: { low: [0.025, 0.025], mid: [0.03, 0.03], high: [0.035, 0.035] }
         }
+      },
+      {
+        type: 'DMG_INC',
+        value: [0.025]
       }
     ]
   },

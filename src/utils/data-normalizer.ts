@@ -32,7 +32,7 @@ import {
   ArkGridCoreDisplay, ArkGridEffectDisplay
 } from '@/types/character-types';
 
-import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
+import { COMBAT_EQUIP_DATA } from '@/data/equipment/combat-equip';
 import { ACCESSORY_DB }    from '@/data/equipment/accessory';
 import { BRACELET_DB }    from '@/data/equipment/bracelet';
 import { ENGRAVINGS_DB }    from '@/data/engravings';
@@ -134,7 +134,7 @@ export const extractColoredValues = (text: string): ColoredValue[] => {
   for (const m of colorMatches) {
     values.push({
       color: normalizeColor(m[1]) || '',
-      value: parseFloat(m[2].replace(/[+%]/g, ''))
+      value: parseFloat(m[2].replace(/[+%]/g, '')) ?? 0
     });
   }
   return values;
@@ -201,11 +201,12 @@ const SKILL_CATEGORY_COLORS: Record<string, string> = {
 // ============================================================
 
 /** 아이템 이름과 등급을 기반으로 세트 타입을 결정 */
-const findEquipSetType = (itemName: string, grade: string): MultiKey => {
-  if (grade === '에스더') return 'ESTHER';
+const findEquipSetType = (itemName: string, ellaLv: number): MultiKey => {
   if (itemName.includes('전율')) return 'ANCIENT_2';
   if (itemName.includes('업화')) return 'ANCIENT';
   if (itemName.includes('결단')) return 'RELIC';
+  if (ellaLv === 2) return 'ESTHER_E2';
+  if (ellaLv === 3) return 'ESTHER_E3';
 
   return 'COMMON'; // 기본값
 };
@@ -293,14 +294,22 @@ export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay 
 export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] => {
   const equipTypes = ['무기', '투구', '상의', '하의', '장갑', '어깨'];
 
-  //return raw.equipment
   const result = raw.equipment
     .filter(eq => equipTypes.includes(eq.Type))
     .map(eq => {
       const tooltip = parseTooltip(eq.Tooltip);
       const titleEl = tooltip['Element_001']?.value ?? {};
       const features = scanTooltipFeatures(tooltip);
-      const dbMatch = COMBAT_EQUIP_DB[eq.Type];
+      const dbMatch = COMBAT_EQUIP_DATA.find(item => item.name === eq.Type);
+
+      // 에스더 전용 데이터 먼저 추출
+      let estherName = '';
+      let ellaLv = 0;
+
+      if (eq.Grade === '에스더') {
+        estherName = extractStr(features.estherRaw, /\[(.*?)\]/) || '';
+        ellaLv = extractNum(features.ellaRaw, /(\d+)\s*단계/) || 0;
+      }
 
       // 기본 데이터 구조
       const displayData: EquipmentDisplay = {
@@ -309,17 +318,17 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         label: eq.Name,
         isDb: !!dbMatch,
         icon: eq.Icon,
-        itemLv: extractNum(titleEl.leftStr2 ?? '', /아이템 레벨\s*(\d+)/),
-        itemTier: extractNum(titleEl.leftStr2 ?? '', /티어\s*(\d+)/),
-        refineLv: extractNum(eq.Name, /\+(\d+)/),
-        advRefineLv: extractNum(features.advRaw, /\[상급 재련\]\s*(\d+)/),
+        itemLv: extractNum(titleEl.leftStr2 ?? '', /아이템 레벨\s*(\d+)/) || 0,
+        itemTier: extractNum(titleEl.leftStr2 ?? '', /티어\s*(\d+)/) || 0,
+        refineLv: extractNum(eq.Name, /\+(\d+)/) || 0,
+        advRefineLv: extractNum(features.advRaw, /\[상급 재련\]\s*(\d+)/) || 0,
         quality: titleEl.qualityValue ?? 0,
-        eqGrade: findEquipSetType(eq.Name, eq.Grade),
+        eqGrade: findEquipSetType(eq.Name, ellaLv),
       };
 
       if (eq.Grade === '에스더') {
-        displayData.estherName = extractStr(features.estherRaw, /\[(.*?)\]/);
-        displayData.ellaLv = extractNum(features.ellaRaw, /(\d+)\s*단계/);
+        displayData.estherName = estherName;
+        displayData.ellaLv = ellaLv;
       }
 
       return displayData;
@@ -379,7 +388,7 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
             name: db?.name || label,
             label: label,
             isDb: !!db,
-            values: [{ value: parseInt(m[2]), color: '' }],  
+            values: [{ value: parseInt(m[2]) ?? 0, color: '' }],  
             valueRange: createValueRange(gradeData),
           });
         });
@@ -422,7 +431,7 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
         isDb: true,
         icon: eq.Icon,
         quality: titleEl.qualityValue ?? 0,
-        itemTier,
+        tier: itemTier,
         type: currentType,
         eqGrade: currentGradeKey,
         effects,
@@ -508,8 +517,7 @@ export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null
     effects,
   };
 
-  console.log("--- bracelet ---");
-  console.log(result);
+  console.log("--- bracelet ---", result);
   return result;
 };
 
@@ -640,7 +648,7 @@ export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
       isDb: !!dbMatch,
       icon: av.Icon,
       eqGrade: getGradeKey(av.Grade),
-      mainStatBonus: bonusStr.includes('%') ? extractPercent(bonusStr) : 0,
+      mainStatBonus: bonusStr.includes('%') ? extractNum(bonusStr) : 0,
     };
   });
 

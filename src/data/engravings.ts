@@ -82,6 +82,7 @@ export const ENGRAVINGS_DB: EngravingData[] = [
   {
     id: BASE + 11,
     name: NAMES[BASE + 11],
+    special: true,
     effects: [{ type: 'DMG_INC', value: [0.40] }],
     iconPath: `/images/engravings/${BASE + 11}.webp`,
     bonus: {

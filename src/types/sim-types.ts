@@ -351,5 +351,4 @@ export type SuperArmorId =
 /** 소모 자원 ID */
 export type ResourceTypeId =
   | 'MANA'
-  | 'QI_EMBERES'
-  | 'NONE';
+  | 'QI_EMBERES';

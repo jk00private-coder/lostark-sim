@@ -3,179 +3,120 @@
  *
  * 파이프라인 기반 캐릭터 계산 Store
  *
- * [역할]
- *   1. CharacterDisplayData → PipelineEffectLog[] 수집
- *   2. StatModifiers 구성 (장비 기본 스탯 합산)
- *   3. runPipeline() 호출
- *   4. SkillDamageResult[] 저장
+ * [설계 원칙]
+ *   CharacterDisplayData의 각 항목에 id가 명시되어 있으므로
+ *   텍스트 매칭 없이 id로 DB를 직접 조회합니다.
  *
- * [콘솔 디버그 출력]
- *   🔵 [1단계] StaticBuffer   — target 없는 공통 효과
- *   🟡 [1단계] DynamicLogs    — target 있는 조건부 효과
- *   🔴 [1단계] SpecialLogs    — special=true 효과
- *   🟢 [2단계] SkillBuffer    — 스킬별 버퍼 (Dynamic 추가 후)
- *   🟣 [3단계] FinalMods      — 스킬별 확정 DamageModifiers
- *   ⚪ [결과]  SkillDamage    — 최종 피해량
+ * [id → DB 조회 방식]
+ *   각 DB를 Map<id, data>로 변환하여 O(1) 조회
+ *
+ * [예외: 텍스트 매핑 불가피한 경우]
+ *   arkGrid.effects — normalizer가 텍스트로 파싱, id 없음
+ *
+ * [콘솔 디버그]
+ *   🔵 StaticBuffer  — target 없는 공통 효과
+ *   🟡 DynamicLogs   — target 있는 조건부 효과
+ *   🔴 SpecialLogs   — special=true 효과
+ *   📊 StatModifiers — 장비/악세 기본 스탯 누산값
+ *   ⚪ 스킬 피해량   — 최종 결과
  */
 
 "use client";
 
 import { useState, useEffect } from 'react';
 import { CharacterDisplayData } from '@/types/character-types';
-import {
-  StatModifiers,
-  CommonEffectTypeId,
-  EFFECT_MAP,
-  SUB_GROUPS,
-  DamageModifiers,
-} from '@/types/sim-types';
+import { StatModifiers, EffectTypeId, MultiKey } from '@/types/sim-types';
 import { PipelineEffectLog } from '@/engine/pipeline/types';
 import { runPipeline } from '@/engine/pipeline/run-pipeline';
 import { SkillDamageResult } from '@/engine/calc/damage-calculator';
-import { ENGRAVINGS_DB } from '@/data/engravings';
-import { COMBAT_EQUIP_DB } from '@/data/equipment/combat-equip';
 
+// DB imports
+import { ENGRAVINGS_DB }   from '@/data/engravings';
+import { COMBAT_EQUIP_DATA } from '@/data/equipment/combat-equip';
+import { ACCESSORY_DB }    from '@/data/equipment/accessory';
+import { BRACELET_DB }     from '@/data/equipment/bracelet';
+import { AVATAR_DATA }     from '@/data/avatars';
+import { GEM_DATA }        from '@/data/gems';
+import { CARD_DATA }       from '@/data/cards';
+
+
+// ============================================================
+// DB → Map 변환 (id 기반 O(1) 조회)
+// ============================================================
+const EQUIP_MAP     = new Map(COMBAT_EQUIP_DATA.map(c => [c.id, c]));
+const ACCESSORY_MAP = new Map(ACCESSORY_DB.map(a  => [a.id, a]));
+const ENGRAVING_MAP = new Map(ENGRAVINGS_DB.map(e => [e.id, e]));
+const BRACELET_MAP  = new Map(BRACELET_DB.map(b   => [b.id, b]));
+const AVATAR_MAP    = new Map(AVATAR_DATA.map(a   => [a.id, a]));
+const GEM_MAP       = new Map(GEM_DATA.map(g      => [g.id, g]));
+const CARD_MAP      = new Map(CARD_DATA.map(c     => [c.id, c]));
+
+/** 퍼센트 기반 타입 정의 */
+const getStandardValue = (type: EffectTypeId, value: number): number => {
+  const percentageTypes = [
+    'DMG_INC', 'EVO_DMG', 'ADD_DMG',
+    'CRIT_CHANCE', 'CRIT_DMG', 'CRIT_DMG_INC',
+    'DEF_PENETRATION', 'ENEMY_DMG_TAKEN', 'CDR_P',
+    'SPEED_ATK', 'SPEED_MOV',
+    'MAIN_STAT_P', 'WEAPON_ATK_P', 'BASE_ATK_P', 'ATK_P',
+    'STAT_HP_P',
+  ];
+
+  const processedValue = percentageTypes.includes(type) ? value / 100 : value;
+  return Math.round(processedValue * 10000) / 10000;
+};
 
 // ============================================================
 // StatModifiers 초기값
 // ============================================================
 
 const createEmptyStatModifiers = (): StatModifiers => ({
-  mainStatC : 0,  mainStatP : 0,
-  weaponAtkC: 0,  weaponAtkP: 0,
+  mainStatC : 0, mainStatP : 0,
+  weaponAtkC: 0, weaponAtkP: 0,
   baseAtkP  : 0,
-  atkC      : 0,  atkP      : 0,
-  critC     : 0,  specC     : 0,
-  swiftC    : 0,  domC      : 0,
-  endC      : 0,  expC      : 0,
-  hpC       : 0,  hpP       : 0,
+  atkC      : 0, atkP      : 0,
+  critC     : 0, specC     : 0,
+  swiftC    : 0, domC      : 0,
+  endC      : 0, expC      : 0,
+  hpC       : 0, hpP       : 0,
 });
 
-
-// ============================================================
-// 각인 효과 → PipelineEffectLog 변환
-// ============================================================
-
-const resolveEngravingLogs = (
-  name      : string,
-  grade     : string,
-  level     : number,
-  stoneLevel: number | null,
-): PipelineEffectLog[] => {
-  const db = ENGRAVINGS_DB.find(e => e.name === name);
-  if (!db?.effects) return [];
-
-  const logs: PipelineEffectLog[] = [];
-
-  db.effects.forEach(eff => {
-    if (!eff.value) return;
-
-    const baseValue = eff.value[0] ?? 0;
-    let bonusValue = 0;
-
-    if ((grade === '유물' || grade === '전설') && db.bonus?.relic?.value) {
-      bonusValue += db.bonus.relic.value[level - 1] ?? 0;
-    }
-    if (stoneLevel !== null && db.bonus?.ability?.value) {
-      bonusValue += db.bonus.ability.value[stoneLevel - 1] ?? 0;
-    }
-
-    const total = baseValue + bonusValue;
-    if (total === 0) return;
-
-    logs.push({
-      label   : name,
-      type    : eff.type,
-      value   : total,
-      subGroup: eff.subGroup,
-      target  : eff.target,
-      special : (db as any).special,
-    });
-  });
-
-  return logs;
+/** StatModifiers 직접 누산 대상 타입 → 필드 매핑 */
+const STAT_MOD_FIELD_MAP: Record<string, keyof StatModifiers> = {
+  MAIN_STAT_C : 'mainStatC',
+  WEAPON_ATK_C: 'weaponAtkC',
+  WEAPON_ATK_P: 'weaponAtkP',
+  BASE_ATK_P  : 'baseAtkP',
+  ATK_C       : 'atkC',
+  STAT_CRIT   : 'critC',
+  STAT_SPEC   : 'specC',
+  STAT_SWIFT  : 'swiftC',
+  STAT_DOM    : 'domC',
+  STAT_END    : 'endC',
+  STAT_EXP    : 'expC',
+  STAT_HP_C   : 'hpC',
+  STAT_HP_P   : 'hpP',
 };
 
-
-// ============================================================
-// 악세서리 연마효과 label → effectType
-// ============================================================
-
-const ACCESSORY_LABEL_MAP: Array<[string, string]> = [
-  ['힘', 'MAIN_STAT_C'], ['민첩', 'MAIN_STAT_C'], ['지능', 'MAIN_STAT_C'],
-  ['적에게 주는 피해', 'DMG_INC'],
-  ['추가 피해'       , 'ADD_DMG'],
-  ['무기 공격력'     , 'WEAPON_ATK_P'],
-  ['치명타 피해'     , 'CRIT_DMG'],
-  ['치명타 적중률'   , 'CRIT_CHANCE'],
-];
-
-const detectPolishEffectType = (label: string, value: number): string => {
-  if (label.includes('공격력') && !label.includes('무기')) {
-    return value >= 1 ? 'ATK_C' : 'ATK_P';
-  }
-  for (const [key, typeId] of ACCESSORY_LABEL_MAP) {
-    if (label.includes(key)) return typeId;
-  }
-  return 'UNKNOWN';
-};
-
-
-// ============================================================
-// 팔찌 label → effectType
-// ============================================================
-
-const BRACELET_LABEL_MAP: Array<[string, string]> = [
-  ['추가 피해'      , 'ADD_DMG'      ],
-  ['치명타로 적중 시', 'CRIT_DMG_INC'],
-  ['치명타 피해'    , 'CRIT_DMG'     ],
-  ['헤드어택'       , 'DMG_INC'      ],
-  ['무기 공격력'    , 'WEAPON_ATK_C' ],
-];
-
-const detectBraceletEffectType = (label: string): string => {
-  for (const [key, typeId] of BRACELET_LABEL_MAP) {
-    if (label.includes(key)) return typeId;
-  }
-  return 'UNKNOWN';
-};
-
-
-// ============================================================
-// 카드 키워드 → effectType
-// ============================================================
-
-const CARD_EFFECT_LIST: Array<[string, CommonEffectTypeId | null]> = [
-  ['피해 감소'  , null          ],
-  ['피해'       , 'DMG_INC'    ],
-  ['공격력'     , 'ATK_P'      ],
-  ['치명타 피해', 'CRIT_DMG'   ],
-  ['치명타 확률', 'CRIT_CHANCE'],
-];
-
-const ARK_GRID_EFFECT_MAP: Record<string, CommonEffectTypeId> = {
+/** 아크그리드 effects는 id 없음 — label 텍스트 매핑 불가피 */
+const ARK_GRID_EFFECT_TYPE_MAP: Record<string, EffectTypeId> = {
   '공격력'  : 'ATK_P',
   '보스 피해': 'DMG_INC',
   '추가 피해': 'ADD_DMG',
 };
 
-// API 장비 타입명 → DB name 매핑
-const API_TYPE_TO_DB_NAME: Record<string, string> = {
-  '무기': '무기', '투구': '투구', '어깨': '견갑',
-  '상의': '상의', '하의': '하의', '장갑': '장갑',
-};
-
 
 // ============================================================
-// 전체 effectLog 수집
+// effectLog 수집 (id 기반)
 // ============================================================
 
 const collectEffectLogs = (
   display: CharacterDisplayData,
-): { logs: PipelineEffectLog[]; statMods: StatModifiers } => {
-  const logs   : PipelineEffectLog[] = [];
+): { pipelineLogs: PipelineEffectLog[]; statMods: StatModifiers } => {
+  const pipelineLogs: PipelineEffectLog[] = [];
   const statMods = createEmptyStatModifiers();
 
+  /** effectLog push 헬퍼 */
   const push = (
     label   : string,
     type    : string,
@@ -184,216 +125,323 @@ const collectEffectLogs = (
     target? : PipelineEffectLog['target'],
     special?: boolean,
   ) => {
-    // StatModifiers 직접 할당 계열 (C 타입)
-    const statField = ({
-      MAIN_STAT_C : 'mainStatC',
-      WEAPON_ATK_C: 'weaponAtkC',
-      WEAPON_ATK_P: 'weaponAtkP',
-      BASE_ATK_P  : 'baseAtkP',
-      ATK_C       : 'atkC',
-      STAT_CRIT   : 'critC',
-      STAT_SPEC   : 'specC',
-      STAT_SWIFT  : 'swiftC',
-      STAT_DOM    : 'domC',
-      STAT_END    : 'endC',
-      STAT_EXP    : 'expC',
-      STAT_HP_C   : 'hpC',
-      STAT_HP_P   : 'hpP',
-    } as Record<string, keyof StatModifiers>)[type];
+    if (type === 'UNKNOWN' || !value) return;
 
-    if (statField) {
-      // StatModifiers는 누산
-      (statMods as any)[statField] += value;
-    }
-
-    // effectLog에도 추가 (파이프라인이 EFFECT_MAP으로 처리)
-    if (type !== 'UNKNOWN') {
-      logs.push({ label, type, value, subGroup, target, special });
-    }
-  };
-
-  // ── 1. 장비 기본 스탯 ────────────────────────────────────
-  display.equipment.forEach(eq => {
-    const dbName  = API_TYPE_TO_DB_NAME[eq.type];
-    if (!dbName) return;
-    const dbEntry = COMBAT_EQUIP_DB[dbName];
-    if (!dbEntry?.effects) return;
-
-    const gradeKey = eq.eqGrade === 'ANCIENT_2' ? 'ANCIENT_2' :
-                     eq.eqGrade === 'ANCIENT'    ? 'ANCIENT'   : 'RELIC';
-
-    dbEntry.effects.forEach(eff => {
-      if (!('multiValues' in eff) || !eff.multiValues) return;
-      const values = (eff.multiValues as any)[gradeKey];
-      if (!values?.length) return;
-
-      const idx   = Math.max(0, (eq.refineLv ?? 1) - 1);
-      const value = values[Math.min(idx, values.length - 1)] ?? 0;
-      if (value === 0) return;
-
-      push(`${eq.type} 기본스탯`, eff.type, value);
-    });
-  });
-
-  // ── 2. 악세서리 주스탯 ───────────────────────────────────
-  display.accessories.forEach(acc => {
-    acc.baseEffects?.forEach((eff: any) => {
-      const effectType = eff.statType?.text === '체력' ? 'STAT_HP_C' : 'MAIN_STAT_C';
-      if (eff.value?.value > 0)
-        push(`${acc.type} 주스탯`, effectType, eff.value.value);
-    });
-  });
-
-  // ── 3. 악세서리 연마효과 ─────────────────────────────────
-  display.accessories.forEach(acc =>
-    acc.polishEffects?.forEach((eff: any) => {
-      const effectType = detectPolishEffectType(eff.label?.text ?? '', eff.value?.value ?? 0);
-      if (effectType !== 'UNKNOWN')
-        push(`${acc.type} ${eff.label?.text}`, effectType, eff.value?.value ?? 0);
-    })
-  );
-
-  // ── 4. 팔찌 ─────────────────────────────────────────────
-  display.bracelet?.effects?.forEach((eff: any) => {
-    if (eff.isFixed) return;
-    const effectType = detectBraceletEffectType(eff.label?.text ?? '');
-    if (effectType !== 'UNKNOWN')
-      push(`팔찌 ${eff.label?.text}`, effectType, eff.value?.value ?? 0);
-  });
-
-  // ── 5. 아바타 ────────────────────────────────────────────
-  const totalAvatarBonus = display.avatars.reduce(
-    (sum, av) => sum + (av.mainStatBonus ?? 0), 0
-  );
-  if (totalAvatarBonus > 0)
-    push('아바타', 'MAIN_STAT_P', totalAvatarBonus);
-
-  // ── 6. 각인 ──────────────────────────────────────────────
-  display.engravings.forEach(eng => {
-    const engLogs = resolveEngravingLogs(
-      eng.name.text,
-      eng.grade.text,
-      eng.level,
-      eng.abilityStoneLevel,
-    );
-    engLogs.forEach(log =>
-      push(log.label, log.type, log.value, log.subGroup, log.target, log.special)
-    );
-  });
-
-  // ── 7. 보석 공증 ─────────────────────────────────────────
-  if (display.gems.totalBaseAtk?.value > 0)
-    push('보석 공증', 'BASE_ATK_P', display.gems.totalBaseAtk.value);
-
-  // ── 8. 카드 ──────────────────────────────────────────────
-  display.cards?.activeItems?.forEach((item: any) => {
-    if (!item.value) return;
-    for (const [keyword, effectType] of CARD_EFFECT_LIST) {
-      if (item.description?.includes(keyword)) {
-        if (effectType !== null) {
-          const subGroup = effectType === 'DMG_INC' ? SUB_GROUPS.CARD : undefined;
-          push(`카드 ${keyword}`, effectType, item.value.value, subGroup);
-        }
-        break;
+    // 1. 여기서 target 내부의 키 개수를 찍어봅니다.
+    if (target) {
+      const keys = Object.keys(target);
+      if (keys.length < 5) {
+        console.warn(`[${label}] target 필드가 ${keys.length}개 뿐입니다:`, target);
       }
     }
+
+
+    // StatModifiers 직접 누산 (atk-calculator 입력용)
+    const statField = STAT_MOD_FIELD_MAP[type];
+    if (statField) (statMods as any)[statField] += value;
+
+    pipelineLogs.push({ label, type, value, subGroup, target, special });
+  };
+
+    // ── 1. 장비 기본 스탯 (ID 참조 및 상급 재련 통합 계산) ────────────────
+    display.equipment.forEach(eq => {
+      const db = EQUIP_MAP.get(eq.id);
+      if (!db) return;
+      const gradeKey = eq.eqGrade as MultiKey;
+
+      // 2. 기본 재련 스탯 계산 (db.effects 순회)
+      db.effects?.forEach(eff => {
+        if (!('multiValues' in eff) || !eff.multiValues) return;
+        
+        const values = eff.multiValues[gradeKey];
+        if (!values) return;
+
+        // 기본 재련 인덱스 (refineLv 1~25 대응)
+        const baseIdx = Math.max(0, (eq.refineLv ?? 1) - 1);
+        let totalValue = values[Math.min(baseIdx, values.length - 1)] ?? 0;
+
+        // 3. 상급 재련 스탯 합산 (adv_refine 배열 참조)
+        // 현재 기본 재련 레벨에 해당하는 상급 재련 테이블을 찾습니다.
+        const advEntry = db.adv_refine.find(a => a.refineLv === eq.refineLv);
+        if (advEntry && eq.advRefineLv > 0) {
+          // 상급 재련 항목 중 동일한 타입(MAIN_STAT_C 등)의 수치를 찾습니다.
+          const advEff = advEntry.effects.find(ae => ae.type === eff.type);
+          if (advEff && 'multiValues' in advEff) {
+            const advValues = advEff.multiValues![gradeKey];
+            if (advValues) {
+              // 상급 재련 레벨(advRefineLv)을 인덱스로 수치 합산
+              const advIdx = Math.max(0, eq.advRefineLv - 1);
+              totalValue += advValues[Math.min(advIdx, advValues.length - 1)] ?? 0;
+            }
+          }
+        }
+
+        if (totalValue > 0) {
+          push(`${eq.name}`, eff.type, totalValue);
+        }
+      });
+    });
+
+    // ── 2. 악세서리  ────────────────────
+    display.accessories.forEach(acc => {
+      acc.effects.forEach(eff => {
+        const db = ACCESSORY_MAP.get(eff.id);
+        if (!db || !db.effects) return;
+
+        db.effects.forEach(dbEff => {
+          const label = `${acc.type}`;
+          const rawValue = eff.values?.[0]?.value ?? 0;
+          const standardizedValue = getStandardValue(dbEff.type, rawValue);
+          
+          push(
+            label, 
+            dbEff.type, 
+            standardizedValue,
+            dbEff.subGroup, 
+            dbEff.target
+          );
+        });
+      });
+    });
+
+    // ── 3. 팔찌 효과  ─────────────────────────────
+    display.bracelet?.effects.forEach(eff => {
+      const db = BRACELET_MAP.get(eff.id);
+      if (!db || !db.effects) return;
+
+      db.effects.forEach((dbEff, idx) => {
+        const label = `팔찌 ${db.label ?? db.name}`;
+        const rawValue = eff.values?.[idx]?.value ?? 0;
+        const standardizedValue = getStandardValue(dbEff.type, rawValue);
+
+        if (standardizedValue !== 0) {
+          push(
+            label,
+            dbEff.type,
+            standardizedValue,
+            dbEff.subGroup,
+            dbEff.target
+          );
+        }
+      });
+    });
+
+    // ── 4. 아바타 ─────────────────────────────
+    display.avatars.forEach(av => {
+      const db = AVATAR_MAP.get(av.id);
+      if (!db || !db.effects) return;
+
+      db.effects.forEach(dbEff => {
+        const label = `아바타 ${av.label ?? av.name}`;
+        const rawValue = av.mainStatBonus ?? 0;
+        const standardizedValue = getStandardValue(dbEff.type, rawValue);
+
+        if (standardizedValue !== 0) {
+          push(
+            label,
+            dbEff.type,
+            standardizedValue,
+            dbEff.subGroup,
+            dbEff.target
+          );
+        }
+      });
+    });
+
+    // ── 5. 각인 ─────────────────────────────
+display.engravings.forEach(eng => {
+    if (!eng.id) return;
+    
+    const db = ENGRAVING_MAP.get(eng.id);
+    if (!db || !db.effects) return;
+
+    // 등급 판정은 루프 밖에서 한 번만 수행
+    const isRelicOrLegend = eng.eqGrade === 'RELIC';
+
+    db.effects.forEach((eff) => {
+      const baseValue = eff.value?.[0] ?? 0;
+      let bonusValue = 0;
+
+      // 1. 유물 각인서 보너스 계산
+      const relic = db.bonus?.relic;
+      const hasRelicBonus = isRelicOrLegend && relic?.type === eff.type;
+
+      if (hasRelicBonus && relic?.value) {
+        bonusValue += relic.value[eng.level - 1] ?? 0;
+      }
+      
+      // 2. 어빌리티 스톤 보너스 계산
+      const ability = db.bonus?.ability;
+      const hasAbilityBonus = eng.abilityStoneLevel && ability?.type === eff.type;
+
+      if (hasAbilityBonus && ability?.value) {
+        bonusValue += ability.value[eng.abilityStoneLevel - 1] ?? 0;
+      }
+
+      // 3. 합산 및 최종 수치 결정
+      const total = baseValue + bonusValue;
+      if (total === 0) return;
+
+      const finalizedValue = Math.round(total * 10000) / 10000;
+
+      // 각 효과별로 push가 호출됨 (효과가 2개면 로그도 2줄 생성)
+      push(
+        db.name,
+        eff.type,
+        finalizedValue,
+        eff.subGroup,
+        eff.target,
+        (db as any).special
+      );
+    });
   });
 
-  // ── 9. 아크그리드 ────────────────────────────────────────
-  display.arkGrid?.effects?.forEach((eff: any) => {
-    const effectType = ARK_GRID_EFFECT_MAP[eff.label?.text ?? ''];
-    if (effectType)
-      push(`아크그리드 ${eff.label?.text}`, effectType, eff.value?.value ?? 0);
-  });
+  // // eng.id → ENGRAVING_MAP 조회
+  // display.engravings.forEach(eng => {
+  //   if (!eng.id) return;
+  //   const db = ENGRAVING_MAP.get(eng.id);
+  //   if (!db?.effects) return;
 
-  return { logs, statMods };
+  //   const gradeText = typeof eng.grade === 'string' ? eng.grade : eng.grade.text;
+
+  //   db.effects.forEach(eff => {
+  //     if (!eff.value) return;
+
+  //     const baseValue  = eff.value[0] ?? 0;
+  //     let   bonusValue = 0;
+
+  //     if ((gradeText === '유물' || gradeText === '전설') && db.bonus?.relic?.value) {
+  //       bonusValue += db.bonus.relic.value[eng.level - 1] ?? 0;
+  //     }
+  //     if (eng.abilityStoneLevel && db.bonus?.ability?.value) {
+  //       bonusValue += db.bonus.ability.value[eng.abilityStoneLevel - 1] ?? 0;
+  //     }
+
+  //     const total = baseValue + bonusValue;
+  //     if (!total) return;
+
+  //     push(
+  //       db.name,
+  //       eff.type,
+  //       total,
+  //       eff.subGroup,
+  //       eff.target,
+  //       (db as any).special,
+  //     );
+  //   });
+  // });
+
+  // // ── 7. 보석 공증 ─────────────────────────────────────────
+  // // normalizer가 totalBaseAtk를 이미 합산해서 저장
+  // const gemsData = display.gems as any;
+  // const totalBaseAtkValue: number = gemsData?.totalBaseAtk?.value ?? 0;
+  // if (totalBaseAtkValue > 0)
+  //   push('보석 공증', 'BASE_ATK_P', totalBaseAtkValue);
+
+  // // ── 8. 카드 ──────────────────────────────────────────────
+  // // cards.id → CARD_MAP 조회
+  // if (display.cards?.id) {
+  //   const db = CARD_MAP.get(display.cards.id);
+  //   if (db?.effects) {
+  //     const totalAwake = (display.cards as any).totalAwake ?? 0;
+
+  //     db.effects.forEach(eff => {
+  //       if (!eff.value) return;
+  //       // 각성 합계에 맞는 인덱스 선택 (0-based, 클램프)
+  //       const idx   = Math.min(Math.max(totalAwake - 1, 0), eff.value.length - 1);
+  //       const value = eff.value[idx] ?? 0;
+  //       if (!value) return;
+
+  //       const subGroup = eff.type === 'DMG_INC' ? SUB_GROUPS.CARD : eff.subGroup;
+  //       push('카드', eff.type, value, subGroup, eff.target);
+  //     });
+  //   }
+  // }
+
+  // // ── 9. 아크그리드 ────────────────────────────────────────
+  // // arkGrid.effects는 normalizer가 최종 수치로 파싱 완료
+  // // label 텍스트 매핑 불가피 (id 없음)
+  // display.arkGrid.effects.forEach(eff => {
+  //   const labelText  = typeof eff.label === 'string' ? eff.label : eff.label.text;
+  //   const effectType = ARK_GRID_EFFECT_TYPE_MAP[labelText];
+  //   if (effectType)
+  //     push(`아크그리드 ${labelText}`, effectType, eff.value.value);
+  // });
+
+  return { pipelineLogs, statMods };
 };
 
 
 // ============================================================
-// 콘솔 디버그 출력
+// 콘솔 디버그
 // ============================================================
 
-/**
- * 파이프라인 각 단계 결과를 콘솔에 출력
- * 실제 runPipeline 내부에 직접 접근이 어려우므로
- * effectLog 수집 결과 + 최종 결과를 출력
- */
 const debugPipeline = (
-  logs            : PipelineEffectLog[],
-  statMods        : StatModifiers,
-  skillDamageResults: SkillDamageResult[],
+  logs   : PipelineEffectLog[],
+  mods   : StatModifiers,
+  results: SkillDamageResult[],
 ): void => {
   console.group('🚀 [파이프라인 디버그]');
 
-  // ── effectLog 전체 ────────────────────────────────────────
   const staticLogs  = logs.filter(l => !l.special && !l.target);
   const dynamicLogs = logs.filter(l => !l.special && !!l.target);
   const specialLogs = logs.filter(l => !!l.special);
 
-  console.group('🔵 [1단계] StaticBuffer 대상 로그 (target 없음)');
+  console.group(`🔵 StaticBuffer (${staticLogs.length}개)`);
   console.table(staticLogs.map(l => ({
-    label   : l.label,
-    type    : l.type,
-    value   : l.value,
-    subGroup: l.subGroup ?? '-',
+    출처: l.label, 타입: l.type, 값: l.value, 서브그룹: l.subGroup ?? '-',
   })));
   console.groupEnd();
 
-  console.group('🟡 [1단계] DynamicLogs (target 있음)');
+  console.group(`🟡 DynamicLogs (${dynamicLogs.length}개)`);
   console.table(dynamicLogs.map(l => ({
-    label      : l.label,
-    type       : l.type,
-    value      : l.value,
-    subGroup   : l.subGroup ?? '-',
-    skillIds   : l.target?.skillIds?.join(',') ?? '-',
-    categories : l.target?.categories?.join(',') ?? '-',
-    skillTypes : l.target?.skillTypes?.join(',') ?? '-',
-    attackType : l.target?.attackType?.join(',') ?? '-',
+    출처      : l.label,
+    타입      : l.type,
+    값        : l.value,
+    서브그룹  : l.subGroup ?? '-',
+    skillIds  : l.target?.skillIds?.join(',')   ?? '-',
+    categories: l.target?.categories?.join(',') ?? '-',
+    skillTypes: l.target?.skillTypes?.join(',') ?? '-',
+    attackType: l.target?.attackType?.join(',') ?? '-',
+    resourceTypes: l.target?.resourceTypes?.join(',') ?? '-',
   })));
   console.groupEnd();
 
-  console.group('🔴 [1단계] SpecialLogs (special=true)');
-  console.table(specialLogs.map(l => ({
-    label: l.label,
-    type : l.type,
-    value: l.value,
-  })));
+  console.group(`🔴 SpecialLogs (${specialLogs.length}개)`);
+  specialLogs.length > 0
+    ? console.table(specialLogs.map(l => ({ 출처: l.label, 타입: l.type, 값: l.value })))
+    : console.log('(없음)');
   console.groupEnd();
 
-  // ── StatModifiers ─────────────────────────────────────────
-  console.group('📊 StatModifiers (장비/악세 기본 스탯 누산)');
-  console.table(
-    Object.entries(statMods)
-      .filter(([, v]) => v !== 0)
-      .map(([k, v]) => ({ field: k, value: v }))
-  );
+  console.group('📊 StatModifiers');
+  const nonZero = Object.entries(mods).filter(([, v]) => v !== 0);
+  nonZero.length > 0
+    ? console.table(nonZero.map(([k, v]) => ({ 필드: k, 값: v })))
+    : console.log('(모두 0 — 장비 DB 매칭 확인 필요)');
   console.groupEnd();
 
-  // ── 최종 피해량 ───────────────────────────────────────────
-  console.group('⚪ [결과] 스킬별 피해량');
+  console.group(`⚪ 스킬 피해량 (${results.length}개)`);
   console.table(
-    skillDamageResults
+    results
       .sort((a, b) => b.totalDamage - a.totalDamage)
       .map(r => ({
-        스킬명    : r.skillName,
-        총피해량  : r.totalDamage.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-        피해원수  : r.sources.length,
+        스킬명  : r.skillName,
+        총피해량: r.totalDamage.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+        피해원수: r.sources.length,
       }))
   );
-
-  // 스킬별 상세 피해원
-  skillDamageResults.forEach(r => {
-    console.group(`  📌 ${r.skillName} 피해원 상세`);
+  results.forEach(r => {
+    if (!r.sources.length) return;
+    console.group(`  📌 ${r.skillName}`);
     console.table(r.sources.map(s => ({
-      피해원    : s.name,
-      피해량    : s.damage.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-      합산여부  : s.isCombined ? '✅' : '❌',
+      피해원  : s.name,
+      피해량  : s.damage.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+      합산여부: s.isCombined ? '✅' : '❌',
     })));
     console.groupEnd();
   });
-
   console.groupEnd();
+
   console.groupEnd();
 };
 
@@ -426,22 +474,16 @@ export const useSimulatorStore = (): SimulatorStore => {
       return;
     }
 
-    // effectLog 수집 + StatModifiers 구성
-    const { logs, statMods } = collectEffectLogs(displayData);
+    const { pipelineLogs, statMods } = collectEffectLogs(displayData);
 
-    // combatInfo: API에서 받아온 수치
     const combatInfo = {
       baseAtk       : displayData.combatStats.attackPower,
       specialization: displayData.combatStats.specialization,
     };
 
-    // 파이프라인 실행
-    const results = runPipeline(displayData, logs, statMods, combatInfo);
-
+    const results = runPipeline(displayData, pipelineLogs, statMods, combatInfo);
     setSkillDamageResults(results);
-
-    // 콘솔 디버그 출력
-    debugPipeline(logs, statMods, results);
+    debugPipeline(pipelineLogs, statMods, results);
 
   }, [displayData]);
 

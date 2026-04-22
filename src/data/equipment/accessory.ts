@@ -97,7 +97,7 @@ const ACCESSORY_DATA: AccessoryRawData[] = [
     name: NAMES[ID.T4N_1],
     label: LABELS[ID.T4N_1],
     effects: [{
-        type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
+        type: "MAIN_STAT_C",
         multiGrades: { ANCIENT: { low: [15178, 17068], mid: [17069, 17589], high: [17590, 17857] } }
       }]
   },
@@ -153,7 +153,7 @@ const ACCESSORY_DATA: AccessoryRawData[] = [
     name: NAMES[ID.T4E_1],
     label: LABELS[ID.T4E_1],
     effects: [{
-        type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
+        type: "MAIN_STAT_C",
         multiGrades: { ANCIENT: { low: [11806, 12446], mid: [12447, 13275], high: [13276, 13889] } }
       }]
   },
@@ -209,7 +209,7 @@ const ACCESSORY_DATA: AccessoryRawData[] = [
     name: NAMES[ID.T4R_1],
     label: LABELS[ID.T4R_1],
     effects: [{
-        type: "MAIN_STAT_C", subGroup: 'MAIN_STAT_C_GROUP',
+        type: "MAIN_STAT_C",
         multiGrades: { ANCIENT: { low: [10962, 11556], mid: [11557, 12327], high: [12328, 12897] } }
       }]
   },

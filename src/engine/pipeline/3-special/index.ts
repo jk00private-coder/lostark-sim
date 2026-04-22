@@ -25,7 +25,7 @@ import {
 } from '../types';
 import { pushToBuffer } from '../1-static-buffer';
 import { processCommonSpecials } from './common-specials';
-import { processGuardianKnightSpecials } from './classes/guardian-knight';
+import { processGuardianKnightSpecials } from './guardian-knight';
 import { isTargetMatch } from '../2-dynamic-buffer';
 
 
