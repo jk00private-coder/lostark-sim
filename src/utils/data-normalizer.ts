@@ -732,6 +732,7 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
     label: lastItem.Name,
     name: setName,
     isDb: !!dbMatch,
+    level: parseInt(setName.replace(/[^0-9]/g, '')) || 0,
   };
   console.log("--- [DEBUG] normalizeCards Result ---", result);
   return result;

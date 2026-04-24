@@ -148,7 +148,9 @@ export interface GemDisplay extends BaseDisplay {
 // 카드 및 아크 패시브
 // ============================================================
 
-export interface CardSetDisplay extends BaseDisplay { }
+export interface CardSetDisplay extends BaseDisplay {
+  level: number;
+ }
 
 export interface ArkPassivePointDisplay {
   evolution: { level: number; description: string };

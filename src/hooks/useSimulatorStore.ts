@@ -330,27 +330,26 @@ const collectEffectLogs = (
       );
     }
 
-  // // ── 8. 카드 ──────────────────────────────────────────────
-  // // cards.id → CARD_MAP 조회
-  // if (display.cards?.id) {
-  //   const db = CARD_MAP.get(display.cards.id);
-  //   if (db?.effects) {
-  //     const totalAwake = (display.cards as any).totalAwake ?? 0;
+  // ── 7. 카드 ─────────────────────────────
+  if (display.cards?.id) {
+      const db = CARD_MAP.get(display.cards.id);
+      if (db?.effects) {
+        const level = display.cards.level ?? 0;
+        db.effects.forEach(eff => {
+          if (!eff.value) return;
+          const maxIdx = eff.value.length - 1;
+          const targetIdx = Math.min(Math.max(Math.floor(level / 6) - 2, 0), maxIdx);
+          const accumulatedValue = eff.value
+            .slice(0, targetIdx + 1)
+            .reduce((sum, val) => sum + val, 0);
 
-  //     db.effects.forEach(eff => {
-  //       if (!eff.value) return;
-  //       // 각성 합계에 맞는 인덱스 선택 (0-based, 클램프)
-  //       const idx   = Math.min(Math.max(totalAwake - 1, 0), eff.value.length - 1);
-  //       const value = eff.value[idx] ?? 0;
-  //       if (!value) return;
+          if (accumulatedValue <= 0) return;
+          push('카드', eff.type, accumulatedValue, eff.subGroup, eff.target);
+        });
+      }
+    }
 
-  //       const subGroup = eff.type === 'DMG_INC' ? SUB_GROUPS.CARD : eff.subGroup;
-  //       push('카드', eff.type, value, subGroup, eff.target);
-  //     });
-  //   }
-  // }
-
-  // // ── 9. 아크그리드 ────────────────────────────────────────
+  // // ── 8. 아크그리드 ────────────────────────────────────────
   // // arkGrid.effects는 normalizer가 최종 수치로 파싱 완료
   // // label 텍스트 매핑 불가피 (id 없음)
   // display.arkGrid.effects.forEach(eff => {

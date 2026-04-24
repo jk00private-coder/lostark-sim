@@ -19,7 +19,7 @@ export const CARD_DATA: BaseSimData[] = [
     id: ID.CARDS,
     name: NAMES[ID.CARDS],
     effects: [
-      { type: "DMG_INC", value: [0.08, 0.12, 0.15] }
+      { type: "DMG_INC", value: [0.08, 0.04, 0.03] }
     ]
   }
 ]

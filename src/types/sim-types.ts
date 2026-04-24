@@ -147,10 +147,8 @@ export type EffectTypeId = CommonEffectTypeId | ClassEffectTypeId;
  * todo: 섭그룹이 생길때마다 여기에 작성해야 하는지 검토
  */
 export const SUB_GROUPS = {
-  CARD  : 'card',   // 카드 피해 — 카드끼리 합산 후 1회 곱연산
   SHN_03: 'snh03',  // 업화 해3 14p, 17p
   SND_03: 'snd03',  // 드레드 해3 14p, 17p
-  MAIN_STAT_C_GROUP: 'mainStatC',
 } as const;
 
 /**
