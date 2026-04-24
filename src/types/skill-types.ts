@@ -1,5 +1,5 @@
 /**
- * @/types/skill.ts
+ * @/types/skill-types.ts
  * 스킬/트라이포드 데이터 타입을 정의합니다.
  */
 

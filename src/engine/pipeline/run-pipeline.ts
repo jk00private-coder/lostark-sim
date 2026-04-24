@@ -22,7 +22,7 @@
 
 import { CharacterDisplayData, SkillDisplay } from '@/types/character-types';
 import { StatModifiers } from '@/types/sim-types';
-import { SkillData, TripodData } from '@/types/skill';
+import { SkillData, TripodData } from '@/types/skill-types';
 
 import { resolveSkillMeta } from './0-resolve-skill';
 import { buildStaticBuffer } from './1-static-buffer';

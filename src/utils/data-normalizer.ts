@@ -39,13 +39,7 @@ import { ENGRAVINGS_DB }    from '@/data/engravings';
 import { AVATAR_DATA }    from '@/data/avatars';
 import { GEM_DATA }    from '@/data/gems';
 import { CARD_DATA } from '@/data/cards';
-import { EVOLUTION_DATA } from '@/data/arc-passive/evolution';
-import { ELIGHTEN_GUARDIAN_KNIGHT_DATA } from '@/data/arc-passive/elighten/guardian-knight';
-import { getLeapDataByName } from '@/data/arc-passive';
-import { ARKGRID_COMMON_DATA } from '@/data/arc-grid/common';
-import { ARKGRID_GUARDIAN_KNIGHT_DATA } from '@/data/arc-grid/guardian-knight';
-import { SKILLS_GUARDIAN_KNIGHT_DB } from '@/data/skills/guardian-knight-skills';
-
+import { findSkillByName, findArkPassiveNode, findArkGridCore} from '@/data/_class-registry';
 
 // ============================================================
 // 1. 기초 문자열 처리 유틸
@@ -744,33 +738,6 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
 };
 
 // ── 아크패시브 ───────────────────────────────────────────────
-const JOB_ENLIGHTEN_MAP: Record<string, typeof ELIGHTEN_GUARDIAN_KNIGHT_DATA> = {
-  '가디언나이트': ELIGHTEN_GUARDIAN_KNIGHT_DATA,
-  // '검사': ELIGHTEN_SWORD_MASTER_DATA, // 이런 식으로 추가
-};
-
-/** 전 직업 대응 가능하도록 개선된 DB 매칭 헬퍼 */
-const findArkPassiveDb = (category: string, name: string, job: string) => {
-  // 1. 진화 (공통)
-  if (category === '진화') {
-    return EVOLUTION_DATA.nodes.find(n => n.name === name);
-  }
-
-  // 2. 깨달음 (직업 매핑 테이블 참조)
-  if (category === '깨달음') {
-    const jobData = JOB_ENLIGHTEN_MAP[job];
-    return jobData?.nodes.find(n => n.name === name);
-  }
-
-  // 3. 도약 (공통 + 직업 2티어 병합 데이터 참조)
-  if (category === '도약') {
-    const leapData = getLeapDataByName(job);
-    return leapData?.nodes.find(n => n.name === name);
-  }
-
-  return null;
-};
-
 export const normalizeArkPassive = (raw: RawCharacterData, jobName: string) => {
   const p = raw.arkPassive;
   if (!p) return null;
@@ -798,18 +765,14 @@ export const normalizeArkPassive = (raw: RawCharacterData, jobName: string) => {
   const effects: ArkPassiveEffectDisplay[] = p.Effects.map(eff => {
     const cleanDesc = stripHtml(eff.Description);
     const m = cleanDesc.match(PATTERN);
-    
     const categoryName = m ? m[1] : eff.Name;
     const tier = m ? parseInt(m[2]) : 0;
     const nodeName = m ? m[3] : eff.Name;
     const level = m ? parseInt(m[4]) : 0;
-
     const ttJson = parseTooltip(eff.ToolTip);
     const descRaw: string = ttJson['Element_002']?.value ?? '';
     const finalDesc = stripHtml(descRaw.split('||')[0]).trim();
-
-    // DB 매칭
-    const dbMatch = findArkPassiveDb(categoryName, nodeName, jobName);
+    const dbMatch = findArkPassiveNode(categoryName, nodeName, jobName);
 
     return {
       id: dbMatch?.id ?? 0,
@@ -834,20 +797,10 @@ export const normalizeArkPassive = (raw: RawCharacterData, jobName: string) => {
 };
 
 // ── 아크그리드 ───────────────────────────────────────────────
-const JOB_ARK_GRID_MAP: Record<string, typeof ARKGRID_GUARDIAN_KNIGHT_DATA> = {
-  '가디언나이트': ARKGRID_GUARDIAN_KNIGHT_DATA,
-  // 새로운 직업 추가 시 여기에 등록
-};
-
 export const normalizeArkGrid = (raw: RawCharacterData, jobName: string): ArkGridDisplay => {
   const g = raw.arkGrid;
-  const jobDb = JOB_ARK_GRID_MAP[jobName];
-  const commonDb = ARKGRID_COMMON_DATA;
-
-  // 1. 코어(Cores) 파싱
   const cores: ArkGridCoreDisplay[] = g.Slots.map(slot => {
-    const dbMatch = jobDb?.find(d => (d.label || d.name) === slot.Name) 
-                    || commonDb.find(d => (d.label || d.name) === slot.Name);
+    const dbMatch = findArkGridCore(jobName, slot.Name);
     return {
       id: dbMatch?.id ?? 0,
       label: slot.Name,
@@ -859,7 +812,6 @@ export const normalizeArkGrid = (raw: RawCharacterData, jobName: string): ArkGri
     };
   });
 
-  // 2. 활성화 효과(Effects) 파싱
   const effects: ArkGridEffectDisplay[] = g.Effects.map(eff => {
     const tooltipValue = extractPercent(eff.Tooltip);
     const tooltipColor = extractColor(eff.Tooltip);
@@ -878,23 +830,11 @@ export const normalizeArkGrid = (raw: RawCharacterData, jobName: string): ArkGri
 };
 
 // ── 스킬 ────────────────────────────────────────────────────
-const JOB_SKILL_MAP: Record<string, typeof SKILLS_GUARDIAN_KNIGHT_DB> = {
-  '가디언나이트': SKILLS_GUARDIAN_KNIGHT_DB,
-  // 추가 직업들...
-};
-
-// ── 스킬 ────────────────────────────────────────────────────
 export const normalizeSkills = (raw: RawCharacterData, jobName: string): SkillDisplay[] => {
   const gemSkillNames = raw.gems.Effects.Skills.map(s => s.Name); // 보석이 박힌 스킬 이름들 (필터링 조건용)
-  const skillDb = JOB_SKILL_MAP[jobName];
-  const clean = (str: string) => str.replace(/\s+/g, ''); // 비교용 공백 제거 헬퍼
-
-
   const activeTitle = raw.arkPassive?.Title || '';
   const isSkillUsed = (skill: typeof raw.skills[0]): boolean => {
-    const dbMatch = skillDb?.find(d => d.label || d.name === skill.Name);
-
-    // [수정] requiredTitle 조건 체크
+    const dbMatch = findSkillByName(jobName, skill.Name);
     /**
      * todo: 도약 2티어 노드로 조건을 변경해서 고도화해야함,
      *       데빌헌터같은 경우는 초각성스킬이 3개라서 title로는 구분 불가능
@@ -911,7 +851,7 @@ export const normalizeSkills = (raw: RawCharacterData, jobName: string): SkillDi
   };
 
   const skills: SkillDisplay[] = raw.skills.filter(isSkillUsed).map(skill => {
-    const dbMatch = skillDb?.find(d => d.label || d.name === skill.Name);
+    const dbMatch = findSkillByName(jobName, skill.Name);
     const tooltip = parseTooltip(skill.Tooltip);
     const titleEl = tooltip['Element_001']?.value ?? {};
     const rawLevelText = titleEl.level || ''; 

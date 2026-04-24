@@ -13,7 +13,7 @@
  * ⚠️ QI_SPECIALIZATION_COEFF 는 guardian-knight-effects.ts 에서 관리
  */
 
-import { SkillData } from '@/types/skill';
+import { SkillData } from '@/types/skill-types';
 import { ID_AA, ID_BB } from '@/constants/id-config';
 
 // ============================================================

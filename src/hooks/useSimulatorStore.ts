@@ -39,6 +39,7 @@ import { AVATAR_DATA }     from '@/data/avatars';
 import { GEM_DATA }        from '@/data/gems';
 import { CARD_DATA }       from '@/data/cards';
 import { SKILLS_GUARDIAN_KNIGHT_DB } from '@/data/skills/guardian-knight-skills';
+import { getSkillMap } from '@/data/_class-registry';
 
 
 // ============================================================
@@ -135,7 +136,7 @@ const collectEffectLogs = (
     pipelineLogs.push({ label, type, value, subGroup, target, special });
   };
 
-    // ── 1. 장비 기본 스탯 (ID 참조 및 상급 재련 통합 계산) ────────────────
+    // ── 1. 장비 기본 스탯 ────────────────
     display.equipment.forEach(eq => {
       const db = EQUIP_MAP.get(eq.id);
       if (!db) return;
@@ -288,13 +289,6 @@ const collectEffectLogs = (
       });
     });
 
-    const JOB_SKILL_MAP: Record<string, typeof SKILLS_GUARDIAN_KNIGHT_DB> = {
-      '가디언나이트': SKILLS_GUARDIAN_KNIGHT_DB,
-      // 추가 직업들...
-    };
-    const currentJobSkillMap = JOB_SKILL_MAP[display.profile.className] ?? {};
-    const skillNameMap = new Map(currentJobSkillMap.map(s => [s.name, s]));
-
     // ── 6. 보석 ─────────────────────────────
     let totalGemBaseAtkBonus = 0;
 
@@ -302,7 +296,7 @@ const collectEffectLogs = (
       if (!gem.id) return;
       const db = GEM_MAP.get(gem.id);
       if (!db || !db.effects) return;
-      const skillID = skillNameMap.get(gem.skillName)?.id;
+      const skillID = getSkillMap(display.profile.className).get(gem.skillName)?.id;
 
       db.effects.forEach(eff => {
         if (eff.type === 'BASE_ATK_P') {

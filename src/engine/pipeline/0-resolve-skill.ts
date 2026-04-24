@@ -15,7 +15,7 @@
  *   - 효과(effects) 수집은 하지 않음 → 1단계에서 담당
  */
 
-import { SkillData, TripodData, DamageSource } from '@/types/skill';
+import { SkillData, TripodData, DamageSource } from '@/types/skill-types';
 import { AttackTypeId, SkillTypeId, ResourceTypeId } from '@/types/sim-types';
 import { ResolvedSkillMeta, ResolvedSource } from './types';
 
