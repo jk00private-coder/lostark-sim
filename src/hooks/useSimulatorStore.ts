@@ -38,6 +38,7 @@ import { BRACELET_DB }     from '@/data/equipment/bracelet';
 import { AVATAR_DATA }     from '@/data/avatars';
 import { GEM_DATA }        from '@/data/gems';
 import { CARD_DATA }       from '@/data/cards';
+import { SKILLS_GUARDIAN_KNIGHT_DB } from '@/data/skills/guardian-knight-skills';
 
 
 // ============================================================
@@ -126,15 +127,6 @@ const collectEffectLogs = (
     special?: boolean,
   ) => {
     if (type === 'UNKNOWN' || !value) return;
-
-    // 1. 여기서 target 내부의 키 개수를 찍어봅니다.
-    if (target) {
-      const keys = Object.keys(target);
-      if (keys.length < 5) {
-        console.warn(`[${label}] target 필드가 ${keys.length}개 뿐입니다:`, target);
-      }
-    }
-
 
     // StatModifiers 직접 누산 (atk-calculator 입력용)
     const statField = STAT_MOD_FIELD_MAP[type];
@@ -233,7 +225,7 @@ const collectEffectLogs = (
 
       db.effects.forEach(dbEff => {
         const label = `아바타 ${av.label ?? av.name}`;
-        const rawValue = av.mainStatBonus ?? 0;
+        const rawValue = av.values?.[0]?.value ?? 0;
         const standardizedValue = getStandardValue(dbEff.type, rawValue);
 
         if (standardizedValue !== 0) {
@@ -249,94 +241,100 @@ const collectEffectLogs = (
     });
 
     // ── 5. 각인 ─────────────────────────────
-display.engravings.forEach(eng => {
-    if (!eng.id) return;
-    
-    const db = ENGRAVING_MAP.get(eng.id);
-    if (!db || !db.effects) return;
-
-    // 등급 판정은 루프 밖에서 한 번만 수행
-    const isRelicOrLegend = eng.eqGrade === 'RELIC';
-
-    db.effects.forEach((eff) => {
-      const baseValue = eff.value?.[0] ?? 0;
-      let bonusValue = 0;
-
-      // 1. 유물 각인서 보너스 계산
-      const relic = db.bonus?.relic;
-      const hasRelicBonus = isRelicOrLegend && relic?.type === eff.type;
-
-      if (hasRelicBonus && relic?.value) {
-        bonusValue += relic.value[eng.level - 1] ?? 0;
-      }
+    display.engravings.forEach(eng => {
+      if (!eng.id) return;
       
-      // 2. 어빌리티 스톤 보너스 계산
-      const ability = db.bonus?.ability;
-      const hasAbilityBonus = eng.abilityStoneLevel && ability?.type === eff.type;
+      const db = ENGRAVING_MAP.get(eng.id);
+      if (!db || !db.effects) return;
 
-      if (hasAbilityBonus && ability?.value) {
-        bonusValue += ability.value[eng.abilityStoneLevel - 1] ?? 0;
-      }
+      // 등급 판정은 루프 밖에서 한 번만 수행
+      const isRelicOrLegend = eng.eqGrade === 'RELIC';
 
-      // 3. 합산 및 최종 수치 결정
-      const total = baseValue + bonusValue;
-      if (total === 0) return;
+      db.effects.forEach((eff) => {
+        const baseValue = eff.value?.[0] ?? 0;
+        let bonusValue = 0;
 
-      const finalizedValue = Math.round(total * 10000) / 10000;
+        // 1. 유물 각인서 보너스 계산
+        const relic = db.bonus?.relic;
+        const hasRelicBonus = isRelicOrLegend && relic?.type === eff.type;
 
-      // 각 효과별로 push가 호출됨 (효과가 2개면 로그도 2줄 생성)
-      push(
-        db.name,
-        eff.type,
-        finalizedValue,
-        eff.subGroup,
-        eff.target,
-        (db as any).special
-      );
+        if (hasRelicBonus && relic?.value) {
+          bonusValue += relic.value[eng.level - 1] ?? 0;
+        }
+        
+        // 2. 어빌리티 스톤 보너스 계산
+        const ability = db.bonus?.ability;
+        const hasAbilityBonus = eng.abilityStoneLevel && ability?.type === eff.type;
+
+        if (hasAbilityBonus && ability?.value) {
+          bonusValue += ability.value[eng.abilityStoneLevel - 1] ?? 0;
+        }
+
+        // 3. 합산 및 최종 수치 결정
+        const total = baseValue + bonusValue;
+        if (total === 0) return;
+
+        const finalizedValue = Math.round(total * 10000) / 10000;
+
+        // 각 효과별로 push가 호출됨 (효과가 2개면 로그도 2줄 생성)
+        push(
+          db.name,
+          eff.type,
+          finalizedValue,
+          eff.subGroup,
+          eff.target,
+          (db as any).special
+        );
+      });
     });
-  });
 
-  // // eng.id → ENGRAVING_MAP 조회
-  // display.engravings.forEach(eng => {
-  //   if (!eng.id) return;
-  //   const db = ENGRAVING_MAP.get(eng.id);
-  //   if (!db?.effects) return;
+    const JOB_SKILL_MAP: Record<string, typeof SKILLS_GUARDIAN_KNIGHT_DB> = {
+      '가디언나이트': SKILLS_GUARDIAN_KNIGHT_DB,
+      // 추가 직업들...
+    };
+    const currentJobSkillMap = JOB_SKILL_MAP[display.profile.className] ?? {};
+    const skillNameMap = new Map(currentJobSkillMap.map(s => [s.name, s]));
 
-  //   const gradeText = typeof eng.grade === 'string' ? eng.grade : eng.grade.text;
+    // ── 6. 보석 ─────────────────────────────
+    let totalGemBaseAtkBonus = 0;
 
-  //   db.effects.forEach(eff => {
-  //     if (!eff.value) return;
+    display.gems.forEach(gem => {
+      if (!gem.id) return;
+      const db = GEM_MAP.get(gem.id);
+      if (!db || !db.effects) return;
+      const skillID = skillNameMap.get(gem.skillName)?.id;
 
-  //     const baseValue  = eff.value[0] ?? 0;
-  //     let   bonusValue = 0;
+      db.effects.forEach(eff => {
+        if (eff.type === 'BASE_ATK_P') {
+          const bonusValue = eff.value?.[gem.level - 1] ?? 0;
+          totalGemBaseAtkBonus += bonusValue;
+          return;
+        }
 
-  //     if ((gradeText === '유물' || gradeText === '전설') && db.bonus?.relic?.value) {
-  //       bonusValue += db.bonus.relic.value[eng.level - 1] ?? 0;
-  //     }
-  //     if (eng.abilityStoneLevel && db.bonus?.ability?.value) {
-  //       bonusValue += db.bonus.ability.value[eng.abilityStoneLevel - 1] ?? 0;
-  //     }
-
-  //     const total = baseValue + bonusValue;
-  //     if (!total) return;
-
-  //     push(
-  //       db.name,
-  //       eff.type,
-  //       total,
-  //       eff.subGroup,
-  //       eff.target,
-  //       (db as any).special,
-  //     );
-  //   });
-  // });
-
-  // // ── 7. 보석 공증 ─────────────────────────────────────────
-  // // normalizer가 totalBaseAtk를 이미 합산해서 저장
-  // const gemsData = display.gems as any;
-  // const totalBaseAtkValue: number = gemsData?.totalBaseAtk?.value ?? 0;
-  // if (totalBaseAtkValue > 0)
-  //   push('보석 공증', 'BASE_ATK_P', totalBaseAtkValue);
+        const rawValue = eff.value?.[gem.level - 1] ?? 0;
+        if (rawValue === 0) return;
+        const finalizedValue = Math.round(rawValue * 10000) / 10000;
+        push(
+          gem.name,
+          eff.type,
+          finalizedValue,
+          eff.subGroup,
+          {
+          ...eff.target,
+          skillIds: skillID ? [skillID] : undefined,
+          }
+        );
+      });
+    }); 
+    
+    if (totalGemBaseAtkBonus > 0) {
+      const finalAtkBonus = Math.round(totalGemBaseAtkBonus * 10000) / 10000;
+      push(
+        '보석 기본 공격력 보너스', // 합산용 라벨
+        'BASE_ATK_P',
+        finalAtkBonus,
+      );
+    }
 
   // // ── 8. 카드 ──────────────────────────────────────────────
   // // cards.id → CARD_MAP 조회

@@ -126,9 +126,7 @@ export interface BoJuDisplay extends BaseDisplay {
   paradoxPower: number;
 }
 
-export interface AvatarDisplay extends BaseDisplay {
-  mainStatBonus: number;
-}
+export interface AvatarDisplay extends BaseDisplay { }
 
 // ============================================================
 // 각인 및 보석

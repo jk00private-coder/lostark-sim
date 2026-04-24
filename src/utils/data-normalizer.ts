@@ -640,6 +640,7 @@ export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
   const result = representativeAvatars.map(av => {
     const tooltip = parseTooltip(av.Tooltip);
     const bonusStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
+    const mainStatBonus = bonusStr.includes('%') ? extractNum(bonusStr) : 0;
     
     return {
       id: dbMatch.id,
@@ -648,7 +649,7 @@ export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
       isDb: !!dbMatch,
       icon: av.Icon,
       eqGrade: getGradeKey(av.Grade),
-      mainStatBonus: bonusStr.includes('%') ? extractNum(bonusStr) : 0,
+      values: [{ value: mainStatBonus, color: '' }],
     };
   });
 
@@ -702,18 +703,18 @@ export const normalizeGems = (raw: RawCharacterData): GemDisplay[] => {
       id: dbMatch?.id ?? 0,
       name: gemName,
       label: matchLabel,
-      value: extractPercent(rawDesc),
+      values: [{value: extractNum(rawDesc), color: '' }],
       isDb: !!dbMatch,
       icon: gem?.Icon || skill.Icon,
       eqGrade: getGradeKey(gem?.Grade ?? ''),
       level: gem?.Level ?? 0,
       skillName: skill.Name,
       effectType,
-      baseAtkBonus: extractPercent(skill.Option || ''),
+      baseAtkBonus: extractNum(skill.Option || ''),
     };
   });
 
-  console.log("--- [DEBUG] normalizeGems Final Output ---", gems);
+  console.log("--- normalizeGems ---", gems);
   return gems;
 };
 
@@ -746,6 +747,28 @@ export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => 
 const JOB_ENLIGHTEN_MAP: Record<string, typeof ELIGHTEN_GUARDIAN_KNIGHT_DATA> = {
   '가디언나이트': ELIGHTEN_GUARDIAN_KNIGHT_DATA,
   // '검사': ELIGHTEN_SWORD_MASTER_DATA, // 이런 식으로 추가
+};
+
+/** 전 직업 대응 가능하도록 개선된 DB 매칭 헬퍼 */
+const findArkPassiveDb = (category: string, name: string, job: string) => {
+  // 1. 진화 (공통)
+  if (category === '진화') {
+    return EVOLUTION_DATA.nodes.find(n => n.name === name);
+  }
+
+  // 2. 깨달음 (직업 매핑 테이블 참조)
+  if (category === '깨달음') {
+    const jobData = JOB_ENLIGHTEN_MAP[job];
+    return jobData?.nodes.find(n => n.name === name);
+  }
+
+  // 3. 도약 (공통 + 직업 2티어 병합 데이터 참조)
+  if (category === '도약') {
+    const leapData = getLeapDataByName(job);
+    return leapData?.nodes.find(n => n.name === name);
+  }
+
+  return null;
 };
 
 export const normalizeArkPassive = (raw: RawCharacterData, jobName: string) => {
@@ -808,28 +831,6 @@ export const normalizeArkPassive = (raw: RawCharacterData, jobName: string) => {
   console.log("--- [DEBUG] normalizeArkPassive Result ---");
   console.log(result);
   return result;
-};
-
-/** 전 직업 대응 가능하도록 개선된 DB 매칭 헬퍼 */
-const findArkPassiveDb = (category: string, name: string, job: string) => {
-  // 1. 진화 (공통)
-  if (category === '진화') {
-    return EVOLUTION_DATA.nodes.find(n => n.name === name);
-  }
-
-  // 2. 깨달음 (직업 매핑 테이블 참조)
-  if (category === '깨달음') {
-    const jobData = JOB_ENLIGHTEN_MAP[job];
-    return jobData?.nodes.find(n => n.name === name);
-  }
-
-  // 3. 도약 (공통 + 직업 2티어 병합 데이터 참조)
-  if (category === '도약') {
-    const leapData = getLeapDataByName(job);
-    return leapData?.nodes.find(n => n.name === name);
-  }
-
-  return null;
 };
 
 // ── 아크그리드 ───────────────────────────────────────────────
