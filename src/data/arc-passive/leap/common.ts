@@ -31,60 +31,51 @@ export const NAMES = {
     [ID.T1_4]: '풀려난 힘', [ID.T1_5]: '잠재력 해방', [ID.T1_6]: '즉각적인 주문',
 } as const;
 
-export const LEAP_COMMON_DATA: ArkPassiveSectionData = {
-    tierMeta: { 1: 40, 2: 30 },
-    karma: {
-        levelBonus: {
-            type: 'DMG_INC', value: Array.from({ length: 30 }, (_, i) => (i + 1) * 0.005),
-            target: {categories:['HYPER_ULTIMATE']}
-        }
-    },
-    nodes: [
-    // ── 티어 1 ──────────────────────────────────────────
-        { // 초월적인 힘
-            id: ID.T1_1,
-            name: NAMES[ID.T1_1],
-            iconPath: `/images/arc-passive/leap/${ID.T1_1}.webp`,
-            pointCost: 4,
-            effects: [
-                { type: 'DMG_INC', value: [0.1, 0.2, 0.3, 0.4, 0.5], target: {categories:['HYPER_ULTIMATE']} }
-            ]
-        },
-        { // 충전된 분노
-            id: ID.T1_2,
-            name: NAMES[ID.T1_2],
-            iconPath: `/images/arc-passive/leap/${ID.T1_2}.webp`,
-            pointCost: 4
-        },
-        {
-            id: ID.T1_3,
-            name: NAMES[ID.T1_3], // 각성 증폭기
-            iconPath: `/images/arc-passive/leap/${ID.T1_3}.webp`,
-            pointCost: 2
-        },
-        { // 풀려난 힘
-            id: ID.T1_4,
-            name: NAMES[ID.T1_4],
-            iconPath: `/images/arc-passive/leap/${ID.T1_4}.webp`,
-            pointCost: 4,
-            effects: [
-                { type: 'DMG_INC', value: [0.03, 0.06, 0.09, 0.12, 0.15], target: {categories:['HYPER_SKILL']} }
-            ]
-        },
-        { // 잠재력 해방
-            id: ID.T1_5,
-            name: NAMES[ID.T1_5],
-            iconPath: `/images/arc-passive/leap/${ID.T1_5}.webp`,
-            pointCost: 4,
-            effects: [
-                { type: 'CDR_P', value: [0.02, 0.04, 0.06, 0.08, 0.1], target: {categories:['HYPER_SKILL']} }
-            ]
-        },
-        { // 즉각적인 주문
-            id: ID.T1_6,
-            name: NAMES[ID.T1_6],
-            iconPath: `/images/arc-passive/leap/${ID.T1_6}.webp`,
-            pointCost: 2
-        },
-    ]
-}
+export const LEAP_COMMON_DATA: ArkPassiveSectionData[] = [
+  // ── 티어 1 ──────────────────────────────────────────
+  { // 초월적인 힘
+      id: ID.T1_1,
+      name: NAMES[ID.T1_1],
+      iconPath: `/images/arc-passive/leap/${ID.T1_1}.webp`,
+      pointCost: 4,
+      effects: [
+          { type: 'DMG_INC', value: [0.1, 0.2, 0.3, 0.4, 0.5], target: {categories:['HYPER_ULTIMATE']} }
+      ]
+  },
+  { // 충전된 분노
+      id: ID.T1_2,
+      name: NAMES[ID.T1_2],
+      iconPath: `/images/arc-passive/leap/${ID.T1_2}.webp`,
+      pointCost: 4
+  },
+  {
+      id: ID.T1_3,
+      name: NAMES[ID.T1_3], // 각성 증폭기
+      iconPath: `/images/arc-passive/leap/${ID.T1_3}.webp`,
+      pointCost: 2
+  },
+  { // 풀려난 힘
+      id: ID.T1_4,
+      name: NAMES[ID.T1_4],
+      iconPath: `/images/arc-passive/leap/${ID.T1_4}.webp`,
+      pointCost: 4,
+      effects: [
+          { type: 'DMG_INC', value: [0.03, 0.06, 0.09, 0.12, 0.15], target: {categories:['HYPER_SKILL']} }
+      ]
+  },
+  { // 잠재력 해방
+      id: ID.T1_5,
+      name: NAMES[ID.T1_5],
+      iconPath: `/images/arc-passive/leap/${ID.T1_5}.webp`,
+      pointCost: 4,
+      effects: [
+          { type: 'CDR_P', value: [0.02, 0.04, 0.06, 0.08, 0.1], target: {categories:['HYPER_SKILL']} }
+      ]
+  },
+  { // 즉각적인 주문
+      id: ID.T1_6,
+      name: NAMES[ID.T1_6],
+      iconPath: `/images/arc-passive/leap/${ID.T1_6}.webp`,
+      pointCost: 2
+  },
+];

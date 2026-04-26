@@ -20,7 +20,7 @@
  */
 
 import { SkillData } from '@/types/skill-types';
-import { ArkPassiveNodeData, ArkPassiveSectionData } from '@/types/ark-passive';
+import { ArkPassiveSectionData } from '@/types/ark-passive';
 import { ArkGridCoreData } from '@/types/ark-grid';
 
 // ── 가디언나이트 DB imports ───────────────────────────────
@@ -53,8 +53,8 @@ import { LEAP_COMMON_DATA } from './arc-passive/leap/common';
  */
 export interface ClassRegistry {
   skills       : SkillData[];
-  enlightenData: ArkPassiveSectionData;
-  leapNodes    : ArkPassiveNodeData[];
+  enlightenData: ArkPassiveSectionData[];
+  leapNodes    : ArkPassiveSectionData[];
   arkGridData  : ArkGridCoreData[];
 }
 
@@ -120,26 +120,40 @@ export const findArkPassiveNode = (
   category: string,
   nodeName: string,
   jobName: ClassName,
-) => {
+): ArkPassiveSectionData | undefined => {
   const registry = CLASS_REGISTRY[jobName];
 
-  // 카테고리별 노드 소스를 매핑
-  const nodeSources: Record<string, ArkPassiveNodeData[] | undefined> = {
-    '진화': EVOLUTION_DATA.nodes,
-    '깨달음': registry?.enlightenData.nodes,
-    '도약': getLeapData(registry).nodes // 수정된 getLeapData 사용
+  const nodeSources: Record<string, ArkPassiveSectionData[] | undefined> = {
+    '진화': EVOLUTION_DATA,
+    '깨달음': registry?.enlightenData,
+    '도약': getLeapData(registry)
   };
 
   return nodeSources[category]?.find(n => n.name === nodeName);
 };
-export const getLeapData = (registry?: ClassRegistry): ArkPassiveSectionData => {
-  return {
-    ...LEAP_COMMON_DATA,
-    nodes: [
-      ...LEAP_COMMON_DATA.nodes,
-      ...(registry?.leapNodes ?? []),
-    ]
-  };
+
+export const getLeapData = (registry?: ClassRegistry): ArkPassiveSectionData[] => {
+  return [
+    ...(LEAP_COMMON_DATA || []),
+    ...(registry?.leapNodes ?? []),
+  ];
+};
+
+/** 현재 직업에 맞는 아크패시브 노드 전체를 ID 맵으로 반환 */
+export const getArkPassiveNodeMap = (jobName: ClassName): Map<number, ArkPassiveSectionData> => {
+  const registry = CLASS_REGISTRY[jobName];
+  const nodeMap = new Map<number, ArkPassiveSectionData>();
+
+  // 진화 (배열 직접 순회)
+  EVOLUTION_DATA.forEach(n => nodeMap.set(n.id, n));
+  
+  // 깨달음 (배열 직접 순회)
+  registry?.enlightenData?.forEach(n => nodeMap.set(n.id, n));
+  
+  // 도약 (getLeapData 결과가 배열)
+  getLeapData(registry).forEach(n => nodeMap.set(n.id, n));
+
+  return nodeMap;
 };
 
 /**
@@ -158,6 +172,17 @@ export const findArkGridCore = (
     registry?.arkGridData.find(d => (d.label || d.name) === coreName) ??
     ARKGRID_COMMON_DATA.find(d => (d.label || d.name) === coreName)
   );
+};
+
+/** 특정 직업의 아크그리드 데이터를 Map으로 변환하여 반환 */
+export const getArkGridMap = (jobName: ClassName): Map<number | string, ArkGridCoreData> => {
+  const registry = CLASS_REGISTRY[jobName];
+  const coreMap = new Map<number | string, ArkGridCoreData>();
+
+  ARKGRID_COMMON_DATA.forEach(d => coreMap.set(d.id, d));
+  registry?.arkGridData?.forEach(d => coreMap.set(d.id, d));
+
+  return coreMap;
 };
 
 /**

@@ -38,8 +38,8 @@ import { BRACELET_DB }     from '@/data/equipment/bracelet';
 import { AVATAR_DATA }     from '@/data/avatars';
 import { GEM_DATA }        from '@/data/gems';
 import { CARD_DATA }       from '@/data/cards';
-import { SKILLS_GUARDIAN_KNIGHT_DB } from '@/data/skills/guardian-knight-skills';
-import { getSkillMap } from '@/data/_class-registry';
+import { ARK_PASSIVE_RULES } from '@/data/arc-passive/meta';
+import { getSkillMap, getArkGridMap, getArkPassiveNodeMap } from '@/data/_class-registry';
 
 
 // ============================================================
@@ -291,7 +291,6 @@ const collectEffectLogs = (
 
     // ── 6. 보석 ─────────────────────────────
     let totalGemBaseAtkBonus = 0;
-
     display.gems.forEach(gem => {
       if (!gem.id) return;
       const db = GEM_MAP.get(gem.id);
@@ -349,15 +348,84 @@ const collectEffectLogs = (
       }
     }
 
-  // // ── 8. 아크그리드 ────────────────────────────────────────
-  // // arkGrid.effects는 normalizer가 최종 수치로 파싱 완료
-  // // label 텍스트 매핑 불가피 (id 없음)
-  // display.arkGrid.effects.forEach(eff => {
-  //   const labelText  = typeof eff.label === 'string' ? eff.label : eff.label.text;
-  //   const effectType = ARK_GRID_EFFECT_TYPE_MAP[labelText];
-  //   if (effectType)
-  //     push(`아크그리드 ${labelText}`, effectType, eff.value.value);
-  // });
+  // ── 8. 아크패시브 ────────────────────────────────────────
+  const ARKPASSIVE_MAP = getArkPassiveNodeMap(display.profile.className);
+  display.arkPassive?.effects.forEach((eff) => {
+    const db = ARKPASSIVE_MAP.get(eff.id);
+    if (!db) return;
+
+    db.effects?.forEach((dbEff) => {
+      const levelIdx = Math.min(eff.level - 1, (dbEff.value?.length || 1) - 1);
+      const val = dbEff.value?.[levelIdx] ?? 0;
+
+      val !== 0 && push(
+        `아크패시브:${eff.category.text} ${eff.name}`,
+        dbEff.type,
+        val,
+        dbEff.subGroup,
+        dbEff.target
+      );
+    });
+  });
+  const points = display.arkPassive?.points;
+  (['evolution', 'insight', 'leap'] as const).forEach((key) => {
+    const userPoint = points?.[key];
+    const rule = ARK_PASSIVE_RULES[key];
+    const level = userPoint?.level ?? 0;
+    
+    if (level <= 0 || !rule) return;
+    const { levelBonus: lv, rankBonus: rk } = rule.karma;
+    const lvVal = lv?.value?.[Math.min(level - 1, (lv.value.length || 1) - 1)] ?? 0;
+    lvVal !== 0 && push(`아크패시브:${key} ${level}레벨 보너스`, lv!.type, lvVal, undefined, lv?.target);
+
+    const rank = level > 0 ? Math.min(6, Math.floor((level - 1) / 4) + 1) : 0;
+    const rkVal = rk?.value?.slice(0, rank).reduce((s, v) => s + v, 0) ?? 0;
+    rank > 0 && rkVal !== 0 && push(`아크패시브:${key} ${rank}랭크 보너스`, rk!.type, rkVal, undefined, rk?.target);
+  });
+
+  // ── 9. 아크그리드 ────────────────────────────────────────
+  const ARKGRID_MAP = getArkGridMap(display.profile.className);
+  display.arkGrid.cores.forEach((core) => {
+    const db = ARKGRID_MAP.get(core.id);
+    if (!db || !db.thresholds) return;
+
+    const currentPoint = core.point;
+    const gradeKey = (core.eqGrade as MultiKey) || 'COMMON';
+
+    db.thresholds.forEach((threshold) => {
+      if (currentPoint < threshold.point) return;
+      if (!threshold.effects) return;
+
+      threshold.effects.forEach((dbEff) => {
+        let value = 0;
+
+        if (dbEff.multiValues) {
+          const values = dbEff.multiValues[gradeKey];
+          value = values?.[0] ?? 0;
+        } else if (dbEff.value) {
+          value = dbEff.value[0] ?? 0;
+        }
+
+        if (value === 0) return;
+
+        push(
+          `아크그리드:${db.name} (${threshold.point}pt)`,
+          dbEff.type,
+          value,
+          dbEff.subGroup,
+          dbEff.target
+        );
+      });
+    });
+  });
+  /**
+   * todo: 이런식으로 하면 시뮬단계에서 effect의 레벨을 수정할 수 없음. 아크그리드 effect의 DB 필요
+   */
+  display.arkGrid.effects.forEach(eff => {
+    const effectType = ARK_GRID_EFFECT_TYPE_MAP[eff.label];
+    if (effectType)
+      push(`아크그리드 ${eff.label}`, effectType, eff.value.value);
+  });
 
   return { pipelineLogs, statMods };
 };
