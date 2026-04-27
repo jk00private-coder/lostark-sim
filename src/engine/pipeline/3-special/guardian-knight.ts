@@ -14,10 +14,9 @@
  *   GK_QI_DMG: 기운 소모당 피해 증가 (확정 전 재료)
  *   → 이 값들을 모두 합산하여 DMG_INC로 변환 후 버퍼에 push
  *
- * [설계 노트]
- *   GK_QI_DMG는 Special이 아님.
- *   Dynamic 단계에서 스킬별 버퍼에 쌓임.
- *   이 함수는 쌓인 GK_QI_DMG 값을 읽어 최종 DMG_INC를 확정.
+ * [desc 필드]
+ *   완성된 로그에 계산 근거를 명시 (UI 투명성)
+ *   예) "기운4개×10% + 특화1800×0.00858% + 트포10%"
  */
 
 import { PipelineEffectLog, SkillBuffer, SpecialCombatStats, ResolvedSkillMeta } from '../types';
@@ -60,18 +59,32 @@ export const processGuardianKnightSpecials = (
   const qiDmgBonus = readBufferSum(skillBuffer.bufferMap, 'GK_QI_DMG');
 
   // 기본값: 소모 기운 × 10%
-  let totalQiDmg = meta.qiCost * QI_BASE_COEFF;
+  const baseQiDmg = meta.qiCost * QI_BASE_COEFF;
+  let totalQiDmg = baseQiDmg;
 
   // 화신 스킬: 특화 수치 × 특화계수 추가
   const isGodForm = meta.categories.includes('GOD_FORM');
-  if (isGodForm) {
-    totalQiDmg += combatStats.specialization * SPEC_COEFF;
-  }
+  const specBonus = isGodForm ? combatStats.specialization * SPEC_COEFF : 0;
+  totalQiDmg += specBonus;
 
   // 아크패시브/트라이포드 추가치 합산
   totalQiDmg += qiDmgBonus;
 
   if (totalQiDmg <= 0) return [];
+
+  // ── desc: 계산 근거 명시 ──────────────────────────────────
+  const descParts: string[] = [
+    `기운${meta.qiCost}개×${(QI_BASE_COEFF * 100).toFixed(0)}%(=${(baseQiDmg * 100).toFixed(1)}%)`,
+  ];
+  if (isGodForm && specBonus > 0) {
+    descParts.push(
+      `특화${combatStats.specialization}×${(SPEC_COEFF * 100).toFixed(5)}%(=${(specBonus * 100).toFixed(2)}%)`
+    );
+  }
+  if (qiDmgBonus > 0) {
+    descParts.push(`추가치${(qiDmgBonus * 100).toFixed(1)}%`);
+  }
+  const desc = descParts.join(' + ');
 
   // 최종 DMG_INC로 변환하여 반환
   return [{
@@ -79,5 +92,6 @@ export const processGuardianKnightSpecials = (
     type    : 'DMG_INC',
     value   : totalQiDmg,
     special : false, // 이미 계산 완료
+    desc,
   }];
 };

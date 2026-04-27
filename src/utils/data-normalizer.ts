@@ -157,7 +157,7 @@ export const GRADE_MAP: Record<string, MultiKey> = {
   '에스더': 'ESTHER',
 };
 export const getGradeKey = (gradeName: string): MultiKey => {
-  return GRADE_MAP[gradeName] || 'RELIC';
+  return GRADE_MAP[gradeName] || 'COMMON';
 };
 
 /** Tooltip JSON 파싱 (안전 장치) */
@@ -272,6 +272,11 @@ export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay 
   const statsMap = Object.fromEntries(
     raw.profile.Stats.map(s => [s.Type, parseInt(s.Value.replace(/,/g, ''))])
   );
+
+  const atkStat = raw.profile.Stats.find(s => s.Type === '공격력');
+  const baseAtkFromApi = extractNum(atkStat?.Tooltip?.[1] ?? '');
+  console.log(`[SYSTEM] 역산용 기본 공격력 포착: ${baseAtkFromApi}`);
+
   return {
     critical      : statsMap['치명']        ?? 0,
     specialization: statsMap['특화']        ?? 0,
@@ -281,6 +286,7 @@ export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay 
     expertise     : statsMap['숙련']        ?? 0,
     maxHp         : statsMap['최대 생명력'] ?? 0,
     attackPower   : statsMap['공격력']      ?? 0,
+    baseAtkFromApi, // API tooltip에서 역산한 기본 공격력 수치 추가
   };
 };
 

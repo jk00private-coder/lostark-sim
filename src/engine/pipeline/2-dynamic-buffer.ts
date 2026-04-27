@@ -50,6 +50,7 @@ export const isTargetMatch = (
   attackId    : AttackTypeId,
   resourceType: ResourceTypeId | undefined,
 ): boolean => {
+
   // skillIds 조건
   if (target.skillIds && !target.skillIds.includes(skillId)) return false;
 
@@ -70,6 +71,7 @@ export const isTargetMatch = (
     if (!target.resourceTypes.includes(resourceType)) return false;
   }
 
+  console.log('결과: 모든 조건 통과 (True)');
   return true;
 };
 

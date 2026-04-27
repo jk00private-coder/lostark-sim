@@ -14,7 +14,7 @@ export const ARK_GRID_EFFECT_RULES: Record<string, EffectEntry> = {
     value: [0.0003658, 0, 120],
   },
   '추가 피해': {
-    type: 'WEAPON_ATK_P',
+    type: 'ADD_DMG',
     isLinear: true,
     value: [0.000808, 0, 120],
   },

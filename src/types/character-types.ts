@@ -70,6 +70,7 @@ export interface CombatStatsDisplay {
   expertise: number;
   maxHp: number;
   attackPower: number;
+  baseAtkFromApi: number;
 }
 
 // ============================================================
