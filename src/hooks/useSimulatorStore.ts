@@ -40,6 +40,7 @@ import { GEM_DATA }        from '@/data/gems';
 import { CARD_DATA }       from '@/data/cards';
 import { ARK_PASSIVE_RULES } from '@/data/arc-passive/meta';
 import { getSkillMap, getArkGridMap, getArkPassiveNodeMap } from '@/data/_class-registry';
+import { ARK_GRID_EFFECT_RULES } from '@/data/arc-grid/meta';
 
 
 // ============================================================
@@ -53,7 +54,10 @@ const AVATAR_MAP    = new Map(AVATAR_DATA.map(a   => [a.id, a]));
 const GEM_MAP       = new Map(GEM_DATA.map(g      => [g.id, g]));
 const CARD_MAP      = new Map(CARD_DATA.map(c     => [c.id, c]));
 
-/** 퍼센트 기반 타입 정의 */
+/**
+ * 퍼센트 기반 타입 정의
+ * DB에 직접 추출하는 값이 아닌 display에서 추출한 값에만 사용
+ * */
 const getStandardValue = (type: EffectTypeId, value: number): number => {
   const percentageTypes = [
     'DMG_INC', 'EVO_DMG', 'ADD_DMG',
@@ -99,14 +103,6 @@ const STAT_MOD_FIELD_MAP: Record<string, keyof StatModifiers> = {
   STAT_HP_C   : 'hpC',
   STAT_HP_P   : 'hpP',
 };
-
-/** 아크그리드 effects는 id 없음 — label 텍스트 매핑 불가피 */
-const ARK_GRID_EFFECT_TYPE_MAP: Record<string, EffectTypeId> = {
-  '공격력'  : 'ATK_P',
-  '보스 피해': 'DMG_INC',
-  '추가 피해': 'ADD_DMG',
-};
-
 
 // ============================================================
 // effectLog 수집 (id 기반)
@@ -363,10 +359,12 @@ const collectEffectLogs = (
         dbEff.type,
         val,
         dbEff.subGroup,
-        dbEff.target
+        dbEff.target,
+        (db as any).special
       );
     });
   });
+
   const points = display.arkPassive?.points;
   (['evolution', 'insight', 'leap'] as const).forEach((key) => {
     const userPoint = points?.[key];
@@ -380,7 +378,8 @@ const collectEffectLogs = (
 
     const rank = level > 0 ? Math.min(6, Math.floor((level - 1) / 4) + 1) : 0;
     const rkVal = rk?.value?.slice(0, rank).reduce((s, v) => s + v, 0) ?? 0;
-    rank > 0 && rkVal !== 0 && push(`아크패시브:${key} ${rank}랭크 보너스`, rk!.type, rkVal, undefined, rk?.target);
+    const finalValue = Math.round(rkVal * 10000) / 10000;
+    rank > 0 && rkVal !== 0 && push(`아크패시브:${key} ${rank}랭크 보너스`, rk!.type, finalValue, undefined, rk?.target);
   });
 
   // ── 9. 아크그리드 ────────────────────────────────────────
@@ -413,18 +412,27 @@ const collectEffectLogs = (
           dbEff.type,
           value,
           dbEff.subGroup,
-          dbEff.target
+          dbEff.target,
+          (db as any).special
         );
       });
     });
   });
-  /**
-   * todo: 이런식으로 하면 시뮬단계에서 effect의 레벨을 수정할 수 없음. 아크그리드 effect의 DB 필요
-   */
+  
   display.arkGrid.effects.forEach(eff => {
-    const effectType = ARK_GRID_EFFECT_TYPE_MAP[eff.label];
-    if (effectType)
-      push(`아크그리드 ${eff.label}`, effectType, eff.value.value);
+    const rule = ARK_GRID_EFFECT_RULES[eff.label];
+    
+    if (rule && rule.value) {
+      const level = eff.level ?? 0;
+      const [step, , max] = rule.value; 
+      const safeLevel = Math.min(Math.max(level, 0), max);
+      const rawValue = safeLevel * step;
+      const finalValue = Math.round(rawValue * 10000) / 10000;
+
+      if (finalValue !== 0) {
+        push(`아크그리드 ${eff.label} Lv.${safeLevel}`, rule.type, finalValue);
+      }
+    }
   });
 
   return { pipelineLogs, statMods };

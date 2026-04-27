@@ -207,8 +207,9 @@ export type EffectEntry = {
   valueColor?: string;
   subGroup?  : string;
   target?    : EffectTarget;
+  isLinear?   : boolean;  // true - value:[step, min, max] 형태로 인식, step 간격으로 min~max 범위에서 수치 변동
 } & (
-  | { value: number[]; grades?: never; multiValues?: never; multiGrades?: never }
+  | { value: number[]; grades?: never; multiValues?: never; multiGrades?: never;}
   | { grades: OptionGrades; value?: never; multiValues?: never; multiGrades?: never }
   | { 
       multiValues: Partial<Record<MultiKey, number[]>>; 
