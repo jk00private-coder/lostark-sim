@@ -70,8 +70,7 @@ export const isTargetMatch = (
   if (target.resourceTypes && resourceType) {
     if (!target.resourceTypes.includes(resourceType)) return false;
   }
-
-  console.log('결과: 모든 조건 통과 (True)');
+  
   return true;
 };
 

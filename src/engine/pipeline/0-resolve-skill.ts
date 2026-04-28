@@ -193,7 +193,7 @@ export const resolveSkillMeta = (
   const addedSources = collectAddedSources(selectedTripods, attackId, level);
 
   // 기운 소모 개수 확정
-  const qiCost = resolveQiCost(skill, selectedTripods);
+  const cost = resolveQiCost(skill, selectedTripods);
 
   return {
     skillId     : skill.id,
@@ -202,7 +202,7 @@ export const resolveSkillMeta = (
     typeId,
     attackId,
     resourceType: skill.resource?.typeId as ResourceTypeId | undefined,
-    qiCost,
+    cost,
     sources     : [...baseSources, ...addedSources],
   };
 };

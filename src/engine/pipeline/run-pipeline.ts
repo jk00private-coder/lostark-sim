@@ -155,7 +155,7 @@ const buildSkillMetaDebug = (
   attackId      : meta.attackId,
   cooldown      : skillDb.cooldown,
   resourceType  : meta.resourceType,
-  qiCost        : meta.qiCost,
+  cost        : meta.cost,
   appliedTripods: selectedTripods.map(t => t.name),
   sources       : meta.sources.map(s => ({
     name       : s.name,

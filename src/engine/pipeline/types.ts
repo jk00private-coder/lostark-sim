@@ -69,7 +69,7 @@ export interface ResolvedSkillMeta {
   attackId    : AttackTypeId;
   resourceType: ResourceTypeId | undefined;
   /** 기운 소모 개수 (GK_QI_COST 기본값 + 트라이포드 보정) */
-  qiCost?     : number;
+  cost?     : number;
   /** 피해원 목록 (상수/계수 레벨별 확정) */
   sources     : ResolvedSource[];
 }
@@ -169,7 +169,7 @@ export interface SkillMetaDebug {
   attackId      : AttackTypeId;
   cooldown      : number;           // 원본 쿨타임 (트라이포드 적용 전)
   resourceType  : string | undefined;
-  qiCost        : number | undefined;
+  cost          : number | undefined;
   appliedTripods: string[];         // 적용된 트라이포드 이름 목록
   sources       : {
     name       : string;
