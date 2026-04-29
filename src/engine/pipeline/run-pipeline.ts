@@ -247,8 +247,7 @@ export const runPipeline = (
   }
 
   // ── 1단계: Static 버퍼 ────────────────────────────────────
-  const { staticBuffer, dynamicLogs, specialLogs } =
-    buildStaticBuffer(allEffectLogs);
+  const { staticBuffer, dynamicLogs, specialLogs } = buildStaticBuffer(allEffectLogs);
 
   // ── 1단계 디버그: buildStaticBuffer 완료 직후 스냅샷 ──────
   const step1Snapshot = snapshotBufferMap(staticBuffer);

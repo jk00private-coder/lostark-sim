@@ -7,7 +7,6 @@
 import { RawCharacterData } from '@/types/raw-types';
 import { MultiKey } from '@/types/sim-types';
 import {
-  ColoredText,
   ColoredValue,
   BaseDisplay,
   CharacterDisplayData,
@@ -27,9 +26,6 @@ import {
   ArkPassiveEffectDisplay,
   ArkGridDisplay,
   SkillDisplay,
-  SelectedTripodDisplay,
-  EquippedRuneDisplay,
-  ArkGridCoreDisplay, ArkGridEffectDisplay
 } from '@/types/character-types';
 
 import { COMBAT_EQUIP_DATA } from '@/data/equipment/combat-equip';
@@ -54,7 +50,6 @@ const stripHtml = (html: string): string =>
  */
 const normalizeColor = (color?: string): string | undefined => {
   if (!color) return undefined;
-  // 따옴표, # 기호 제거 후 대문자로 변환
   const cleanColor = color.replace(/['"#]/g, '').toUpperCase();
   return `#${cleanColor}`;
 };
@@ -83,28 +78,21 @@ const extractStr = (str: string, regex: RegExp): string => {
 
 /** 툴팁 단일 순회 스캐너 */
 const scanTooltipFeatures = (tooltip: Record<string, any>) => {
-  const features = {
-    advRaw: '', 
-    estherRaw: '', 
-    ellaRaw: '',   
-  };
-
+  const features = { advRaw: '', estherRaw: '', ellaRaw: '' };
   Object.keys(tooltip).forEach((key) => {
     const obj = tooltip[key];
     if (!obj) return;
 
     if (obj.type === 'SingleTextBox' && typeof obj.value === 'string') {
-      if (obj.value.includes('[상급 재련]')) {
-        features.advRaw = obj.value;
-      }
+      if (obj.value.includes('[상급 재련]')) features.advRaw = obj.value;
     }
 
     if (obj.type === 'IndentStringGroup' && obj.value?.Element_000) {
       const target = obj.value.Element_000;
       
       if (target.topStr?.includes('에스더 효과')) {
-        features.estherRaw = target.topStr; // "[실리안]" 추출용
-        features.ellaRaw = JSON.stringify(target.contentStr || {}); // "3 단계" 추출용
+        features.estherRaw = target.topStr;
+        features.ellaRaw = JSON.stringify(target.contentStr || {});
       }
     }
   });
@@ -149,24 +137,12 @@ export const createValueRange = (gradeData: any) => {
 
 /** API 등급명을 시스템 MultiKey로 변환 */
 export const GRADE_MAP: Record<string, MultiKey> = {
-  '희귀': 'RARE',
-  '영웅': 'HERO',
-  '전설': 'LEGEND',
-  '고대': 'ANCIENT',
-  '유물': 'RELIC',
-  '에스더': 'ESTHER',
+  '희귀': 'RARE', '영웅': 'HERO', '전설': 'LEGEND', '고대': 'ANCIENT', '유물': 'RELIC', '에스더': 'ESTHER',
 };
-export const getGradeKey = (gradeName: string): MultiKey => {
-  return GRADE_MAP[gradeName] || 'COMMON';
-};
+export const getGradeKey = (gradeName: string): MultiKey => GRADE_MAP[gradeName] || 'COMMON';
 
-/** Tooltip JSON 파싱 (안전 장치) */
 const parseTooltip = (tooltipStr: string): Record<string, any> => {
-  try { 
-    return JSON.parse(tooltipStr); 
-  } catch { 
-    return {}; 
-  }
+  try { return JSON.parse(tooltipStr); } catch { return {}; }
 };
 
 // ============================================================
@@ -207,38 +183,24 @@ const findEquipSetType = (itemName: string, ellaLv: number): MultiKey => {
 
 /** 연마효과 수치로 상/중/하 등급 판별 */
 const findPolishGrade = (values: ColoredValue[]): OptionGrade => {
-  // 1. 값이 없으면 기본값 반환
   if (!values || values.length === 0) return 'LOW';
-
-  // 2. 등급 가중치 정의
-  const gradeWeight: Record<OptionGrade, number> = {
-    'HIGH': 3,
-    'MID': 2,
-    'LOW': 1
-  };
-
-  // 3. 각 색상별 등급 판별 로직 (내부 헬퍼)
+  const gradeWeight: Record<OptionGrade, number> = { 'HIGH': 3, 'MID': 2, 'LOW': 1 };
   const getGradeByColor = (color?: string): OptionGrade => {
-    if (color === '#FE9600') return 'HIGH'; // 주황색 (상)
-    if (color === '#CE43FC') return 'MID';  // 보라색 (중)
-    if (color === '#00B5FF') return 'LOW';  // 하늘색 (하)
+    if (color === '#FE9600') return 'HIGH';
+    if (color === '#CE43FC') return 'MID';
+    if (color === '#00B5FF') return 'LOW';
     return 'LOW';
   };
-
-  // 4. 전체 values를 돌면서 가장 높은 등급의 가중치를 찾음
   let bestWeight = 0;
   let bestGrade: OptionGrade = 'LOW';
-
   for (const v of values) {
     const currentGrade = getGradeByColor(v.color);
     const currentWeight = gradeWeight[currentGrade];
-
     if (currentWeight > bestWeight) {
       bestWeight = currentWeight;
       bestGrade = currentGrade;
     }
   }
-
   return bestGrade;
 };
 
@@ -272,10 +234,8 @@ export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay 
   const statsMap = Object.fromEntries(
     raw.profile.Stats.map(s => [s.Type, parseInt(s.Value.replace(/,/g, ''))])
   );
-
   const atkStat = raw.profile.Stats.find(s => s.Type === '공격력');
   const baseAtkFromApi = extractNum(atkStat?.Tooltip?.[1] ?? '');
-  console.log(`[SYSTEM] 역산용 기본 공격력 포착: ${baseAtkFromApi}`);
 
   return {
     critical      : statsMap['치명']        ?? 0,
@@ -286,15 +246,14 @@ export const normalizeCombatStats = (raw: RawCharacterData): CombatStatsDisplay 
     expertise     : statsMap['숙련']        ?? 0,
     maxHp         : statsMap['최대 생명력'] ?? 0,
     attackPower   : statsMap['공격력']      ?? 0,
-    baseAtkFromApi, // API tooltip에서 역산한 기본 공격력 수치 추가
+    baseAtkFromApi,
   };
 };
 
 // ── 전투 장비 ────────────────────────────────────────────────
 export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] => {
   const equipTypes = ['무기', '투구', '상의', '하의', '장갑', '어깨'];
-
-  const result = raw.equipment
+  return raw.equipment
     .filter(eq => equipTypes.includes(eq.Type))
     .map(eq => {
       const tooltip = parseTooltip(eq.Tooltip);
@@ -302,16 +261,13 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
       const features = scanTooltipFeatures(tooltip);
       const dbMatch = COMBAT_EQUIP_DATA.find(item => item.name === eq.Type);
 
-      // 에스더 전용 데이터 먼저 추출
       let estherName = '';
       let ellaLv = 0;
-
       if (eq.Grade === '에스더') {
         estherName = extractStr(features.estherRaw, /\[(.*?)\]/) || '';
         ellaLv = extractNum(features.ellaRaw, /(\d+)\s*단계/) || 0;
       }
 
-      // 기본 데이터 구조
       const displayData: EquipmentDisplay = {
         id: dbMatch?.id || 0,
         name: dbMatch?.name || eq.Type,
@@ -330,19 +286,14 @@ export const normalizeEquipment = (raw: RawCharacterData): EquipmentDisplay[] =>
         displayData.estherName = estherName;
         displayData.ellaLv = ellaLv;
       }
-
       return displayData;
     });
-  console.log("--- normalizeEquipment ---");
-  console.table(result);
-  return result;
 };
 
 // ── 악세서리 ────────────────────────────────────────────────
 export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] => {
   const accTypes = ['목걸이', '귀걸이', '반지'];
-
-  const result = raw.equipment
+  return raw.equipment
     .filter(eq => accTypes.includes(eq.Type))
     .map(eq => {
       const tooltip = parseTooltip(eq.Tooltip);
@@ -350,182 +301,104 @@ export const normalizeAccessories = (raw: RawCharacterData): AccessoryDisplay[] 
       const itemTier = extractNum(titleEl.leftStr2 ?? '', /티어\s*(\d+)/);
       const currentType = eq.Type;
       const currentGradeKey = getGradeKey(eq.Grade);
-
       const effects: BaseDisplay[] = [];
       let mainStatProcessed = false;
 
-      const findFromDb = (label: string, isPercent: boolean) => {
-        return ACCESSORY_DB.find(d => 
-          d.tier === itemTier && 
-          d.type === currentType && 
-          d.label === label &&
-          (d.name.includes('%') === isPercent)
-        );
-      };
+      const findFromDb = (label: string, isPercent: boolean) => 
+        ACCESSORY_DB.find(d => d.tier === itemTier && d.type === currentType && d.label === label && (d.name.includes('%') === isPercent));
 
-      // 1) 기본 효과 파싱
       const basePart = tooltip['Element_004']?.value;
       if (basePart?.Element_001) {
-        const lines = basePart.Element_001.split(/<BR\s*\/?>/i);
-        lines.forEach((line: string) => {
+        basePart.Element_001.split(/<BR\s*\/?>/i).forEach((line: string) => {
           const clean = stripHtml(line);
           const m = clean.match(/(힘|민첩|지능|체력)\s*\+(\d+)/);
           if (!m) return;
-
           let label = m[1];
-          if (label === '힘' || label === '민첩' || label === '지능') {
+          if (['힘', '민첩', '지능'].includes(label)) {
             if (mainStatProcessed) return;
-            label = '힘';
-            mainStatProcessed = true;
+            label = '힘'; mainStatProcessed = true;
           }
-
           const db = findFromDb(label, false);
-          const effectDb = db?.effects?.[0]; 
-          const gradeData = effectDb?.multiGrades?.[currentGradeKey];
-
+          const gradeData = db?.effects?.[0]?.multiGrades?.[currentGradeKey];
           effects.push({
-            id: db?.id ?? 0,
-            name: db?.name || label,
-            label: label,
-            isDb: !!db,
-            values: [{ value: parseInt(m[2]) ?? 0, color: '' }],  
+            id: db?.id ?? 0, name: db?.name || label, label: label, isDb: !!db,
+            values: [{ value: parseInt(m[2]) ?? 0, color: '' }],
             valueRange: createValueRange(gradeData),
           });
         });
       }
 
-      // 2) 연마 효과 파싱
       const polishPart = tooltip['Element_006']?.value;
       if (polishPart?.Element_001) {
-        const lines = polishPart.Element_001.split(/<br\s*\/?>/i);
-        lines.forEach((line: string) => {
+        polishPart.Element_001.split(/<br\s*\/?>/i).forEach((line: string) => {
           const clean = stripHtml(line);
           const labelM = clean.match(/^([가-힣\s]+)/);
           if (!labelM) return;
-
           const labelText = labelM[1].trim();
           const cv = extractColoredValues(line);
-
           if (cv.length === 0) return;
-
-          const isPercent = line.includes('%');
-          const db = findFromDb(labelText, isPercent);
-
+          const db = findFromDb(labelText, line.includes('%'));
           if (db) {
             effects.push({
-              id: db.id,
-              name: db.name,
-              label: labelText,
-              isDb: true,
-              values: cv,
-              opGrade: findPolishGrade(cv),
+              id: db.id, name: db.name, label: labelText, isDb: true,
+              values: cv, opGrade: findPolishGrade(cv),
             });
           }
         });
       }
 
       return {
-        id: 0, 
-        name: eq.Name,
-        label: eq.Name,
-        isDb: true,
-        icon: eq.Icon,
-        quality: titleEl.qualityValue ?? 0,
-        tier: itemTier,
-        type: currentType,
-        eqGrade: currentGradeKey,
-        effects,
+        id: 0, name: eq.Name, label: eq.Name, isDb: true, icon: eq.Icon,
+        quality: titleEl.qualityValue ?? 0, tier: itemTier, type: currentType,
+        eqGrade: currentGradeKey, effects,
       };
     });
-  console.log("--- accessoryEquipment ---");
-  console.table(result);
-
-  return result;
 };
 
 // ── 팔찌 ────────────────────────────────────────────────────
 export const normalizeBracelet = (raw: RawCharacterData): BraceletDisplay | null => {
   const bracelet = raw.equipment.find(eq => eq.Type === '팔찌');
   if (!bracelet) return null;
-
   const tooltip = parseTooltip(bracelet.Tooltip);
   const effectStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
   const currentGradeKey = getGradeKey(bracelet.Grade);
-
   const rawChunks = effectStr.split(/<img[^>]*>/).filter(c => c.trim());
 
   const effects: BaseDisplay[] = rawChunks.map(chunk => {
     const cleanLine = stripHtml(chunk.replace(/<br\s*\/?>/gi, ' ')).trim();
-    
-    // 1. 라벨 추출 및 주스탯 치환
     const labelMatch = cleanLine.match(/^[^+\d%]+/);
     let labelText = labelMatch ? labelMatch[0].trim() : cleanLine;
-
     if (['힘', '민첩', '지능'].includes(labelText)) labelText = '주스탯';
 
-    // 2. 수치 추출 (ColoredValue 배열로 생성)
-    const values: ColoredValue[] = [];
-    const colorMatches = chunk.matchAll(/<FONT COLOR='([^']+)'>([^<]+)<\/FONT>/gi);
-    for (const m of colorMatches) {
-      values.push({
-        color: normalizeColor(m[1]) || '',
-        value: parseFloat(m[2].replace(/[+%]/g, ''))
-      });
-    }
-
-    // 3. 매칭 로직
-    const filteredDb = BRACELET_DB.filter((d): d is typeof d & { label: string } => {
+    const values = extractColoredValues(chunk);
+    const db = BRACELET_DB.filter(d => {
       if (!d.label) return false;
       if (d.label === '주스탯') return labelText === '주스탯';
+      return cleanLine.replace(/\s+/g, '').includes(d.label.replace(/\s+/g, ''));
+    }).sort((a, b) => (b.label?.length || 0) - (a.label?.length || 0))[0];
 
-      const cleanDbLabel = d.label.replace(/\s+/g, '');
-      const cleanTargetLine = cleanLine.replace(/\s+/g, '');
-      return cleanTargetLine.includes(cleanDbLabel);
-    });
-
-    const db = filteredDb.sort((a, b) => {
-      if (b.label.length !== a.label.length) {
-        return b.label.length - a.label.length;
-      }
-      return cleanLine.indexOf(a.label) - cleanLine.indexOf(b.label);
-    })[0];
-
-    const effectDb = db?.effects?.[0];
-    const gradeData = effectDb?.multiGrades?.[currentGradeKey];
+    const gradeData = db?.effects?.[0]?.multiGrades?.[currentGradeKey];
     const showRange = db?.category === 'BASE' || db?.category === 'COMBAT';
 
     return {
-      id: db?.id ?? 0,
-      name: db?.name || labelText,
-      label: db?.label || labelText,
-      isDb: !!db,
-      values: values, 
-      valueRange: showRange ? createValueRange(gradeData) : undefined,
-      eqGrade: currentGradeKey,
-      opGrade: findPolishGrade(values),
+      id: db?.id ?? 0, name: db?.name || labelText, label: db?.label || labelText, isDb: !!db,
+      values: values, valueRange: showRange ? createValueRange(gradeData) : undefined,
+      eqGrade: currentGradeKey, opGrade: findPolishGrade(values),
     };
   });
 
-  const result: BraceletDisplay = {
-    id: 0,
-    name: stripHtml(tooltip['Element_000']?.value ?? bracelet.Name),
+  return {
+    id: 0, name: stripHtml(tooltip['Element_000']?.value ?? bracelet.Name),
     label: stripHtml(tooltip['Element_000']?.value ?? bracelet.Name),
-    isDb: true,
-    icon: bracelet.Icon,
+    isDb: true, icon: bracelet.Icon,
     itemTier: extractNum(tooltip['Element_001']?.value?.leftStr2 ?? '', /티어\s*(\d+)/) || 4,
-    eqGrade: currentGradeKey,
-    effects,
+    eqGrade: currentGradeKey, effects,
   };
-
-  console.log("--- bracelet ---", result);
-  return result;
 };
 
-// ── 어빌리티 스톤 ────────────────────────────────────────────
 export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDisplay | null => {
   const stone = raw.equipment.find(eq => eq.Type === '어빌리티 스톤');
   if (!stone) return null;
-
   const tooltip = parseTooltip(stone.Tooltip);
   const engravingGroup = tooltip['Element_007']?.value?.Element_000?.contentStr ?? {};
   const engravings: AbilityStoneDisplay['engravings'] = [];
@@ -534,388 +407,135 @@ export const normalizeAbilityStone = (raw: RawCharacterData): AbilityStoneDispla
 
   Object.values(engravingGroup).forEach((item: any) => {
     const content: string = item?.contentStr ?? '';
-    
-    if (content.includes('기본 공격력')) {
-      baseAtkBonus = extractPercent(content);
-      return;
-    }
-
-    // [각인 이름 추출]
-    const clean = stripHtml(content);
-    const m = clean.match(/\[([^\]]+)\]\s*Lv\.(\d+)/);
+    if (content.includes('기본 공격력')) { baseAtkBonus = extractPercent(content); return; }
+    const m = stripHtml(content).match(/\[([^\]]+)\]\s*Lv\.(\d+)/);
     if (!m) return;
-
     const labelName = m[1];
-    const levelValue = parseInt(m[2]);
     const cvs = extractColoredValues(content);
     const db = ENGRAVINGS_DB.find(d => d.name === labelName);
-
-    // 데이터 조립 (UI용)
-    const engravingData = {
-      id: db?.id ?? 0,
-      isDb: !!db,
-      name: { 
-        text: db?.name || labelName, 
-        color: cvs[0]?.color || '' 
-      },
-      level: { 
-        value: levelValue, 
-        color: '' 
-      },
+    const data = {
+      id: db?.id ?? 0, isDb: !!db,
+      name: { text: db?.name || labelName, color: cvs[0]?.color || '' },
+      level: { value: parseInt(m[2]), color: '' },
     };
-
-    // [페널티 판별] 빨간색이면 penalty로, 아니면 engravings로
-    if (engravingData.name.color.toUpperCase() === '#FE2E2E') {
-      penalty = engravingData;
-    } else {
-      engravings.push(engravingData);
-    }
+    if (data.name.color.toUpperCase() === '#FE2E2E') penalty = data;
+    else engravings.push(data);
   });
 
-  const result: AbilityStoneDisplay = {
-    id: 0,
-    name: stone.Name,
-    label: stone.Name,
-    isDb: true,
-    icon: stone.Icon,
-    eqGrade: getGradeKey(stone.Grade), // 기존 공통함수
-    baseAtkBonus,
-    engravings,
-    penalty,
-  };
-
-  console.log("--- AbilityStone Result ---", result);
-  return result;
+  return { id: 0, name: stone.Name, label: stone.Name, isDb: true, icon: stone.Icon, eqGrade: getGradeKey(stone.Grade), baseAtkBonus, engravings, penalty };
 };
 
-// ── 보주 ────────────────────────────────────────────
 export const normalizeBoJu = (raw: RawCharacterData): BoJuDisplay | null => {
   const boju = raw.equipment.find(eq => eq.Type === '보주');
   if (!boju) return null;
-
   const tooltip = parseTooltip(boju.Tooltip);
   const effectStr: string = tooltip['Element_004']?.value?.Element_001 ?? '';
   const seasonM = effectStr.match(/시즌(\d+)\s*달성\s*최대\s*낙원력\s*:\s*([\d,]+)/);
-
-  const result: BoJuDisplay = {
-    id: 0,
-    name: boju.Name,
-    label: boju.Name,
-    isDb: false,
-    icon: boju.Icon,
-    eqGrade: getGradeKey(boju.Grade),
-    seasonLabel: seasonM ? `시즌 ${seasonM[1]}` : '',
-    paradoxPower: seasonM ? parseInt(seasonM[2].replace(/,/g, '')) : 0,
-  };
-
-  console.log("--- BoJu Result ---", result);
-  return result;
+  return { id: 0, name: boju.Name, label: boju.Name, isDb: false, icon: boju.Icon, eqGrade: getGradeKey(boju.Grade), seasonLabel: seasonM ? `시즌 ${seasonM[1]}` : '', paradoxPower: seasonM ? parseInt(seasonM[2].replace(/,/g, '')) : 0 };
 };
 
-// ── 아바타 ──────────────────────────────────────────────────
 export const normalizeAvatars = (raw: RawCharacterData): AvatarDisplay[] => {
   const targetTypes = ['무기 아바타', '머리 아바타', '상의 아바타', '하의 아바타'];
-
-  // 1. 우선순위를 고려하여 부위별로 '하나의' 아바타만 선택
-  const dbMatch = AVATAR_DATA[0];
   const representativeAvatars = raw.avatars
     .filter(av => targetTypes.includes(av.Type))
     .reduce((acc: any[], current) => {
-      // 이미 같은 부위(Type)가 등록되어 있는지 확인
-      const existingIdx = acc.findIndex(a => a.Type === current.Type);
-
-      if (existingIdx > -1) {
-        // 이미 있다면: 현재 아바타가 IsInner인 경우에만 교체 (능력치 아바타 우선)
-        if (current.IsInner) {
-          acc[existingIdx] = current;
-        }
-      } else {
-        // 없다면: 일단 추가
-        acc.push(current);
-      }
+      const idx = acc.findIndex(a => a.Type === current.Type);
+      if (idx > -1) { if (current.IsInner) acc[idx] = current; }
+      else acc.push(current);
       return acc;
     }, []);
 
-  // 2. 선택된 아바타들만 가지고 최종 배열 생성 (전투장비와 동일한 map 구조)
-  const result = representativeAvatars.map(av => {
+  return representativeAvatars.map(av => {
     const tooltip = parseTooltip(av.Tooltip);
     const bonusStr: string = tooltip['Element_005']?.value?.Element_001 ?? '';
-    const mainStatBonus = bonusStr.includes('%') ? extractNum(bonusStr) : 0;
-    
-    return {
-      id: dbMatch.id,
-      name: av.Name,
-      label: av.Name,
-      isDb: !!dbMatch,
-      icon: av.Icon,
-      eqGrade: getGradeKey(av.Grade),
-      values: [{ value: mainStatBonus, color: '' }],
-    };
+    return { id: AVATAR_DATA[0].id, name: av.Name, label: av.Name, isDb: true, icon: av.Icon, eqGrade: getGradeKey(av.Grade), values: [{ value: bonusStr.includes('%') ? extractNum(bonusStr) : 0, color: '' }] };
   });
-
-  console.log("--- [DEBUG] Avatar Result List ---");
-  console.table(result);
-
-  return result;
 };
 
-// ── 각인 ────────────────────────────────────────────────────
 export const normalizeEngravings = (raw: RawCharacterData): EngravingDisplay[] => {
-  const arkEngravings = raw.engravings?.ArkPassiveEffects ?? [];
-  const result: EngravingDisplay[] = arkEngravings.map(eff => {
+  return (raw.engravings?.ArkPassiveEffects ?? []).map(eff => {
     const dbMatch = ENGRAVINGS_DB.find(d => (d.label || d.name) === eff.Name);
-    return {
-      id: dbMatch?.id ?? 0,
-      name: eff.Name,
-      label: eff.Name, 
-      isDb: !!dbMatch,
-      icon: dbMatch?.iconPath || '',
-      eqGrade: getGradeKey(eff.Grade),
-      level: eff.Level,
-      abilityStoneLevel: eff.AbilityStoneLevel || 0,
-    };
+    return { id: dbMatch?.id ?? 0, name: eff.Name, label: eff.Name, isDb: !!dbMatch, icon: dbMatch?.iconPath || '', eqGrade: getGradeKey(eff.Grade), level: eff.Level, abilityStoneLevel: eff.AbilityStoneLevel || 0 };
   });
-
-  console.log("--- [DEBUG] Engraving Final Result ---");
-  console.table(result);
-  return result;
 };
 
-// ── 보석 ────────────────────────────────────────────────────
 export const normalizeGems = (raw: RawCharacterData): GemDisplay[] => {
   const gemMap = Object.fromEntries(raw.gems.Gems.map(g => [g.Slot, g]));
-  
-  const gems: GemDisplay[] = raw.gems.Effects.Skills.map(skill => {
+  return raw.gems.Effects.Skills.map(skill => {
     const gem = gemMap[skill.GemSlot];
     const rawDesc = skill.Description[0] ?? '';
     const isDmg = rawDesc.includes('피해');
-    
-    const gemName = stripHtml(gem?.Name || ''); 
-    const pureName = gemName.replace(/^\d+레벨\s+/, ''); 
-    const effectType: GemDisplay['effectType'] = isDmg ? '피해 증가' : '쿨타임 감소';
-
+    const pureName = stripHtml(gem?.Name || '').replace(/^\d+레벨\s+/, '');
     let matchLabel = pureName;
-    if (pureName === "광휘의 보석 (귀속)" || "광휘의 보석") {
-      matchLabel = isDmg ? "겁화의 보석" : "작열의 보석";
-    }
+    if (pureName.includes("광휘의 보석")) matchLabel = isDmg ? "겁화의 보석" : "작열의 보석";
     const dbMatch = GEM_DATA.find(d => (d.label || d.name) === matchLabel);
-    return {
-      id: dbMatch?.id ?? 0,
-      name: gemName,
-      label: matchLabel,
-      values: [{value: extractNum(rawDesc), color: '' }],
-      isDb: !!dbMatch,
-      icon: gem?.Icon || skill.Icon,
-      eqGrade: getGradeKey(gem?.Grade ?? ''),
-      level: gem?.Level ?? 0,
-      skillName: skill.Name,
-      effectType,
-      baseAtkBonus: extractNum(skill.Option || ''),
-    };
+    return { id: dbMatch?.id ?? 0, name: stripHtml(gem?.Name || ''), label: matchLabel, values: [{value: extractNum(rawDesc), color: '' }], isDb: !!dbMatch, icon: gem?.Icon || skill.Icon, eqGrade: getGradeKey(gem?.Grade ?? ''), level: gem?.Level ?? 0, skillName: skill.Name, effectType: isDmg ? '피해 증가' : '쿨타임 감소', baseAtkBonus: extractNum(skill.Option || '') };
   });
-
-  console.log("--- normalizeGems ---", gems);
-  return gems;
 };
 
-// ── 카드 ────────────────────────────────────────────────────
 export const normalizeCards = (raw: RawCharacterData): CardSetDisplay | null => {
   if (!raw.cards.Effects?.length) return null;
-
-  const effect = raw.cards.Effects[0];
-  const items = effect.Items;
-  if (!items.length) return null;
-  const lastItem = items[items.length - 1];
-  const dbMatch = CARD_DATA[0];
-
-  const setName = lastItem.Name
-    .replace(/\s*\d+세트/, '')
-    .replace(/\s*\((\d+)각성합계\)/, ' $1각')
-    .trim();
-
-  const result: CardSetDisplay = {
-    id: dbMatch?.id ?? 0,
-    label: lastItem.Name,
-    name: setName,
-    isDb: !!dbMatch,
-    level: parseInt(setName.replace(/[^0-9]/g, '')) || 0,
-  };
-  console.log("--- [DEBUG] normalizeCards Result ---", result);
-  return result;
+  const lastItem = raw.cards.Effects[0].Items.slice(-1)[0];
+  if (!lastItem) return null;
+  const setName = lastItem.Name.replace(/\s*\d+세트/, '').replace(/\s*\((\d+)각성합계\)/, ' $1각').trim();
+  return { id: CARD_DATA[0]?.id ?? 0, label: lastItem.Name, name: setName, isDb: true, level: parseInt(setName.replace(/[^0-9]/g, '')) || 0 };
 };
 
-// ── 아크패시브 ───────────────────────────────────────────────
 export const normalizeArkPassive = (raw: RawCharacterData, jobName: string) => {
   const p = raw.arkPassive;
   if (!p) return null;
-
-  // 포인트 레벨 파싱 (Description에서 숫자만)
   const getPointLevel = (name: string) => {
     const found = p.Points.find(pt => pt.Name === name);
-    if (!found) return { level: 0, description: '' };
-    const levelMatch = found.Description.match(/(\d+)레벨/);
-    return {
-      level: levelMatch ? parseInt(levelMatch[1]) : 0,
-      description: '', 
-    };
+    const m = found?.Description.match(/(\d+)레벨/);
+    return { level: m ? parseInt(m[1]) : 0, description: '' };
   };
-
-  const points: ArkPassivePointDisplay = {
-    evolution: getPointLevel('진화'),
-    insight: getPointLevel('깨달음'),
-    leap: getPointLevel('도약'),
-    title: p.Title,
-  };
-
+  const points: ArkPassivePointDisplay = { evolution: getPointLevel('진화'), insight: getPointLevel('깨달음'), leap: getPointLevel('도약'), title: p.Title };
   const PATTERN = /(진화|깨달음|도약)\s+(\d+)티어\s+(.+?)\s+Lv\.(\d+)/;
-
   const effects: ArkPassiveEffectDisplay[] = p.Effects.map(eff => {
-    const cleanDesc = stripHtml(eff.Description);
-    const m = cleanDesc.match(PATTERN);
-    const categoryName = m ? m[1] : eff.Name;
-    const tier = m ? parseInt(m[2]) : 0;
-    const nodeName = m ? m[3] : eff.Name;
-    const level = m ? parseInt(m[4]) : 0;
-    const ttJson = parseTooltip(eff.ToolTip);
-    const descRaw: string = ttJson['Element_002']?.value ?? '';
-    const finalDesc = stripHtml(descRaw.split('||')[0]).trim();
-    const dbMatch = findArkPassiveNode(categoryName, nodeName, jobName);
-
-    return {
-      id: dbMatch?.id ?? 0,
-      label: nodeName, 
-      name: nodeName,
-      isDb: !!dbMatch,
-      icon: eff.Icon,
-      category: { 
-        text: categoryName, 
-        color: ARK_PASSIVE_COLORS[categoryName] || '#ffffff' 
-      },
-      tier,
-      level,
-      description: finalDesc,
-    };
+    const m = stripHtml(eff.Description).match(PATTERN);
+    const cat = m ? m[1] : eff.Name;
+    const node = m ? m[3] : eff.Name;
+    const dbMatch = findArkPassiveNode(cat, node, jobName);
+    return { id: dbMatch?.id ?? 0, label: node, name: node, isDb: !!dbMatch, icon: eff.Icon, category: { text: cat, color: ARK_PASSIVE_COLORS[cat] || '#ffffff' }, tier: m ? parseInt(m[2]) : 0, level: m ? parseInt(m[4]) : 0, description: stripHtml((parseTooltip(eff.ToolTip)['Element_002']?.value ?? '').split('||')[0]).trim() };
   });
-
-  const result = { points, effects };
-  console.log("--- [DEBUG] normalizeArkPassive Result ---");
-  console.log(result);
-  return result;
+  return { points, effects };
 };
 
-// ── 아크그리드 ───────────────────────────────────────────────
 export const normalizeArkGrid = (raw: RawCharacterData, jobName: string): ArkGridDisplay => {
   const g = raw.arkGrid;
-  const cores: ArkGridCoreDisplay[] = g.Slots.map(slot => {
-    const dbMatch = findArkGridCore(jobName, slot.Name);
-    return {
-      id: dbMatch?.id ?? 0,
-      label: slot.Name,
-      name: dbMatch?.name || slot.Name,
-      isDb: !!dbMatch,
-      icon: slot.Icon,
-      eqGrade: getGradeKey(slot.Grade),
-      point: slot.Point,
-    };
-  });
-
-  const effects: ArkGridEffectDisplay[] = g.Effects.map(eff => {
-    const tooltipValue = extractPercent(eff.Tooltip);
-    const tooltipColor = extractColor(eff.Tooltip);
-
-    return {
-      label: eff.Name,
-      level: eff.Level,
-      value: { value: tooltipValue, color: tooltipColor },
-    };
-  });
-
-  const result = { cores, effects };
-  console.log(`--- [DEBUG] normalizeArkGrid (${jobName}) ---`);
-  console.log(result);
-  return result;
+  return {
+    cores: g.Slots.map(slot => {
+      const dbMatch = findArkGridCore(jobName, slot.Name);
+      return { id: dbMatch?.id ?? 0, label: slot.Name, name: dbMatch?.name || slot.Name, isDb: !!dbMatch, icon: slot.Icon, eqGrade: getGradeKey(slot.Grade), point: slot.Point };
+    }),
+    effects: g.Effects.map(eff => ({ label: eff.Name, level: eff.Level, value: { value: extractPercent(eff.Tooltip), color: extractColor(eff.Tooltip) } }))
+  };
 };
 
-// ── 스킬 ────────────────────────────────────────────────────
 export const normalizeSkills = (raw: RawCharacterData, jobName: string): SkillDisplay[] => {
-  const gemSkillNames = raw.gems.Effects.Skills.map(s => s.Name); // 보석이 박힌 스킬 이름들 (필터링 조건용)
+  const gemSkillNames = raw.gems.Effects.Skills.map(s => s.Name);
   const activeTitle = raw.arkPassive?.Title || '';
-  const isSkillUsed = (skill: typeof raw.skills[0]): boolean => {
-    const dbMatch = findSkillByName(jobName, skill.Name);
-    /**
-     * todo: 도약 2티어 노드로 조건을 변경해서 고도화해야함,
-     *       데빌헌터같은 경우는 초각성스킬이 3개라서 title로는 구분 불가능
-     */
-    if (dbMatch?.requiredTitle) {
-      // 캐릭터의 아크 패시브 Title과 DB의 요구 Title이 다르면 미사용 스킬로 간주
-      if (activeTitle !== dbMatch.requiredTitle) return false;
-    }
-    if (skill.SkillType === 100 || skill.SkillType === 101 || skill.SkillType === 1) return true;
-    if (skill.Level >= 4 || skill.Rune !== null) return true;
-    return gemSkillNames.some(
-      name => skill.Name.includes(name) || name.includes(skill.Name)
-    );
+  const isUsed = (s: any) => {
+    const db = findSkillByName(jobName, s.Name);
+    if (db?.requiredTitle && activeTitle !== db.requiredTitle) return false;
+    if ([100, 101, 1].includes(s.SkillType) || s.Level >= 4 || s.Rune !== null) return true;
+    return gemSkillNames.some(n => s.Name.includes(n) || n.includes(s.Name));
   };
 
-  const skills: SkillDisplay[] = raw.skills.filter(isSkillUsed).map(skill => {
+  return raw.skills.filter(isUsed).map(skill => {
     const dbMatch = findSkillByName(jobName, skill.Name);
-    const tooltip = parseTooltip(skill.Tooltip);
-    const titleEl = tooltip['Element_001']?.value ?? {};
-    const rawLevelText = titleEl.level || ''; 
-    const cleanLevelText = rawLevelText.replace(/<[^>]*>/g, '').trim(); // 태그 제거 및 공백 제거
-    
-    let categoryText = '일반';
-    if (cleanLevelText) {
-      const categoryM = cleanLevelText.match(/\[([^\]]+)\]/);
-      // 대괄호가 있으면 그 안의 내용을, 없으면 텍스트 전체(각성기 등)를 사용
-      categoryText = categoryM ? categoryM[1] : cleanLevelText;
-    }
-
-    const selectedTripods: SelectedTripodDisplay[] = skill.Tripods
-      .filter(t => t.IsSelected)
-      .map(t => {
-        const tripodDbMatch = dbMatch?.tripods?.find(td => td.label || td.name === t.Name);
-
-        return {
-          // BaseDisplay 필드
-          id: tripodDbMatch?.id ?? 0,
-          label: t.Name,
-          name: tripodDbMatch?.name || t.Name,
-          icon: t.Icon,
-          isDb: !!tripodDbMatch,
-          tier: tripodDbMatch?.tier || t.Tier,
-          slot: tripodDbMatch?.slot || t.Slot,
-        };
-      });
-
-    const rune: EquippedRuneDisplay | null = skill.Rune ? {
-      id: 0,
-      label: skill.Rune.Name,
-      name: skill.Rune.Name,
-      eqGrade: getGradeKey(skill.Rune.Grade),
-      icon: skill.Rune.Icon,
-      isDb: false,
-    } : null;
-
+    const catRaw = stripHtml(parseTooltip(skill.Tooltip)['Element_001']?.value?.level || '');
+    const catText = catRaw.match(/\[([^\]]+)\]/)?.[1] || catRaw || '일반';
     return {
-      id: dbMatch?.id ?? 0,
-      label: skill.Name,
-      name: dbMatch?.name || skill.Name,
-      icon: skill.Icon,
-      isDb: !!dbMatch,
-      
-      level: skill.Level,
-      category: { 
-        text: categoryText, 
-        color: SKILL_CATEGORY_COLORS[categoryText] || '#ffffff' 
-      },
-      selectedTripods,
-      rune: rune as EquippedRuneDisplay,
+      id: dbMatch?.id ?? 0, label: skill.Name, name: dbMatch?.name || skill.Name, icon: skill.Icon, isDb: !!dbMatch, level: skill.Level,
+      category: { text: catText, color: SKILL_CATEGORY_COLORS[catText] || '#ffffff' },
+      selectedTripods: skill.Tripods.filter(t => t.IsSelected).map(t => {
+        const tdb = dbMatch?.tripods?.find(td => td.label === t.Name || td.name === t.Name);
+        return { id: tdb?.id ?? 0, label: t.Name, name: tdb?.name || t.Name, icon: t.Icon, isDb: !!tdb, tier: tdb?.tier || t.Tier, slot: tdb?.slot || t.Slot };
+      }),
+      rune: skill.Rune ? { id: 0, label: skill.Rune.Name, name: skill.Rune.Name, eqGrade: getGradeKey(skill.Rune.Grade), icon: skill.Rune.Icon, isDb: false } : null as any
     };
   });
-  console.log(`--- [DEBUG] normalizeSkills (${jobName}) ---`);
-  console.log(skills);
-  return skills;
 };
 
 // ============================================================
@@ -924,7 +544,8 @@ export const normalizeSkills = (raw: RawCharacterData, jobName: string): SkillDi
 
 export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData => {
   const jobName = raw.profile.CharacterClassName;
-  return {
+  
+  const data: CharacterDisplayData = {
     profile     : normalizeProfile(raw),
     combatStats : normalizeCombatStats(raw),
     equipment   : normalizeEquipment(raw),
@@ -940,4 +561,74 @@ export const normalizeCharacter = (raw: RawCharacterData): CharacterDisplayData 
     arkGrid     : normalizeArkGrid(raw, jobName),
     skills      : normalizeSkills(raw, jobName),
   };
+
+  // 통합 디버그 출력
+  console.group(`🚀 [전체 데이터 상세 리포트] ${data.profile.name} (${jobName})`);
+    
+    console.groupCollapsed("🛡️ 전투 장비");
+      console.table(data.equipment);
+    console.groupEnd();
+
+    console.groupCollapsed("💍 악세서리 상세 연마 수치");
+      const accessoryDetails = data.accessories.flatMap(acc => 
+        acc.effects.map(eff => ({
+          ID: eff.id,
+          부위: acc.type,
+          장비명: acc.name,
+          효과명: eff.label,
+          등급: acc.eqGrade,
+          연마등급: eff.opGrade,
+          수치: eff.values?.map(v => v.value).join(', ')
+        }))
+      );
+      console.table(accessoryDetails);
+    console.groupEnd();
+
+    console.groupCollapsed("💎 보석 세부 수치");
+      console.table(data.gems.map(g => ({
+        ...g,
+        values: g.values?.[0].value,
+      })));
+    console.groupEnd();
+    
+    console.groupCollapsed("🗡️ 스킬 및 트라이포드 설정");
+      const skillSummary = data.skills.map(s => ({
+        ID: s.id,
+        스킬명: s.name,
+        레벨: s.level,
+        분류: s.category.text,
+        트라이포드: s.selectedTripods.length > 0 
+          ? s.selectedTripods
+              .sort((a, b) => a.tier - b.tier)
+              .map(t => `${t.name}${t.isDb ? '✅' : '❌'}`)
+              .join(', ') 
+          : '없음',
+        룬: s.rune?.name || '-'
+      }));
+      console.table(skillSummary);
+    console.groupEnd();
+
+    console.groupCollapsed("⚡ 아크 패시브 & 그리드");
+      if (data.arkPassive) {
+        const p = data.arkPassive.points;
+        console.table([{
+          제목: p.title,
+          "진화 Lv": p.evolution.level,
+          "깨달음 Lv": p.insight.level,
+          "도약 Lv": p.leap.level
+        }]);
+        console.table(data.arkPassive.effects.map(e => ({
+          ...e,
+          category: e.category.text
+        })));
+      }
+      console.table(data.arkGrid.cores);
+    console.groupEnd();
+
+    console.log("🛠️ 최종 정규화 객체:", data);
+    console.log("📦 원본 Raw 데이터:", raw);
+
+  console.groupEnd();
+
+  return data;
 };
