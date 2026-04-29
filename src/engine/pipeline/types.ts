@@ -20,6 +20,7 @@ import {
   DamageModifiers,
   EffectTarget,
 } from '@/types/sim-types';
+import { SkillOverride } from '@/types/skill-types';
  
  
 // ============================================================
@@ -100,15 +101,16 @@ export interface ResolvedSource {
  *   일반 effectLog는 desc 생략 가능
  */
 export interface PipelineEffectLog {
-  label    : string;
-  type     : string;
-  value    : number;
-  subGroup?: string;
-  target?  : EffectTarget;
+  label     : string;
+  type      : string;
+  value     : number;
+  subGroup? : string;
+  target?   : EffectTarget;
+  overrides?: SkillOverride;
   /** true이면 1~2단계 스킵, 3단계 Special에서 처리 */
-  special? : boolean;
+  special?  : boolean;
   /** 계산 근거 설명 (Special Hook 결과물에 명시, UI 표기용) */
-  desc?    : string;
+  desc?     : string;
 }
  
  

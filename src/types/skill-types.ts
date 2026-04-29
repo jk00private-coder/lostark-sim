@@ -4,7 +4,7 @@
  */
 
 import {
-  BaseSimData, EffectEntry, MemoParam,
+  BaseSimData, EffectEntry, MemoParam, EffectTarget,
   SkillTypeId, AttackTypeId, SuperArmorId,
   ResourceTypeId, SkillCategory,
 } from '@/types/sim-types';
@@ -50,13 +50,14 @@ export type SkillResource =
 // ============================================================
 
 /** 트라이포드로 변경 가능한 스킬 속성 */
-export interface TripodOverride {
+export interface SkillOverride {
   typeId?      : SkillTypeId;
   attackId?    : AttackTypeId;
   destruction? : number;
   stagger?     : string;
   superArmorId?: SuperArmorId;
   hits?        : number;
+  target?      : EffectTarget;  // 이 오버라이드가 적용되는 조건 (ex 가디언나이트 아크패시브)
 }
 
 /**
@@ -75,7 +76,7 @@ export interface TripodCase {
   then: {
     effects?         : EffectEntry[];
     addDamageSources?: DamageSource[];
-    overrides?       : TripodOverride;
+    overrides?       : SkillOverride;
     memo?            : MemoParam[];
   };
 }
@@ -95,7 +96,7 @@ export interface TripodData extends BaseSimData {
 
   effects?         : EffectEntry[];
   addDamageSources?: DamageSource[];
-  overrides?       : TripodOverride;
+  overrides?       : SkillOverride;
   cases?           : TripodCase[];
   link?            : { tier: number; slot: number };
   memo?            : MemoParam[];

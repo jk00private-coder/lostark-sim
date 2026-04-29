@@ -15,9 +15,10 @@
  *   - 효과(effects) 수집은 하지 않음 → 1단계에서 담당
  */
 
-import { SkillData, TripodData, DamageSource } from '@/types/skill-types';
+import { SkillData, TripodData, DamageSource, SkillOverride } from '@/types/skill-types';
 import { AttackTypeId, SkillTypeId, ResourceTypeId } from '@/types/sim-types';
-import { ResolvedSkillMeta, ResolvedSource } from './types';
+import { PipelineEffectLog, ResolvedSkillMeta, ResolvedSource } from './types';
+import { isTargetMatch } from './2-dynamic-buffer';
 
 
 // ============================================================
@@ -51,17 +52,41 @@ const getLevelValues = (
  *
  * @returns 확정된 typeId, attackId, hits 오버라이드 맵
  */
-const applyOverrides = (
-  skill          : SkillData,
+const applyAllOverrides = (
+  skill: SkillData,
   selectedTripods: TripodData[],
+  externalLogs: PipelineEffectLog[],
 ): {
-  typeId    : SkillTypeId;
-  attackId  : AttackTypeId;
-  hitsMap   : Record<string, number>;  // 피해원 name → 변경 hits
+  typeId: SkillTypeId;
+  attackId: AttackTypeId;
+  hitsMap: Record<string, number>;
 } => {
-  let typeId  : SkillTypeId  = skill.typeId;
+  let typeId: SkillTypeId = skill.typeId;
   let attackId: AttackTypeId = skill.attackId;
   const hitsMap: Record<string, number> = {};
+
+  // [1차 적용] 외부 로그 (아크패시브: 드레드 로어 등)
+  externalLogs.forEach(log => {
+    if (log.type !== 'OVERRIDE' || !log.overrides) return;
+  
+    // 로그 레벨의 target만 확인하면 됨
+    const isMatch = isTargetMatch(
+      log.target || {}, // target이 없으면 빈 객체 전달
+      skill.id,
+      skill.category,
+      skill.typeId,
+      skill.attackId,
+      skill.resource?.typeId
+    );
+    if (!isMatch) return;
+
+    const ov = log.overrides;
+    if (ov.typeId) typeId = ov.typeId;
+    if (ov.attackId) attackId = ov.attackId;
+    if (ov.hits !== undefined) {
+      skill.levels.forEach(src => { hitsMap[src.name] = ov.hits!; });
+    }
+  });
 
   selectedTripods.forEach(tripod => {
     // link 조건 확인
@@ -172,9 +197,10 @@ export const resolveSkillMeta = (
   skill          : SkillData,
   level          : number,
   selectedTripods: TripodData[],
+  externalLogs: PipelineEffectLog[],
 ): ResolvedSkillMeta => {
   // overrides 적용
-  const { typeId, attackId, hitsMap } = applyOverrides(skill, selectedTripods);
+  const { typeId, attackId, hitsMap } = applyAllOverrides(skill, selectedTripods, externalLogs);
 
   // 기본 피해원 목록 구성
   const baseSources: ResolvedSource[] = skill.levels.map(src => {

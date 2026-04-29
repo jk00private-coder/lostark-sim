@@ -187,21 +187,22 @@ const collectEffectLogs = (
 
   /** effectLog push 헬퍼 */
   const push = (
-    label   : string,
-    type    : string,
-    value   : number,
-    subGroup?: string,
-    target? : PipelineEffectLog['target'],
-    special?: boolean,
-    desc?   : string,
+    label      : string,
+    type       : string,
+    value      : number,
+    subGroup?  : string,
+    target?    : PipelineEffectLog['target'],
+    overrides? : PipelineEffectLog['overrides'],
+    special?   : boolean,
+    desc?      : string,
   ) => {
-    if (type === 'UNKNOWN' || !value) return;
+    if (!value && !overrides) return;
 
     // StatModifiers 직접 누산 (atk-calculator 입력용)
     const statField = STAT_MOD_FIELD_MAP[type];
     if (statField) (statMods as any)[statField] += value;
 
-    pipelineLogs.push({ label, type, value, subGroup, target, special, desc });
+    pipelineLogs.push({ label, type, value, subGroup, target, overrides, special, desc });
   };
 
     // ── 1. 장비 기본 스탯 ────────────────
@@ -393,43 +394,48 @@ const collectEffectLogs = (
 
   // ── 7. 카드 ─────────────────────────────
   if (display.cards?.id) {
-      const db = CARD_MAP.get(display.cards.id);
-      if (db?.effects) {
-        const level = display.cards.level ?? 0;
-        db.effects.forEach(eff => {
-          if (!eff.value) return;
-          const maxIdx = eff.value.length - 1;
-          const targetIdx = Math.min(Math.max(Math.floor(level / 6) - 2, 0), maxIdx);
-          const accumulatedValue = eff.value
-            .slice(0, targetIdx + 1)
-            .reduce((sum, val) => sum + val, 0);
+    const db = CARD_MAP.get(display.cards.id);
+    if (db?.effects) {
+      const level = display.cards.level ?? 0;
+      db.effects.forEach(eff => {
+        if (!eff.value) return;
+        const maxIdx = eff.value.length - 1;
+        const targetIdx = Math.min(Math.max(Math.floor(level / 6) - 3, 0), maxIdx);
+        const accumulatedValue = eff.value
+          .slice(0, targetIdx + 1)
+          .reduce((sum, val) => sum + val, 0);
 
-          if (accumulatedValue <= 0) return;
-          push('카드', eff.type, accumulatedValue, eff.subGroup, eff.target);
-        });
-      }
+        if (accumulatedValue <= 0) return;
+        push(`카드 ${display.cards?.name}`, eff.type, accumulatedValue, eff.subGroup, eff.target);
+      });
     }
+  }
 
   // ── 8. 아크패시브 ────────────────────────────────────────
   const ARKPASSIVE_MAP = getArkPassiveNodeMap(display.profile.className);
   display.arkPassive?.effects.forEach((eff) => {
     const db = ARKPASSIVE_MAP.get(eff.id);
     if (!db) return;
+    const label = `아크패시브:${eff.category.text} ${eff.name}`;
 
     db.effects?.forEach((dbEff) => {
       const levelIdx = Math.min(eff.level - 1, (dbEff.value?.length || 1) - 1);
       const val = dbEff.value?.[levelIdx] ?? 0;
 
       val !== 0 && push(
-        `아크패시브:${eff.category.text} ${eff.name}`,
+          label,
           dbEff.type,
           val,
           dbEff.subGroup,
           dbEff.target,
           (db as any).special
         );
-      });
     });
+    if (db.overrides) {
+      const { target, ...pureOverrides } = db.overrides;
+      push(label, 'OVERRIDE', 0, undefined, target, pureOverrides);
+    }
+  });
 
   const points = display.arkPassive?.points;
   (['evolution', 'insight', 'leap'] as const).forEach((key) => {
@@ -470,10 +476,10 @@ const collectEffectLogs = (
 
     const currentPoint = core.point;
     const gradeKey = (core.eqGrade as MultiKey) || 'COMMON';
-
     db.thresholds.forEach((threshold) => {
       if (currentPoint < threshold.point) return;
       if (!threshold.effects) return;
+      const label = `아크그리드:${db.name} (${threshold.point}pt)`;
 
       threshold.effects.forEach((dbEff) => {
         let value = 0;
@@ -485,16 +491,19 @@ const collectEffectLogs = (
           value = dbEff.value[0] ?? 0;
         }
 
-        if (value === 0) return;
-
-          push(
-          `아크그리드:${db.name} (${threshold.point}pt)`,
-            dbEff.type,
-            value,
-            dbEff.subGroup,
-            dbEff.target,
-            (db as any).special
-          );
+        value !== 0 && push(
+          label,
+          dbEff.type,
+          value,
+          dbEff.subGroup,
+          dbEff.target,
+          (db as any).special
+        );
+        
+        if (db.overrides) {
+          const { target, ...pureOverrides } = db.overrides;
+          push(label, 'OVERRIDE', 0, undefined, target, pureOverrides);
+        }
       });
     });
   });
@@ -553,76 +562,77 @@ const debugPipeline = (
 ): void => {
   console.group('🚀 [파이프라인 디버그]');
 
-  // inputLogs를 static / dynamic / special 로 분류
-  const staticLogs  = debug.inputLogs.filter(l => !l.special && !l.target);
-  const dynamicLogs = debug.inputLogs.filter(l => !l.special && !!l.target);
-  const specialLogs = debug.inputLogs.filter(l => !!l.special);
+    // inputLogs를 static / dynamic / special 로 분류
+    const staticLogs  = debug.inputLogs.filter(l => !l.special && !l.target);
+    const dynamicLogs = debug.inputLogs.filter(l => !l.special && !!l.target);
+    const specialLogs = debug.inputLogs.filter(l => !!l.special);
 
-  // ── 📋 0단계: 스킬 특성 확정 ────────────────────────────
-  console.group(`📋 0단계: 스킬 특성 확정 (${debug.step0_resolvedSkills.length}개 스킬)`);
-  debug.step0_resolvedSkills.forEach(skill => {
-    console.group(`  🗡️ ${skill.skillName} (Lv.${skill.level})`);
-    console.table([{
-      카테고리    : skill.categories.join(', '),
-      스킬타입    : skill.typeId,
-      공격타입    : skill.attackId,
-      쿨타임      : `${skill.cooldown}초`,
-      자원타입    : skill.resourceType ?? '-',
-      기운소모    : skill.cost ?? '-',
-      적용트라이포드: skill.appliedTripods.length > 0
-        ? skill.appliedTripods.join(', ')
-        : '없음',
-    }]);
-
-    if (skill.sources.length > 0) {
-      console.table(skill.sources.map(s => ({
-        피해원  : s.name,
-        합산여부: s.isCombined ? '✅ 합산' : '❌ 별도',
-        타수    : s.hits,
-        상수    : s.constant.toLocaleString(),
-        계수    : s.coefficient.toFixed(2),
+    // ── 📋 0단계: 스킬 특성 확정 ────────────────────────────
+    console.groupCollapsed(`📋 0단계: 스킬 특성 확정 (${debug.step0_resolvedSkills.length}개 스킬)`);
+      console.table(debug.step0_resolvedSkills.map(skill => ({
+        스킬명: skill.skillName,
+        Lv: skill.level,  
+        카테고리: skill.categories.join(' / '),
+        스킬타입: skill.typeId,
+        공격타입: skill.attackId,
+        쿨타임: `${skill.cooldown}초`,
+        자원타입: skill.resourceType ?? '-',
+        기운소모: skill.cost ?? '-',
+        트라이포드: skill.appliedTripods.join(', ') || '없음'
       })));
-    }
     console.groupEnd();
-  });
-  console.groupEnd();
 
-  // ── 🔵 1단계: Static 버퍼 — 공통 효과 ──────────────────
-  console.group(`🔵 1단계: Static 버퍼 — 공통 효과 (${staticLogs.length}개)`);
-  // 출처/타입/값/subGroup 그대로 표시
-  console.table(logsToTableRows(staticLogs));
+    console.groupCollapsed("📊 피해원(Sources) 상세 수치 검증");
+      console.table(debug.step0_resolvedSkills.flatMap(skill => 
+        skill.sources.map(s => ({
+          부모스킬: skill.skillName,
+          피해원명: s.name,
+          타수: s.hits,
+          상수: s.constant.toLocaleString(),
+          계수: s.coefficient.toFixed(2),
+          합산여부: s.isCombined ? '✅' : '❌'
+        }))
+      ));
+    console.groupEnd();
   console.groupEnd();
+ 
 
-  // ── ⚙️ 공격력 4종 계산 ──────────────────────────────────
-  console.group('⚙️ 공격력 4종 계산');
-  const atk = debug.atkStats;
+  // // ── 🔵 1단계: Static 버퍼 — 공통 효과 ──────────────────
+  // console.groupCollapsed(`🔵 1단계: Static 버퍼 — 공통 효과 (${staticLogs.length}개)`);
+  // // 출처/타입/값/subGroup 그대로 표시
+  // console.table(logsToTableRows(staticLogs));
+  // console.groupEnd();
 
-  // 무기 공격력에 사용된 항목 나열
-  const weaponAtkLogs = debug.inputLogs.filter(
-    l => l.type === 'WEAPON_ATK_C' || l.type === 'WEAPON_ATK_P'
-  );
-  console.group(`  최종 무기공격력: ${atk.weaponAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
-  console.table(logsToTableRows(weaponAtkLogs));
-  console.groupEnd();
+  // // ── ⚙️ 공격력 4종 계산 ──────────────────────────────────
+  // console.group('⚙️ 공격력 4종 계산');
+  // const atk = debug.atkStats;
 
-  // 주스탯에 사용된 항목 나열
-  const mainStatLogs = debug.inputLogs.filter(
-    l => l.type === 'MAIN_STAT_C' || l.type === 'MAIN_STAT_P'
-  );
-  console.group(`  최종 주스탯: ${atk.mainStat.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
-  console.table(logsToTableRows(mainStatLogs));
-  console.groupEnd();
+  // // 무기 공격력에 사용된 항목 나열
+  // const weaponAtkLogs = debug.inputLogs.filter(
+  //   l => l.type === 'WEAPON_ATK_C' || l.type === 'WEAPON_ATK_P'
+  // );
+  // console.group(`  최종 무기공격력: ${atk.weaponAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+  // console.table(logsToTableRows(weaponAtkLogs));
+  // console.groupEnd();
 
-  // 기본 공격력 / 최종 공격력 요약
-  const atkLogs = debug.inputLogs.filter(
-    l => l.type === 'ATK_C' || l.type === 'ATK_P' || l.type === 'BASE_ATK_P'
-  );
-  console.group(`  기본공격력: ${atk.baseAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}  →  최종공격력: ${atk.finalAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
-  console.log(`  📐 √(주스탯${atk.mainStat.toFixed(0)} × 무기공격력${atk.weaponAtk.toFixed(0)} / 6) = ${atk.baseAtk.toFixed(0)}`);
-  if (atkLogs.length > 0) console.table(logsToTableRows(atkLogs));
-  console.groupEnd();
+  // // 주스탯에 사용된 항목 나열
+  // const mainStatLogs = debug.inputLogs.filter(
+  //   l => l.type === 'MAIN_STAT_C' || l.type === 'MAIN_STAT_P'
+  // );
+  // console.group(`  최종 주스탯: ${atk.mainStat.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+  // console.table(logsToTableRows(mainStatLogs));
+  // console.groupEnd();
 
-  console.groupEnd();
+  // // 기본 공격력 / 최종 공격력 요약
+  // const atkLogs = debug.inputLogs.filter(
+  //   l => l.type === 'ATK_C' || l.type === 'ATK_P' || l.type === 'BASE_ATK_P'
+  // );
+  // console.group(`  기본공격력: ${atk.baseAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}  →  최종공격력: ${atk.finalAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+  // console.log(`  📐 √(주스탯${atk.mainStat.toFixed(0)} × 무기공격력${atk.weaponAtk.toFixed(0)} / 6) = ${atk.baseAtk.toFixed(0)}`);
+  // if (atkLogs.length > 0) console.table(logsToTableRows(atkLogs));
+  // console.groupEnd();
+
+  // console.groupEnd();
 
   // // ── 🟡 2단계: Dynamic 로그 원본 ─────────────────────────
   // console.group(`🟡 2단계: Dynamic 로그 원본 — 스킬별 조건부 효과 (${dynamicLogs.length}개)`);
@@ -888,11 +898,10 @@ export const useSimulatorStore = (): SimulatorStore => {
       specialization: displayData.combatStats.specialization,
     };
 
-    // runPipeline이 { results, debug } 를 반환하도록 변경됨
     const { results, debug } = runPipeline(displayData, pipelineLogs, statMods, combatInfo);
 
     setSkillDamageResults(results);
-    // debugPipeline(statMods, results, debug);
+    debugPipeline(statMods, results, debug);
 
   }, [displayData]);
 

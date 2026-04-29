@@ -1,6 +1,7 @@
 // @/types/arc-grid.ts
 
 import { BaseSimData, EffectEntry } from '@/types/sim-types';
+import { SkillOverride } from './skill-types';
 
 // 이미지 경로 생성 헬퍼
 export const GET_GRID_ICON = (type: 'O_SN' | 'O_MN' | 'O_ST' | 'C_SN' | 'C_MN' | 'C_ST') => `/images/arc-grid/icon_${type.toLowerCase()}.webp`;
@@ -20,4 +21,5 @@ export interface ArkGridCoreEffect {
  */
 export interface ArkGridCoreData extends BaseSimData {
   thresholds: ArkGridCoreEffect[];
+  overrides?: SkillOverride;
 }

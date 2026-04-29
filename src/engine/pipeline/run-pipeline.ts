@@ -219,7 +219,7 @@ export const runPipeline = (
     const selectedTripods = resolveSelectedTripods(dbSkill, displaySkill.selectedTripods);
 
     // 스킬 특성 확정 (overrides 적용 후)
-    const meta = resolveSkillMeta(dbSkill, displaySkill.level, selectedTripods);
+    const meta = resolveSkillMeta(dbSkill, displaySkill.level, selectedTripods, allEffectLogs);
     resolvedSkills.push(meta);
 
     // ── 0단계 디버그: resolveSkillMeta 완료 직후 수집 ──────

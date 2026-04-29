@@ -54,7 +54,7 @@ export const ELIGHTEN_GUARDIAN_KNIGHT_DATA: ArkPassiveSectionData[] = [
     name: NAMES[ID.T1_2],
     iconPath: `/images/arc-passive/enlightenment/${ID.T1_2}.webp`,
     pointCost: 24,
-    // 일반 스킬 헤드 어택 변경 로직 포함
+    overrides: { attackId: 'HEAD_ATK', target: {categories: ['BASIC']} },
   },
   // ── 티어 2 ──────────────────────────────────────────────────
   { // 깨어나는 힘

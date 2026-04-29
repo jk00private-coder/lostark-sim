@@ -1,6 +1,7 @@
 // @/types/ark-passive.ts
 
 import { BaseSimData, EffectEntry } from './sim-types';
+import { SkillOverride } from './skill-types';
 
 /**
  * 카르마 데이터
@@ -18,6 +19,7 @@ export interface KarmaData {
  */
 export interface ArkPassiveSectionData extends BaseSimData {
   pointCost: number;
+  overrides?: SkillOverride;
 }
 
 /**
