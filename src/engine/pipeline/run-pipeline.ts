@@ -5,15 +5,30 @@
  *
  * [실행 순서]
  *   0단계: resolveSkillMeta  — 스킬 특성 확정 (overrides 적용)
- *   1단계: buildStaticBuffer — Static 버퍼 구성
+ *   1단계: buildStaticBuffer — Static 버퍼 구성 + 로그 분류
  *   2단계: buildDynamicBuffers — 스킬별 Dynamic 버퍼
  *   3단계: processAllSpecials — Special 처리
  *   확정 : finalizeAllBuffers — BufferMap → DamageModifiers
+ *   후처리: buildSkillDetailLogs — UI 상세 로그 생성
  *
  * [반환값]
  *   { results, debug }
  *   results : SkillDamageResult[]  — 스킬별 최종 피해량
- *   debug   : PipelineDebugData   — 각 단계 중간값 (디버깅용)
+ *   debug   : PipelineDebugData   — 각 단계 중간값 + UI 소비용 데이터
+ *
+ * [로그 분류 설계]
+ *   공격력 로그(ATK_RELATED_TYPES): 스킬 계산과 무관, 공격력 계산 전용
+ *   → atkDetailLogs로 분리, buildStaticBuffer 투입에서 제외
+ *
+ *   나머지 로그는 buildStaticBuffer에서 static/dynamic/special로 분류
+ *   → 각각 디버그 데이터에 저장 (useSimulatorStore에서 재분류 불필요)
+ *
+ * [변경 이력]
+ *   - ATK_RELATED_TYPES 상수 및 splitAtkLogs() 추가
+ *   - buildStaticBuffer 반환값(dynamicLogs, specialLogs)을 debug에 직접 저장
+ *   - buildSkillDetailLogs() 추가: 최종 버퍼 → EffectRow[] 생성
+ *   - PipelineDebugData에 atkDetailLogs, staticLogs, dynamicLogs,
+ *     specialLogs, skillDetailLogs 추가
  */
 
 import { CharacterDisplayData, SkillDisplay } from '@/types/character-types';
@@ -32,6 +47,8 @@ import {
   ResolvedSkillMeta,
   PipelineDebugData,
   SkillMetaDebug,
+  SkillDetailLog,
+  EffectRow,
   BufferMap,
 } from './types';
 
@@ -48,11 +65,65 @@ const CLASS_SKILL_DB: Record<string, SkillData[]> = {
 
 
 // ============================================================
+// 공격력 관련 로그 타입 상수
+// ============================================================
+
+/**
+ * 공격력 계산에만 사용되는 effectType 목록
+ *
+ * [분리 이유]
+ *   이 타입들은 스킬별 DamageModifiers가 아닌 StatModifiers에 누산되며,
+ *   calcAllAtk()에서 최종 공격력을 계산하는 데만 쓰입니다.
+ *   buildStaticBuffer에 투입하면 스킬 버퍼에 불필요하게 포함되므로 분리합니다.
+ *
+ * [UI 활용]
+ *   분리된 로그는 atkDetailLogs로 저장되어
+ *   공격력 수치 호버 시 표시됩니다.
+ */
+const ATK_RELATED_TYPES = new Set([
+  'WEAPON_ATK_C', 'WEAPON_ATK_P',
+  'MAIN_STAT_C',  'MAIN_STAT_P',
+  'ATK_C',        'ATK_P',
+  'BASE_ATK_P',
+  'STAT_CRIT', 'STAT_SPEC', 'STAT_SWIFT',
+  'STAT_DOM',  'STAT_END',  'STAT_EXP',
+  'STAT_HP_C', 'STAT_HP_P',
+]);
+
+/**
+ * allEffectLogs를 공격력 로그 / 스킬 계산 로그로 분리
+ *
+ * @returns
+ *   atkLogs      : 공격력 계산 전용 (StatModifiers 누산용)
+ *   skillCalcLogs: 스킬별 버퍼 구성에 투입될 로그
+ */
+const splitAtkLogs = (
+  allLogs: PipelineEffectLog[],
+): {
+  atkLogs      : PipelineEffectLog[];
+  skillCalcLogs: PipelineEffectLog[];
+} => {
+  const atkLogs       : PipelineEffectLog[] = [];
+  const skillCalcLogs : PipelineEffectLog[] = [];
+
+  allLogs.forEach(log => {
+    if (ATK_RELATED_TYPES.has(log.type)) {
+      atkLogs.push(log);
+    } else {
+      skillCalcLogs.push(log);
+    }
+  });
+
+  return { atkLogs, skillCalcLogs };
+};
+
+
+// ============================================================
 // 헬퍼: 선택된 트라이포드 DB 매핑
 // ============================================================
 
 const resolveSelectedTripods = (
-  skillDb      : SkillData,
+  skillDb       : SkillData,
   displayTripods: SkillDisplay['selectedTripods'],
 ): TripodData[] => {
   if (!skillDb.tripods) return [];
@@ -69,9 +140,6 @@ const resolveSelectedTripods = (
 // 헬퍼: 트라이포드 effects → PipelineEffectLog 변환
 // ============================================================
 
-/**
- * 선택된 트라이포드의 effects를 PipelineEffectLog로 변환
- */
 const collectTripodEffectLogs = (
   skillDb        : SkillData,
   selectedTripods: TripodData[],
@@ -94,11 +162,12 @@ const collectTripodEffectLogs = (
       if (eff.target?.skillIds && !eff.target.skillIds.includes(skillDb.id)) return;
 
       logs.push({
-        label   : `${skillDb.name} ${tripod.name}`,
+        label   : `${skillDb.name}-${tripod.name}`,
         type    : eff.type,
         value   : eff.value[0] ?? 0,
         subGroup: eff.subGroup,
         target  : eff.target,
+        overrides: tripod.overrides ? tripod.overrides : undefined,
         special : (eff as any).special,
       });
     });
@@ -112,11 +181,6 @@ const collectTripodEffectLogs = (
 // 헬퍼: BufferMap 깊은 복사 (스냅샷용)
 // ============================================================
 
-/**
- * 디버그 스냅샷용 BufferMap 깊은 복사
- * 파이프라인 진행 중 버퍼가 계속 변하므로
- * 각 단계 완료 직후 반드시 복사해야 함
- */
 const snapshotBufferMap = (source: BufferMap): BufferMap => {
   const snap: BufferMap = {};
   for (const type in source) {
@@ -133,19 +197,11 @@ const snapshotBufferMap = (source: BufferMap): BufferMap => {
 // 헬퍼: 0단계 디버그 데이터 생성
 // ============================================================
 
-/**
- * resolveSkillMeta 결과 + 원본 스킬 DB에서 디버그 데이터 수집
- *
- * [수집 항목]
- *   - 스킬 레벨, 쿨타임, 카테고리, typeId, attackId, qiCost
- *   - 적용된 트라이포드 이름 목록
- *   - 피해원(sources)의 상수/계수 (override 및 레벨 적용 후 값)
- */
 const buildSkillMetaDebug = (
-  meta          : ResolvedSkillMeta,
-  skillDb       : SkillData,
+  meta           : ResolvedSkillMeta,
+  skillDb        : SkillData,
   selectedTripods: TripodData[],
-  skillLevel    : number,
+  skillLevel     : number,
 ): SkillMetaDebug => ({
   skillId       : meta.skillId,
   skillName     : meta.skillName,
@@ -155,7 +211,7 @@ const buildSkillMetaDebug = (
   attackId      : meta.attackId,
   cooldown      : skillDb.cooldown,
   resourceType  : meta.resourceType,
-  cost        : meta.cost,
+  cost          : meta.cost,
   appliedTripods: selectedTripods.map(t => t.name),
   sources       : meta.sources.map(s => ({
     name       : s.name,
@@ -168,6 +224,106 @@ const buildSkillMetaDebug = (
 
 
 // ============================================================
+// 헬퍼: 최종 버퍼 → EffectRow[] 생성 (UI 상세 로그용)
+// ============================================================
+
+/**
+ * 스킬 하나의 최종 버퍼(step3 완료 후)를 EffectRow[] 로 변환
+ *
+ * [역탐색 방식]
+ *   bufferMap의 value(number) → skillCalcLogs에서 동일 type + 동일 value 탐색
+ *   매칭 안되면 Special 처리 결과물 → desc로 대체
+ *
+ * [중복 방지]
+ *   usedLogIndices Set으로 이미 매칭된 log는 재사용하지 않음
+ */
+const buildEffectRows = (
+  bufferMap     : BufferMap,
+  skillCalcLogs : PipelineEffectLog[],
+): EffectRow[] => {
+  const rows: EffectRow[] = [];
+
+  // type → 동일 value를 가진 log 인덱스 맵 (역탐색용)
+  const logsByTypeAndValue = new Map<string, number[]>();
+  skillCalcLogs.forEach((log, idx) => {
+    const key = `${log.type}::${Math.round(log.value * 10000)}`;
+    if (!logsByTypeAndValue.has(key)) logsByTypeAndValue.set(key, []);
+    logsByTypeAndValue.get(key)!.push(idx);
+  });
+
+  const usedLogIndices = new Set<number>();
+
+  Object.entries(bufferMap).forEach(([type, subGroups]) => {
+    Object.entries(subGroups).forEach(([group, values]) => {
+      const displayGroup = group.startsWith('__solo_') ? '-' : group;
+
+      values.forEach(val => {
+        const key = `${type}::${Math.round(val * 10000)}`;
+        const candidates = logsByTypeAndValue.get(key) ?? [];
+
+        // 아직 사용되지 않은 후보 log 탐색
+        const matchIdx = candidates.find(i => !usedLogIndices.has(i));
+
+        if (matchIdx !== undefined) {
+          usedLogIndices.add(matchIdx);
+          const log = skillCalcLogs[matchIdx];
+          rows.push({
+            label   : log.label,
+            type,
+            value   : val,
+            subGroup: displayGroup,
+            desc    : log.desc ?? '-',
+          });
+        } else {
+          // Special 처리 결과물 등 원본 로그에 없는 경우
+          rows.push({
+            label   : '(계산됨)',
+            type,
+            value   : val,
+            subGroup: displayGroup,
+            desc    : '-',
+          });
+        }
+      });
+    });
+  });
+
+  return rows;
+};
+
+/**
+ * 전체 스킬의 SkillDetailLog 생성
+ *
+ * [호출 시점]
+ *   finalizeAllBuffers 완료 후 (step3 버퍼가 확정된 상태)
+ *
+ * @param resolvedSkills  - 0단계 스킬 메타 목록
+ * @param step3Snapshot   - 3단계 완료 후 스킬별 버퍼 스냅샷
+ * @param skillCalcLogs   - 공격력 로그 제외 후 스킬 계산에 투입된 로그
+ */
+const buildSkillDetailLogs = (
+  resolvedSkills : ResolvedSkillMeta[],
+  step3Snapshot  : Record<number, BufferMap>,
+  skillCalcLogs  : PipelineEffectLog[],
+): Record<number, SkillDetailLog> => {
+  const result: Record<number, SkillDetailLog> = {};
+
+  resolvedSkills.forEach(meta => {
+    const finalBuffer = step3Snapshot[meta.skillId];
+    if (!finalBuffer) return;
+
+    result[meta.skillId] = {
+      skillId   : meta.skillId,
+      skillName : meta.skillName,
+      bufferRows: buildEffectRows(finalBuffer, skillCalcLogs),
+    };
+  });
+
+  return result;
+};
+
+
+// ============================================================
 // 메인: runPipeline
 // ============================================================
 
@@ -177,7 +333,7 @@ const buildSkillMetaDebug = (
  * @param display     - CharacterDisplayData
  * @param effectLogs  - 캐릭터 전체 효과 로그 (각인/카드/장비 등)
  * @param statMods    - StatModifiers (공격력 계산용)
- * @param combatInfo  - { baseAtk, specialization } API에서 받아온 수치
+ * @param combatInfo  - { baseAtk, specialization }
  * @returns           { results, debug }
  */
 export const runPipeline = (
@@ -190,27 +346,37 @@ export const runPipeline = (
   const { className } = display.profile;
   const skillDb = CLASS_SKILL_DB[className];
 
+  // ── 빈 debug 반환 헬퍼 ────────────────────────────────────
+  const emptyDebug = (
+    atkDetailLogs: PipelineEffectLog[] = [],
+    staticLogs   : PipelineEffectLog[] = [],
+    dynamicLogs  : PipelineEffectLog[] = [],
+    specialLogs  : PipelineEffectLog[] = [],
+  ): PipelineDebugData => ({
+    inputLogs           : effectLogs,
+    atkDetailLogs,
+    staticLogs,
+    dynamicLogs,
+    specialLogs,
+    step0_resolvedSkills: [],
+    step1_staticBuffer  : {},
+    step2_dynamicBuffers: {},
+    step3_specialBuffers: {},
+    atkStats            : { weaponAtk: 0, mainStat: 0, baseAtk: 0, finalAtk: 0 },
+    finalMods           : {},
+    skillDetailLogs     : {},
+    skillNameMap        : {},
+  });
+
   // 등록되지 않은 직업이면 빈 결과 반환
   if (!skillDb) {
-    return {
-      results: [],
-      debug  : {
-        inputLogs           : effectLogs,
-        step0_resolvedSkills: [],
-        step1_staticBuffer  : {},
-        step2_dynamicBuffers: {},
-        step3_specialBuffers: {},
-        atkStats            : { weaponAtk: 0, mainStat: 0, baseAtk: 0, finalAtk: 0 },
-        finalMods           : {},
-        skillNameMap        : {},
-      },
-    };
+    return { results: [], debug: emptyDebug() };
   }
 
   // ── 0단계: 스킬 메타 + 트라이포드 effectLog 수집 ──────────
-  const resolvedSkills   : ResolvedSkillMeta[] = [];
-  const allEffectLogs    : PipelineEffectLog[] = [...effectLogs];
-  const step0Debug       : SkillMetaDebug[]    = [];
+  const resolvedSkills : ResolvedSkillMeta[] = [];
+  const allEffectLogs  : PipelineEffectLog[] = [...effectLogs];
+  const step0Debug     : SkillMetaDebug[]    = [];
 
   display.skills.forEach(displaySkill => {
     const dbSkill = skillDb.find(s => s.name === displaySkill.name);
@@ -218,54 +384,54 @@ export const runPipeline = (
 
     const selectedTripods = resolveSelectedTripods(dbSkill, displaySkill.selectedTripods);
 
-    // 스킬 특성 확정 (overrides 적용 후)
     const meta = resolveSkillMeta(dbSkill, displaySkill.level, selectedTripods, allEffectLogs);
     resolvedSkills.push(meta);
 
-    // ── 0단계 디버그: resolveSkillMeta 완료 직후 수집 ──────
     step0Debug.push(buildSkillMetaDebug(meta, dbSkill, selectedTripods, displaySkill.level));
 
-    // 트라이포드 효과 로그 수집 → 전체 effectLogs에 합산
     const tripodLogs = collectTripodEffectLogs(dbSkill, selectedTripods);
     allEffectLogs.push(...tripodLogs);
   });
 
   if (resolvedSkills.length === 0) {
-    return {
-      results: [],
-      debug  : {
-        inputLogs           : allEffectLogs,
-        step0_resolvedSkills: step0Debug,
-        step1_staticBuffer  : {},
-        step2_dynamicBuffers: {},
-        step3_specialBuffers: {},
-        atkStats            : { weaponAtk: 0, mainStat: 0, baseAtk: 0, finalAtk: 0 },
-        finalMods           : {},
-        skillNameMap        : {},
-      },
-    };
+    const { atkLogs } = splitAtkLogs(allEffectLogs);
+    return { results: [], debug: emptyDebug(atkLogs) };
   }
 
-  // ── 1단계: Static 버퍼 ────────────────────────────────────
-  const { staticBuffer, dynamicLogs, specialLogs } = buildStaticBuffer(allEffectLogs);
+  // ── 공격력 로그 분리 ───────────────────────────────────────
+  // allEffectLogs 전체를 공격력 전용 / 스킬 계산 전용으로 분리
+  // skillCalcLogs만 buildStaticBuffer에 투입하여 스킬 버퍼 오염 방지
+  const { atkLogs: atkDetailLogs, skillCalcLogs } = splitAtkLogs(allEffectLogs);
 
-  // ── 1단계 디버그: buildStaticBuffer 완료 직후 스냅샷 ──────
+  // ── 1단계: Static 버퍼 ────────────────────────────────────
+  // buildStaticBuffer가 반환하는 dynamicLogs, specialLogs를 그대로 debug에 저장
+  // → useSimulatorStore에서 재분류 불필요
+  const {
+    staticBuffer,
+    dynamicLogs,
+    specialLogs,
+  } = buildStaticBuffer(skillCalcLogs);
+
+  // staticLogs: skillCalcLogs 중 target 없음 + special 아님 (= staticBuffer에 들어간 것들)
+  const staticLogs = skillCalcLogs.filter(l => !l.special && !l.target);
+
+  // 1단계 스냅샷
   const step1Snapshot = snapshotBufferMap(staticBuffer);
 
   // ── 공격력 4종 계산 ────────────────────────────────────────
-  // ATK_P는 staticBuffer에서 읽음
+  // ATK_P는 staticBuffer에서 읽음 (공격력 로그를 분리했으므로 staticBuffer엔 없음)
+  // StatModifiers는 collectEffectLogs에서 이미 누산됨
   const { weaponAtk, mainStat, baseAtk, finalAtk } =
     calcAllAtk(statMods, staticBuffer);
 
-  // ── 2단계: Dynamic 버퍼 (스킬별) ────────────────────────────
+  // ── 2단계: Dynamic 버퍼 (스킬별) ─────────────────────────
   const skillStatsBuffer = buildDynamicBuffers(
     resolvedSkills,
     staticBuffer,
     dynamicLogs,
   );
 
-  // ── 2단계 디버그: buildDynamicBuffers 완료 직후 스냅샷 ─────
-  // 스킬별 BufferMap을 각각 깊은 복사
+  // 2단계 스냅샷
   const step2Snapshot: Record<number, BufferMap> = {};
   Object.entries(skillStatsBuffer).forEach(([id, buf]) => {
     step2Snapshot[Number(id)] = snapshotBufferMap(buf.bufferMap);
@@ -280,7 +446,7 @@ export const runPipeline = (
     combatInfo.specialization,
   );
 
-  // ── 3단계 디버그: processAllSpecials 완료 직후 스냅샷 ──────
+  // 3단계 스냅샷 (skillDetailLogs 생성용 — 최종 버퍼 상태)
   const step3Snapshot: Record<number, BufferMap> = {};
   Object.entries(skillStatsBuffer).forEach(([id, buf]) => {
     step3Snapshot[Number(id)] = snapshotBufferMap(buf.bufferMap);
@@ -289,17 +455,26 @@ export const runPipeline = (
   // ── 최종 확정: BufferMap → DamageModifiers ─────────────────
   finalizeAllBuffers(skillStatsBuffer);
 
-  // ── 확정 디버그: finalMods 수집 ────────────────────────────
+  // finalMods 수집
   const finalModsDebug: Record<number, import('@/types/sim-types').DamageModifiers> = {};
   Object.entries(skillStatsBuffer).forEach(([id, buf]) => {
     if (buf.finalMods) finalModsDebug[Number(id)] = { ...buf.finalMods };
   });
 
-  // 스킬 이름 역참조 맵 생성 (id → name)
+  // 스킬 이름 역참조 맵
   const skillNameMap: Record<number, string> = {};
   resolvedSkills.forEach(m => { skillNameMap[m.skillId] = m.skillName; });
 
-  // ── 피해량 계산 ──────────────────────────────────────────────
+  // ── UI 상세 로그 생성 ──────────────────────────────────────
+  // 3단계 스냅샷(최종 버퍼)을 기반으로 스킬별 EffectRow[] 생성
+  // skillCalcLogs를 원본으로 역탐색하여 출처(label) 복원
+  const skillDetailLogs = buildSkillDetailLogs(
+    resolvedSkills,
+    step3Snapshot,
+    skillCalcLogs,
+  );
+
+  // ── 피해량 계산 ───────────────────────────────────────────
   const results: SkillDamageResult[] = [];
 
   resolvedSkills.forEach(meta => {
@@ -318,15 +493,20 @@ export const runPipeline = (
     results.push(result);
   });
 
-  // ── 디버그 데이터 조립 및 반환 ─────────────────────────────
+  // ── 디버그 데이터 조립 ─────────────────────────────────────
   const debug: PipelineDebugData = {
     inputLogs           : allEffectLogs,
+    atkDetailLogs,
+    staticLogs,
+    dynamicLogs,
+    specialLogs,
     step0_resolvedSkills: step0Debug,
     step1_staticBuffer  : step1Snapshot,
     step2_dynamicBuffers: step2Snapshot,
     step3_specialBuffers: step3Snapshot,
     atkStats            : { weaponAtk, mainStat, baseAtk, finalAtk },
     finalMods           : finalModsDebug,
+    skillDetailLogs,
     skillNameMap,
   };
 

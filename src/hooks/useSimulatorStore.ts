@@ -7,18 +7,21 @@
  *   CharacterDisplayData의 각 항목에 id가 명시되어 있으므로
  *   텍스트 매칭 없이 id로 DB를 직접 조회합니다.
  *
- * [id → DB 조회 방식]
- *   각 DB를 Map<id, data>로 변환하여 O(1) 조회
- *
- * [예외: 텍스트 매핑 불가피한 경우]
- *   arkGrid.effects — normalizer가 텍스트로 파싱, id 없음
+ * [변경 이력]
+ *   - debugPipeline에서 static/dynamic/special 재분류 코드 제거
+ *   - run-pipeline이 반환하는 debug.staticLogs, debug.dynamicLogs,
+ *     debug.specialLogs, debug.atkDetailLogs, debug.skillDetailLogs 직접 참조
+ *   - inputLogs 직접 참조 제거 (분류된 로그만 사용)
  *
  * [콘솔 디버그 구조]
- *   📋 0단계: 스킬 특성 확정 (category, typeId, attackId, 트라이포드, sources)
- *   🔵 1단계: StaticBuffer (type → subGroup → values, 기본연산 표시)
- *   🟡 2단계: Dynamic 버퍼 (스킬별 BufferMap 전체)
- *   🟠 3단계: Special 처리 후 버퍼 (스킬별 BufferMap 전체)
- *   ⚙️  확정: 공격력 4종 + 스킬별 DamageModifiers
+ *   📋 0단계: 스킬 특성 확정
+ *   📊 피해원 상세 수치
+ *   ⚙️  공격력 4종 계산 (atkDetailLogs 기반)
+ *   🔵 1단계: Static 로그
+ *   🟡 2단계: Dynamic 로그
+ *   🟠 3단계: Special 로그
+ *   📊 StatModifiers
+ *   🎯 확정: 스킬별 DamageModifiers (skillDetailLogs 기반)
  *   ⚪ 최종: 스킬 피해량
  */
 
@@ -56,9 +59,9 @@ const GEM_MAP       = new Map(GEM_DATA.map(g      => [g.id, g]));
 const CARD_MAP      = new Map(CARD_DATA.map(c     => [c.id, c]));
 
 /**
-* 퍼센트 기반 타입 정의
+ * 퍼센트 기반 타입 정의
  * DB에 직접 추출하는 값이 아닌 display에서 추출한 값에만 사용
- * */
+ */
 const getStandardValue = (type: EffectTypeId, value: number): number => {
   const percentageTypes = [
     'DMG_INC', 'EVO_DMG', 'ADD_DMG',
@@ -109,28 +112,11 @@ const STAT_MOD_FIELD_MAP: Record<string, keyof StatModifiers> = {
 // 기본 연산 맵 (DEFAULT_OPERATION_MAP)
 // ============================================================
 
-/**
- * type별 기본 연산 정의
- *
- * [설계 의도]
- *   subGroup이 없을 때의 기본 동작을 미리 정의해두어
- *   effectLog 작성 시 subGroup을 일일이 명시하는 수고를 줄임
- *
- *   MULTI: subGroup 없으면 독립 곱연산 → 효과마다 별도 곱연산
- *          (각인, 아크패시브 피해증가 등은 서로 독립적으로 곱해져야 함)
- *   SUM  : subGroup 없어도 합산 → 전체 합산 후 1회 적용
- *          (치명타 확률, 방어력 관통 등은 합산이 자연스러움)
- *
- *   ※ subGroup이 명시된 경우: 같은 그룹끼리 합산 후 1회 곱연산 (예외 동작)
- */
 const DEFAULT_OPERATION_MAP: Record<string, 'SUM' | 'MULTI'> = {
-  // 피해 계열 → 독립 곱연산
   DMG_INC        : 'MULTI',
   EVO_DMG        : 'SUM',
   ADD_DMG        : 'SUM',
   CRIT_DMG_INC   : 'MULTI',
-
-  // 확률/수치 합산 계열 → 합산
   CRIT_CHANCE    : 'SUM',
   CRIT_DMG       : 'SUM',
   DEF_PENETRATION: 'SUM',
@@ -139,15 +125,13 @@ const DEFAULT_OPERATION_MAP: Record<string, 'SUM' | 'MULTI'> = {
   CDR_P          : 'SUM',
   SPEED_ATK      : 'SUM',
   SPEED_MOV      : 'SUM',
-
-  // 스탯 계열 → 합산
   MAIN_STAT_C    : 'SUM',
   MAIN_STAT_P    : 'SUM',
   WEAPON_ATK_C   : 'SUM',
   WEAPON_ATK_P   : 'SUM',
   BASE_ATK_P     : 'SUM',
   ATK_C          : 'SUM',
-  ATK_P          : 'MULTI', // 공격력 퍼센트는 독립 곱
+  ATK_P          : 'MULTI',
   STAT_CRIT      : 'SUM',
   STAT_SPEC      : 'SUM',
   STAT_SWIFT     : 'SUM',
@@ -158,20 +142,20 @@ const DEFAULT_OPERATION_MAP: Record<string, 'SUM' | 'MULTI'> = {
   STAT_HP_P      : 'SUM',
 };
 
-/** 등급 키에 따른 한글 명칭 매핑 (gradeKey 타입에 맞춰 정의) */
+/** 등급 키에 따른 한글 명칭 매핑 */
 const GRADE_NAME: Partial<Record<MultiKey, string>> = {
-  RELIC: "에기르 유물",
-  ANCIENT: "에기르 고대",
+  RELIC    : "에기르 유물",
+  ANCIENT  : "에기르 고대",
   ANCIENT_2: "세르카 고대",
-  ESTHER: "에스더",
+  ESTHER   : "에스더",
   ESTHER_E2: "에스더 엘라2",
   ESTHER_E3: "에스더 엘라3",
 };
 
 const ARK_PASSIVE_NAME: Record<string, string> = {
   'evolution': '진화',
-  'insight': '깨달음',
-  'leap': '도약',
+  'insight'  : '깨달음',
+  'leap'     : '도약',
 };
 
 
@@ -187,14 +171,14 @@ const collectEffectLogs = (
 
   /** effectLog push 헬퍼 */
   const push = (
-    label      : string,
-    type       : string,
-    value      : number,
-    subGroup?  : string,
-    target?    : PipelineEffectLog['target'],
-    overrides? : PipelineEffectLog['overrides'],
-    special?   : boolean,
-    desc?      : string,
+    label     : string,
+    type      : string,
+    value     : number,
+    subGroup? : string,
+    target?   : PipelineEffectLog['target'],
+    overrides?: PipelineEffectLog['overrides'],
+    special?  : boolean,
+    desc?     : string,
   ) => {
     if (!value && !overrides) return;
 
@@ -205,213 +189,167 @@ const collectEffectLogs = (
     pipelineLogs.push({ label, type, value, subGroup, target, overrides, special, desc });
   };
 
-    // ── 1. 장비 기본 스탯 ────────────────
-    display.equipment.forEach(eq => {
-      const db = EQUIP_MAP.get(eq.id);
-      if (!db) return;
-      const gradeKey = eq.eqGrade as MultiKey;
+  // ── 1. 장비 기본 스탯 ────────────────
+  display.equipment.forEach(eq => {
+    const db = EQUIP_MAP.get(eq.id);
+    if (!db) return;
+    const gradeKey = eq.eqGrade as MultiKey;
 
-      // 기본 재련 스탯 계산 (db.effects 순회)
-      db.effects?.forEach(eff => {
-        if (!('multiValues' in eff) || !eff.multiValues) return;
-        
-        const values = eff.multiValues[gradeKey];
-        if (!values) return;
+    db.effects?.forEach(eff => {
+      if (!('multiValues' in eff) || !eff.multiValues) return;
+      
+      const values = eff.multiValues[gradeKey];
+      if (!values) return;
 
-        // 기본 재련 인덱스 (refineLv 1~25 대응)
-        const baseIdx = Math.max(0, (eq.refineLv ?? 1) - 1);
-        let totalValue = values[Math.min(baseIdx, values.length - 1)] ?? 0;
+      const baseIdx = Math.max(0, (eq.refineLv ?? 1) - 1);
+      let totalValue = values[Math.min(baseIdx, values.length - 1)] ?? 0;
 
-        // 상급 재련 스탯 합산
-        const advEntry = db.adv_refine.find(a => a.refineLv === eq.refineLv);
-        if (advEntry && eq.advRefineLv > 0) {
-          const advEff = advEntry.effects.find(ae => ae.type === eff.type);
-          if (advEff && 'multiValues' in advEff) {
-            const advValues = advEff.multiValues![gradeKey];
-            if (advValues) {
-              const advIdx = Math.max(0, eq.advRefineLv - 1);
-              totalValue += advValues[Math.min(advIdx, advValues.length - 1)] ?? 0;
-            }
+      const advEntry = db.adv_refine.find(a => a.refineLv === eq.refineLv);
+      if (advEntry && eq.advRefineLv > 0) {
+        const advEff = advEntry.effects.find(ae => ae.type === eff.type);
+        if (advEff && 'multiValues' in advEff) {
+          const advValues = advEff.multiValues![gradeKey];
+          if (advValues) {
+            const advIdx = Math.max(0, eq.advRefineLv - 1);
+            totalValue += advValues[Math.min(advIdx, advValues.length - 1)] ?? 0;
           }
         }
+      }
 
-        if (totalValue > 0) {
-          const advText = eq.advRefineLv > 0 ? `(+${eq.advRefineLv})` : "";
-          const gradeName = GRADE_NAME[gradeKey] ?? gradeKey;
-          const label = `${eq.name} ${gradeName} ${eq.refineLv}강${advText}`;
-          push(label, eff.type, totalValue);
-        }
-      });
+      if (totalValue > 0) {
+        const advText   = eq.advRefineLv > 0 ? `(+${eq.advRefineLv})` : "";
+        const gradeName = GRADE_NAME[gradeKey] ?? gradeKey;
+        const label     = `${eq.name} ${gradeName} ${eq.refineLv}강${advText}`;
+        push(label, eff.type, totalValue);
+      }
     });
+  });
 
-    // ── 2. 악세서리  ────────────────────
-    display.accessories.forEach(acc => {
-      acc.effects.forEach(eff => {
-        const db = ACCESSORY_MAP.get(eff.id);
-        if (!db || !db.effects) return;
-
-        db.effects.forEach(dbEff => {
-          const label = `${acc.type} ${db.category === 'BASE' ? '기본 효과' : '연마 효과'}`;
-          const rawValue = eff.values?.[0]?.value ?? 0;
-          const standardizedValue = getStandardValue(dbEff.type, rawValue);
-          
-          push(
-            label, 
-            dbEff.type, 
-            standardizedValue,
-            dbEff.subGroup, 
-            dbEff.target
-          );
-        });
-      });
-    });
-
-    // ── 3. 팔찌 효과  ─────────────────────────────
-    display.bracelet?.effects.forEach(eff => {
-      const db = BRACELET_MAP.get(eff.id);
-      if (!db || !db.effects) return;
-      
-      db.effects.forEach((dbEff, idx) => {
-        const label = `팔찌 ${db.category === 'BASE' ? '기본 효과' : db.category === 'COMBAT' ? '전투 특성' : '특수 효과'}`;
-        const rawValue = eff.values?.[idx]?.value ?? 0;
-        const standardizedValue = getStandardValue(dbEff.type, rawValue);
-
-        if (standardizedValue !== 0) {
-          push(
-            label,
-            dbEff.type,
-            standardizedValue,
-            dbEff.subGroup,
-            dbEff.target
-          );
-        }
-      });
-    });
-
-    // ── 4. 아바타 ─────────────────────────────
-    display.avatars.forEach(av => {
-      const db = AVATAR_MAP.get(av.id);
+  // ── 2. 악세서리 ────────────────────
+  display.accessories.forEach(acc => {
+    acc.effects.forEach(eff => {
+      const db = ACCESSORY_MAP.get(eff.id);
       if (!db || !db.effects) return;
 
       db.effects.forEach(dbEff => {
-        const label = `아바타 ${av.label ?? av.name}`;
-        const rawValue = av.values?.[0]?.value ?? 0;
-        const standardizedValue = getStandardValue(dbEff.type, rawValue);
-
-        if (standardizedValue !== 0) {
-          push(
-            label,
-            dbEff.type,
-            standardizedValue,
-            dbEff.subGroup,
-            dbEff.target
-          );
-        }
+        const label           = `${acc.type} ${db.category === 'BASE' ? '기본 효과' : '연마 효과'}`;
+        const rawValue        = eff.values?.[0]?.value ?? 0;
+        const standardizedVal = getStandardValue(dbEff.type, rawValue);
+        push(label, dbEff.type, standardizedVal, dbEff.subGroup, dbEff.target);
       });
     });
+  });
 
-    // ── 5. 각인 ─────────────────────────────
-    display.engravings.forEach(eng => {
-      if (!eng.id) return;
-      
-      const db = ENGRAVING_MAP.get(eng.id);
-      if (!db || !db.effects) return;
-
-      const isRelicOrLegend = eng.eqGrade === 'RELIC';
-
-      db.effects.forEach((eff) => {
-        const baseValue = eff.value?.[0] ?? 0;
-        let bonusValue = 0;
-
-        const relic = db.bonus?.relic;
-        const hasRelicBonus = isRelicOrLegend && relic?.type === eff.type;
-        if (hasRelicBonus && relic?.value) {
-          bonusValue += relic.value[eng.level - 1] ?? 0;
-        }
-        
-        const ability = db.bonus?.ability;
-        const hasAbilityBonus = eng.abilityStoneLevel && ability?.type === eff.type;
-        if (hasAbilityBonus && ability?.value) {
-          bonusValue += ability.value[eng.abilityStoneLevel - 1] ?? 0;
-        }
-
-        const total = baseValue + bonusValue;
-        if (total === 0) return;
-
-        const finalizedValue = Math.round(total * 10000) / 10000;
-
-        push(
-          db.name,
-          eff.type,
-          finalizedValue,
-          eff.subGroup,
-          eff.target,
-          (db as any).special
-        );
-      });
-    });
-
-    // ── 6. 보석 ─────────────────────────────
-    let totalGemBaseAtkBonus = 0;
-
-    display.gems.forEach(gem => {
-      if (!gem.id) return;
-      const db = GEM_MAP.get(gem.id);
-      if (!db || !db.effects) return;
-      const skillID = getSkillMap(display.profile.className).get(gem.skillName)?.id;
-
-      db.effects.forEach(eff => {
-        if (eff.type === 'BASE_ATK_P') {
-          const bonusValue = eff.value?.[gem.level - 1] ?? 0;
-          totalGemBaseAtkBonus += bonusValue;
-          return;
-        }
-
-        const rawValue = eff.value?.[gem.level - 1] ?? 0;
-        if (rawValue === 0) return;
-        const finalizedValue = Math.round(rawValue * 10000) / 10000;
-        push(
-          gem.name,
-          eff.type,
-          finalizedValue,
-          eff.subGroup,
-          {
-          ...eff.target,
-          skillIds: skillID ? [skillID] : undefined,
-          }
-        );
-      });
-    }); 
+  // ── 3. 팔찌 ─────────────────────────
+  display.bracelet?.effects.forEach(eff => {
+    const db = BRACELET_MAP.get(eff.id);
+    if (!db || !db.effects) return;
     
-    if (totalGemBaseAtkBonus > 0) {
-      const finalAtkBonus = Math.round(totalGemBaseAtkBonus * 10000) / 10000;
-      push(
-        '보석 기본 공격력 보너스',
-        'BASE_ATK_P',
-        finalAtkBonus,
-      );
-    }
+    db.effects.forEach((dbEff, idx) => {
+      const label           = `팔찌 ${db.category === 'BASE' ? '기본 효과' : db.category === 'COMBAT' ? '전투 특성' : '특수 효과'}`;
+      const rawValue        = eff.values?.[idx]?.value ?? 0;
+      const standardizedVal = getStandardValue(dbEff.type, rawValue);
+      if (standardizedVal !== 0) {
+        push(label, dbEff.type, standardizedVal, dbEff.subGroup, dbEff.target);
+      }
+    });
+  });
 
-  // ── 7. 카드 ─────────────────────────────
+  // ── 4. 아바타 ─────────────────────────
+  display.avatars.forEach(av => {
+    const db = AVATAR_MAP.get(av.id);
+    if (!db || !db.effects) return;
+
+    db.effects.forEach(dbEff => {
+      const label           = `아바타 ${av.label ?? av.name}`;
+      const rawValue        = av.values?.[0]?.value ?? 0;
+      const standardizedVal = getStandardValue(dbEff.type, rawValue);
+      if (standardizedVal !== 0) {
+        push(label, dbEff.type, standardizedVal, dbEff.subGroup, dbEff.target);
+      }
+    });
+  });
+
+  // ── 5. 각인 ─────────────────────────
+  display.engravings.forEach(eng => {
+    if (!eng.id) return;
+    const db = ENGRAVING_MAP.get(eng.id);
+    if (!db || !db.effects) return;
+
+    const isRelicOrLegend = eng.eqGrade === 'RELIC';
+
+    db.effects.forEach((eff) => {
+      const baseValue = eff.value?.[0] ?? 0;
+      let bonusValue  = 0;
+
+      const relic          = db.bonus?.relic;
+      const hasRelicBonus  = isRelicOrLegend && relic?.type === eff.type;
+      if (hasRelicBonus && relic?.value) {
+        bonusValue += relic.value[eng.level - 1] ?? 0;
+      }
+      
+      const ability          = db.bonus?.ability;
+      const hasAbilityBonus  = eng.abilityStoneLevel && ability?.type === eff.type;
+      if (hasAbilityBonus && ability?.value) {
+        bonusValue += ability.value[eng.abilityStoneLevel - 1] ?? 0;
+      }
+
+      const total = baseValue + bonusValue;
+      if (total === 0) return;
+
+      const finalizedValue = Math.round(total * 10000) / 10000;
+      push(db.name, eff.type, finalizedValue, eff.subGroup, eff.target, (db as any).overrides, (db as any).special);
+    });
+  });
+
+  // ── 6. 보석 ─────────────────────────
+  let totalGemBaseAtkBonus = 0;
+
+  display.gems.forEach(gem => {
+    if (!gem.id) return;
+    const db      = GEM_MAP.get(gem.id);
+    if (!db || !db.effects) return;
+    const skillID = getSkillMap(display.profile.className).get(gem.skillName)?.id;
+
+    db.effects.forEach(eff => {
+      if (eff.type === 'BASE_ATK_P') {
+        totalGemBaseAtkBonus += eff.value?.[gem.level - 1] ?? 0;
+        return;
+      }
+      const rawValue = eff.value?.[gem.level - 1] ?? 0;
+      if (rawValue === 0) return;
+      const finalizedValue = Math.round(rawValue * 10000) / 10000;
+      push(
+        gem.name, eff.type, finalizedValue, eff.subGroup,
+        { ...eff.target, skillIds: skillID ? [skillID] : undefined }
+      );
+    });
+  }); 
+    
+  if (totalGemBaseAtkBonus > 0) {
+    const finalAtkBonus = Math.round(totalGemBaseAtkBonus * 10000) / 10000;
+    push('보석 기본 공격력 보너스', 'BASE_ATK_P', finalAtkBonus);
+  }
+
+  // ── 7. 카드 ─────────────────────────
   if (display.cards?.id) {
     const db = CARD_MAP.get(display.cards.id);
     if (db?.effects) {
       const level = display.cards.level ?? 0;
       db.effects.forEach(eff => {
         if (!eff.value) return;
-        const maxIdx = eff.value.length - 1;
+        const maxIdx    = eff.value.length - 1;
         const targetIdx = Math.min(Math.max(Math.floor(level / 6) - 3, 0), maxIdx);
         const accumulatedValue = eff.value
           .slice(0, targetIdx + 1)
           .reduce((sum, val) => sum + val, 0);
-
         if (accumulatedValue <= 0) return;
         push(`카드 ${display.cards?.name}`, eff.type, accumulatedValue, eff.subGroup, eff.target);
       });
     }
   }
 
-  // ── 8. 아크패시브 ────────────────────────────────────────
+  // ── 8. 아크패시브 ────────────────────
   const ARKPASSIVE_MAP = getArkPassiveNodeMap(display.profile.className);
   display.arkPassive?.effects.forEach((eff) => {
     const db = ARKPASSIVE_MAP.get(eff.id);
@@ -420,62 +358,47 @@ const collectEffectLogs = (
 
     db.effects?.forEach((dbEff) => {
       const levelIdx = Math.min(eff.level - 1, (dbEff.value?.length || 1) - 1);
-      const val = dbEff.value?.[levelIdx] ?? 0;
-
-      val !== 0 && push(
-          label,
-          dbEff.type,
-          val,
-          dbEff.subGroup,
-          dbEff.target,
-          (db as any).special
-        );
+      const val      = dbEff.value?.[levelIdx] ?? 0;
+      val !== 0 && push(label, dbEff.type, val, dbEff.subGroup, dbEff.target, (db as any).overrides, (db as any).special);
     });
     if (db.overrides) {
       const { target, ...pureOverrides } = db.overrides;
-      push(label, 'OVERRIDE', 0, undefined, target, pureOverrides);
+      push(label, 'OVERRIDE', 0,  (db as any).subGroup, target, pureOverrides, (db as any).special);
     }
   });
 
   const points = display.arkPassive?.points;
   (['evolution', 'insight', 'leap'] as const).forEach((key) => {
     const userPoint = points?.[key];
-    const rule = ARK_PASSIVE_RULES[key];
-    const level = userPoint?.level ?? 0;
-    
+    const rule      = ARK_PASSIVE_RULES[key];
+    const level     = userPoint?.level ?? 0;
     if (level <= 0 || !rule) return;
+
     const { levelBonus: lv, rankBonus: rk } = rule.karma;
-    
-    const lvStep = lv?.value?.[0] ?? 0;
+    const lvStep  = lv?.value?.[0] ?? 0;
     const lvValue = Math.round(level * lvStep * 10000) / 10000;
     lvValue !== 0 && push(
       `아크패시브:카르마 ${ARK_PASSIVE_NAME[key]} ${level}레벨`,
-      lv!.type,
-      lvValue,
-      undefined,
-      lv?.target
+      lv!.type, lvValue, undefined, lv?.target
     );
     
-    const rank = level > 0 ? Math.min(6, Math.floor((level - 1) / 4) + 1) : 0;
-    const rkStep = rk?.value?.[0] ?? 0; 
+    const rank    = level > 0 ? Math.min(6, Math.floor((level - 1) / 4) + 1) : 0;
+    const rkStep  = rk?.value?.[0] ?? 0; 
     const rkValue = Math.round(rank * rkStep * 10000) / 10000;
     rkValue !== 0 && push(
       `아크패시브:카르마 ${ARK_PASSIVE_NAME[key]} ${rank}랭크`,
-      rk!.type, rkValue,
-      undefined,
-      rk?.target
+      rk!.type, rkValue, undefined, rk?.target
     );
   });
 
-
-  // ── 9. 아크그리드 ────────────────────────────────────────
+  // ── 9. 아크그리드 ────────────────────
   const ARKGRID_MAP = getArkGridMap(display.profile.className);
   display.arkGrid.cores.forEach((core) => {
     const db = ARKGRID_MAP.get(core.id);
     if (!db || !db.thresholds) return;
 
     const currentPoint = core.point;
-    const gradeKey = (core.eqGrade as MultiKey) || 'COMMON';
+    const gradeKey     = (core.eqGrade as MultiKey) || 'COMMON';
     db.thresholds.forEach((threshold) => {
       if (currentPoint < threshold.point) return;
       if (!threshold.effects) return;
@@ -483,39 +406,27 @@ const collectEffectLogs = (
 
       threshold.effects.forEach((dbEff) => {
         let value = 0;
-
         if (dbEff.multiValues) {
-          const values = dbEff.multiValues[gradeKey];
-          value = values?.[0] ?? 0;
+          value = dbEff.multiValues[gradeKey]?.[0] ?? 0;
         } else if (dbEff.value) {
           value = dbEff.value[0] ?? 0;
         }
-
-        value !== 0 && push(
-          label,
-          dbEff.type,
-          value,
-          dbEff.subGroup,
-          dbEff.target,
-          (db as any).special
-        );
+        value !== 0 && push(label, dbEff.type, value, dbEff.subGroup, dbEff.target, (db as any).overrides, (db as any).special);
         
         if (db.overrides) {
           const { target, ...pureOverrides } = db.overrides;
-          push(label, 'OVERRIDE', 0, undefined, target, pureOverrides);
+          push(label, 'OVERRIDE', 0, (db as any).subGroup, target, pureOverrides, (db as any).special);
         }
       });
     });
   });
 
   display.arkGrid.effects.forEach(eff => {
-    const rule = ARK_GRID_EFFECT_RULES[eff.label];
+    const rule  = ARK_GRID_EFFECT_RULES[eff.label];
     const level = eff.level ?? 0;
-    
     if (level <= 0 || !rule) return;
-    const step = rule?.value?.[0] ?? 0; 
+    const step       = rule?.value?.[0] ?? 0; 
     const finalValue = Math.round(level * step * 10000) / 10000;
-    
     finalValue !== 0 && push(`아크그리드 ${eff.label} Lv.${level}`, rule.type, finalValue);
   });
 
@@ -524,27 +435,11 @@ const collectEffectLogs = (
 
 
 // ============================================================
-// 콘솔 디버그 (effectLog 기반, UI 친화적)
+// 콘솔 디버그
 // ============================================================
 
 /**
- * effectLog를 effectType별로 그룹화
- * UI 렌더링과 디버그 출력 공용
- */
-const groupLogsByType = (
-  logs: PipelineEffectLog[],
-): Record<string, PipelineEffectLog[]> => {
-  const grouped: Record<string, PipelineEffectLog[]> = {};
-  logs.forEach(log => {
-    if (!grouped[log.type]) grouped[log.type] = [];
-    grouped[log.type].push(log);
-  });
-  return grouped;
-};
-
-/**
  * effectLog 배열을 콘솔 테이블용 행으로 변환
- * 출처 / 타입 / 값 / subGroup 표시
  */
 const logsToTableRows = (logs: PipelineEffectLog[]) =>
   logs.map(l => ({
@@ -555,27 +450,86 @@ const logsToTableRows = (logs: PipelineEffectLog[]) =>
     desc    : l.desc     ?? '-',
   }));
 
-const debugPipeline = (
-  statMods  : StatModifiers,
-  results   : SkillDamageResult[],
-  debug     : PipelineDebugData,
-): void => {
-  console.group('🚀 [파이프라인 디버그]');
+/**
+ * BufferMap에서 특정 type의 EffectRow를 콘솔 출력용 행으로 변환
+ *
+ * [기존 debugPipeline의 bufferTypeToRows와 동일하나]
+ *  이제 skillCalcLogs를 기준으로 역탐색합니다.
+ *  (atkDetailLogs는 버퍼에 포함되지 않으므로 역탐색 대상에서 제외)
+ */
+const bufferTypeToRows = (
+  bufferMap    : BufferMap,
+  type         : string,
+  skillCalcLogs: PipelineEffectLog[],
+) => {
+  const subGroups = bufferMap[type];
+  if (!subGroups) return [];
 
-    // inputLogs를 static / dynamic / special 로 분류
-    const staticLogs  = debug.inputLogs.filter(l => !l.special && !l.target);
-    const dynamicLogs = debug.inputLogs.filter(l => !l.special && !!l.target);
-    const specialLogs = debug.inputLogs.filter(l => !!l.special);
+  const logsByValue = new Map<number, PipelineEffectLog[]>();
+  skillCalcLogs.filter(l => l.type === type).forEach(l => {
+    const key = Math.round(l.value * 10000);
+    if (!logsByValue.has(key)) logsByValue.set(key, []);
+    logsByValue.get(key)!.push(l);
+  });
+  const usedLogIndices = new Set<number>();
+
+  const rows: { 출처: string; 타입: string; 값: number; subGroup: string; desc: string }[] = [];
+
+  Object.entries(subGroups).forEach(([group, values]) => {
+    const displayGroup = group.startsWith('__solo_') ? '-' : group;
+    values.forEach(val => {
+      const key        = Math.round(val * 10000);
+      const candidates = logsByValue.get(key) ?? [];
+      const matchLog   = candidates.find((_, idx) => !usedLogIndices.has(
+        skillCalcLogs.indexOf(candidates[idx])
+      ));
+      if (matchLog) {
+        usedLogIndices.add(skillCalcLogs.indexOf(matchLog));
+        rows.push({ 출처: matchLog.label, 타입: type, 값: val, subGroup: displayGroup, desc: matchLog.desc ?? '-' });
+      } else {
+        rows.push({ 출처: '(계산됨)', 타입: type, 값: val, subGroup: displayGroup, desc: '-' });
+      }
+    });
+  });
+
+  return rows;
+};
+
+const debugPipeline = (
+  statMods : StatModifiers,
+  results  : SkillDamageResult[],
+  debug    : PipelineDebugData,
+): void => {
+  // run-pipeline에서 분류된 로그를 직접 참조 (재분류 불필요)
+  const { atkDetailLogs, staticLogs, dynamicLogs, specialLogs, skillDetailLogs } = debug;
+
+  // skillCalcLogs = staticLogs + dynamicLogs + specialLogs
+  // (버퍼 역탐색 시 공격력 로그 제외)
+  const skillCalcLogs = [...staticLogs, ...dynamicLogs, ...specialLogs];
+
+  console.group('🚀 [파이프라인 디버그]');
+    console.groupCollapsed('All effectLogs');
+      console.table(debug.inputLogs.map(l => ({
+        출처    : l.label,
+        타입    : l.type,
+        값      : l.value,
+        target: l.target ? JSON.stringify(l.target) : '-',
+        subGroup: l.subGroup ?? '-',
+        override: l.overrides ? JSON.stringify(l.overrides) : '-',
+        special: l.special ? '✅' : '❌',
+        desc    : l.desc     ?? '-',
+      })));
+    console.groupEnd();
 
     // ── 📋 0단계: 스킬 특성 확정 ────────────────────────────
     console.groupCollapsed(`📋 0단계: 스킬 특성 확정 (${debug.step0_resolvedSkills.length}개 스킬)`);
       console.table(debug.step0_resolvedSkills.map(skill => ({
-        스킬명: skill.skillName,
-        Lv: skill.level,  
+        스킬명  : skill.skillName,
+        Lv      : skill.level,  
         카테고리: skill.categories.join(' / '),
         스킬타입: skill.typeId,
         공격타입: skill.attackId,
-        쿨타임: `${skill.cooldown}초`,
+        쿨타임  : `${skill.cooldown}초`,
         자원타입: skill.resourceType ?? '-',
         기운소모: skill.cost ?? '-',
         트라이포드: skill.appliedTripods.join(', ') || '없음'
@@ -587,287 +541,186 @@ const debugPipeline = (
         skill.sources.map(s => ({
           부모스킬: skill.skillName,
           피해원명: s.name,
-          타수: s.hits,
-          상수: s.constant.toLocaleString(),
-          계수: s.coefficient.toFixed(2),
+          타수    : s.hits,
+          상수    : s.constant.toLocaleString(),
+          계수    : s.coefficient.toFixed(2),
           합산여부: s.isCombined ? '✅' : '❌'
         }))
       ));
     console.groupEnd();
 
-    // ── 🔵 1단계: Static 버퍼 — 공통 효과 ──────────────────
-    console.groupCollapsed(`🔵 1단계: Static 버퍼 — 공통 효과 (${staticLogs.length}개)`);
-    // 출처/타입/값/subGroup 그대로 표시
-    // console.table(logsToTableRows(debug.step1_staticBuffer));
-    console.log(debug);
-    console.log(results);
+    // ── ⚙️ 공격력 4종 계산 ──────────────────────────────────
+    // atkDetailLogs: run-pipeline에서 분리된 공격력 전용 로그
+    console.groupCollapsed('⚙️ 공격력 4종 계산');
+    const atk = debug.atkStats;
+
+    const weaponAtkLogs = atkDetailLogs.filter(l => l.type === 'WEAPON_ATK_C' || l.type === 'WEAPON_ATK_P');
+    console.group(`  최종 무기공격력: ${atk.weaponAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+    console.table(logsToTableRows(weaponAtkLogs));
     console.groupEnd();
 
+    const mainStatLogs = atkDetailLogs.filter(l => l.type === 'MAIN_STAT_C' || l.type === 'MAIN_STAT_P');
+    console.group(`  최종 주스탯: ${atk.mainStat.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+    console.table(logsToTableRows(mainStatLogs));
+    console.groupEnd();
 
+    const atkLogs = atkDetailLogs.filter(l => l.type === 'ATK_C' || l.type === 'ATK_P' || l.type === 'BASE_ATK_P');
+    console.group(`  기본공격력: ${atk.baseAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}  →  최종공격력: ${atk.finalAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+    console.log(`  📐 √(주스탯${atk.mainStat.toFixed(0)} × 무기공격력${atk.weaponAtk.toFixed(0)} / 6) = ${atk.baseAtk.toFixed(0)}`);
+    if (atkLogs.length > 0) console.table(logsToTableRows(atkLogs));
+    console.groupEnd();
 
+    console.groupEnd(); // ⚙️ 공격력
 
+    // ── 🔵 1단계: Static 로그 ───────────────────────────────
+    // run-pipeline에서 분류된 staticLogs 직접 사용
+    console.groupCollapsed(`🔵 1단계: Static 로그 — 모든 스킬 공통 적용 (${staticLogs.length}개)`);
+    staticLogs.length > 0
+      ? console.table(logsToTableRows(staticLogs))
+      : console.log('(없음)');
+    console.groupEnd();
 
+    // ── 🟡 2단계: Dynamic 로그 ──────────────────────────────
+    console.groupCollapsed(`🟡 2단계: Dynamic 로그 — 스킬별 조건부 효과 (${dynamicLogs.length}개)`);
+    console.table(dynamicLogs.map(l => ({
+      출처      : l.label,
+      타입      : l.type,
+      값        : l.value,
+      subGroup  : l.subGroup ?? '-',
+      skillIds  : l.target?.skillIds?.join(', ')   ?? '-',
+      categories: l.target?.categories?.join(', ') ?? '-',
+      skillTypes: l.target?.skillTypes?.join(', ') ?? '-',
+      attackType: l.target?.attackType?.join(', ') ?? '-',
+    })));
+    console.groupEnd();
 
+    // ── 🟠 3단계: Special 로그 ──────────────────────────────
+    console.groupCollapsed(`🟠 3단계: Special 로그 (${specialLogs.length}개)`);
+    specialLogs.length > 0
+      ? console.table(logsToTableRows(specialLogs))
+      : console.log('(없음)');
+    console.groupEnd();
 
-  console.groupEnd();
- 
+    // ── 📊 StatModifiers ────────────────────────────────────
+    console.group('📊 StatModifiers (장비/악세 기본 스탯 누산값)');
+    const nonZeroStats = Object.entries(statMods).filter(([, v]) => v !== 0);
+    nonZeroStats.length > 0
+      ? console.table(nonZeroStats.map(([k, v]) => ({ 필드: k, 값: v })))
+      : console.log('(모두 0 — 장비 DB 매칭 확인 필요)');
+    console.groupEnd();
 
+    // ── 🎯 확정: 스킬별 DamageModifiers ─────────────────────
+    // skillDetailLogs(run-pipeline 생성)에서 bufferRows를 직접 참조
+    console.group('🎯 확정: 스킬별 DamageModifiers');
 
+    const FIELD_TO_TYPES: Record<string, string[]> = {
+      damageInc       : ['DMG_INC'],
+      evoDamage       : ['EVO_DMG'],
+      addDamage       : ['ADD_DMG'],
+      critChance      : ['CRIT_CHANCE'],
+      critDamage      : ['CRIT_DMG'],
+      critDamageInc   : ['CRIT_DMG_INC'],
+      defPenetration  : ['DEF_PENETRATION'],
+      enemyDamageTaken: ['ENEMY_DMG_TAKEN'],
+      cdrC            : ['CDR_C'],
+      cdrP            : ['CDR_P'],
+      spdAtk          : ['SPEED_ATK'],
+      spdMov          : ['SPEED_MOV'],
+    };
 
-  // ── ⚙️ 공격력 4종 계산 ──────────────────────────────────
-  console.groupCollapsed('⚙️ 공격력 4종 계산');
-  const atk = debug.atkStats;
+    const FIELD_LABEL: Record<string, string> = {
+      damageInc       : '피해 증가',
+      evoDamage       : '진화형 피해',
+      addDamage       : '추가 피해',
+      critChance      : '치명타 확률',
+      critDamage      : '치명타 피해',
+      critDamageInc   : '치명타시 피해 증가',
+      defPenetration  : '방어력 관통',
+      enemyDamageTaken: '적 받는 피해 증가',
+      cdrC            : '쿨타임 감소(고정)',
+      cdrP            : '쿨타임 감소(%)',
+      spdAtk          : '공격 속도',
+      spdMov          : '이동 속도',
+    };
 
-  // 무기 공격력에 사용된 항목 나열
-  const weaponAtkLogs = debug.inputLogs.filter(
-    l => l.type === 'WEAPON_ATK_C' || l.type === 'WEAPON_ATK_P'
-  );
-  console.group(`  최종 무기공격력: ${atk.weaponAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
-  console.table(logsToTableRows(weaponAtkLogs));
-  console.groupEnd();
-
-  // 주스탯에 사용된 항목 나열
-  const mainStatLogs = debug.inputLogs.filter(
-    l => l.type === 'MAIN_STAT_C' || l.type === 'MAIN_STAT_P'
-  );
-  console.group(`  최종 주스탯: ${atk.mainStat.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
-  console.table(logsToTableRows(mainStatLogs));
-  console.groupEnd();
-
-  // 기본 공격력 / 최종 공격력 요약
-  const atkLogs = debug.inputLogs.filter(
-    l => l.type === 'ATK_C' || l.type === 'ATK_P' || l.type === 'BASE_ATK_P'
-  );
-  console.group(`  기본공격력: ${atk.baseAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}  →  최종공격력: ${atk.finalAtk.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
-  console.log(`  📐 √(주스탯${atk.mainStat.toFixed(0)} × 무기공격력${atk.weaponAtk.toFixed(0)} / 6) = ${atk.baseAtk.toFixed(0)}`);
-  if (atkLogs.length > 0) console.table(logsToTableRows(atkLogs));
-  console.groupEnd();
-
-  console.groupEnd();
-
-  // ── 🟡 2단계: Dynamic 로그 원본 ─────────────────────────
-  console.groupCollapsed(`🟡 2단계: Dynamic 로그 원본 — 스킬별 조건부 효과 (${dynamicLogs.length}개)`);
-  console.table(dynamicLogs.map(l => ({
-    출처      : l.label,
-    타입      : l.type,
-    값        : l.value,
-    subGroup  : l.subGroup ?? '-',
-    skillIds  : l.target?.skillIds?.join(', ')   ?? '-',
-    categories: l.target?.categories?.join(', ') ?? '-',
-    skillTypes: l.target?.skillTypes?.join(', ') ?? '-',
-    attackType: l.target?.attackType?.join(', ') ?? '-',
-  })));
-  console.groupEnd();
-
-  // ── 🟠 3단계: Special 로그 원본 ─────────────────────────
-  console.groupCollapsed(`🟠 3단계: Special 로그 원본 (${specialLogs.length}개)`);
-  specialLogs.length > 0
-    ? console.table(logsToTableRows(specialLogs))
-    : console.log('(없음)');
-  console.groupEnd();
-
-  // ── 📊 StatModifiers ────────────────────────────────────
-  console.group('📊 StatModifiers (장비/악세 기본 스탯 누산값)');
-  const nonZeroStats = Object.entries(statMods).filter(([, v]) => v !== 0);
-  nonZeroStats.length > 0
-    ? console.table(nonZeroStats.map(([k, v]) => ({ 필드: k, 값: v })))
-    : console.log('(모두 0 — 장비 DB 매칭 확인 필요)');
-  console.groupEnd();
-
-  // ── 🎯 확정: 스킬별 DamageModifiers ─────────────────────
-  // effectType별 groupBy → 실제 버퍼에 들어간 값 + 최종값
-  console.group('🎯 확정: 스킬별 DamageModifiers');
-
-  // DamageModifiers 필드 → effectType 역매핑 (표시용)
-  const FIELD_TO_TYPES: Record<string, string[]> = {
-    damageInc      : ['DMG_INC'],
-    evoDamage      : ['EVO_DMG'],
-    addDamage      : ['ADD_DMG'],
-    critChance     : ['CRIT_CHANCE'],
-    critDamage     : ['CRIT_DMG'],
-    critDamageInc  : ['CRIT_DMG_INC'],
-    defPenetration : ['DEF_PENETRATION'],
-    enemyDamageTaken: ['ENEMY_DMG_TAKEN'],
-    cdrC           : ['CDR_C'],
-    cdrP           : ['CDR_P'],
-    spdAtk         : ['SPEED_ATK'],
-    spdMov         : ['SPEED_MOV'],
-  };
-
-  // 표시 레이블
-  const FIELD_LABEL: Record<string, string> = {
-    damageInc      : '피해 증가',
-    evoDamage      : '진화형 피해',
-    addDamage      : '추가 피해',
-    critChance     : '치명타 확률',
-    critDamage     : '치명타 피해',
-    critDamageInc  : '치명타시 피해 증가',
-    defPenetration : '방어력 관통',
-    enemyDamageTaken: '적 받는 피해 증가',
-    cdrC           : '쿨타임 감소(고정)',
-    cdrP           : '쿨타임 감소(%)',
-    spdAtk         : '공격 속도',
-    spdMov         : '이동 속도',
-  };
-
-  // 곱연산 계열은 ×배율, 합산 계열은 %로 표시
-  const formatModValue = (field: string, value: number): string => {
-    const sumFields = [
-      'evoDamage', 'critChance', 'defPenetration', 'enemyDamageTaken', 'cdrP', 'spdAtk', 'spdMov'
-    ];
-    if (field === 'cdrC') return `${value.toFixed(1)}초`;
-    if (sumFields.includes(field)) return `${(value * 100).toFixed(2)}%`;
-    const baseVal = field === 'critDamage' ? 2.0 : 1.0;
-    const gained = ((value - baseVal) * 100).toFixed(2);
-    return `×${value.toFixed(4)} (+${gained}%)`;
-  };
-
-  /**
-   * 실제 버퍼(BufferMap)에서 특정 type의 항목을 행으로 변환
-   *
-   * [왜 inputLogs가 아닌 버퍼를 읽는가]
-   *   inputLogs는 파이프라인 투입 전 원본 — isTargetMatch 결과와 무관하게 항상 동일
-   *   실제로 이 스킬 버퍼에 들어간 값을 보려면 최종 버퍼(step3)를 읽어야 함
-   *
-   * [inputLogs와 크로스 참조]
-   *   bufferMap의 값(number)으로 inputLogs에서 label을 역탐색하여 출처 표시
-   *   매칭 안되면 '(계산됨)' 표시 (Special 처리 결과물 등)
-   */
-  const bufferTypeToRows = (
-    bufferMap: BufferMap,
-    type     : string,
-    allLogs  : PipelineEffectLog[],
-  ) => {
-    const subGroups = bufferMap[type];
-    if (!subGroups) return [];
-
-    const rows: {
-      출처    : string;
-      타입    : string;
-      값      : number;
-      subGroup: string;
-      desc    : string;
-    }[] = [];
-
-    // 이 type의 inputLogs를 값으로 인덱싱 (역탐색용)
-    // 같은 값이 여러 개일 수 있으므로 배열로 관리
-    const logsByValue = new Map<number, PipelineEffectLog[]>();
-    allLogs.filter(l => l.type === type).forEach(l => {
-      const key = Math.round(l.value * 10000); // 부동소수점 키
-      if (!logsByValue.has(key)) logsByValue.set(key, []);
-      logsByValue.get(key)!.push(l);
-    });
-    // 역탐색 시 이미 사용한 log를 추적 (중복 출처 방지)
-    const usedLogIndices = new Set<number>();
-
-    Object.entries(subGroups).forEach(([group, values]) => {
-      const isSolo = group.startsWith('__solo_');
-      const displayGroup = isSolo ? '-' : group;
-
-      values.forEach(val => {
-        // inputLogs에서 매칭되는 log 역탐색
-        const key = Math.round(val * 10000);
-        const candidates = logsByValue.get(key) ?? [];
-        const matchLog = candidates.find((_, idx) => !usedLogIndices.has(
-          allLogs.indexOf(candidates[idx])
-        ));
-
-        if (matchLog) {
-          usedLogIndices.add(allLogs.indexOf(matchLog));
-          rows.push({
-            출처    : matchLog.label,
-            타입    : type,
-            값      : val,
-            subGroup: displayGroup,
-            desc    : matchLog.desc ?? '-',
-          });
-        } else {
-          // Special 처리 결과물 등 inputLogs에 없는 경우
-          rows.push({
-            출처    : '(계산됨)',
-            타입    : type,
-            값      : val,
-            subGroup: displayGroup,
-            desc    : '-',
-          });
-        }
-      });
-    });
-
-    return rows;
-  };
-
-  Object.entries(debug.finalMods).forEach(([id, mods]) => {
-    const skillName = debug.skillNameMap[Number(id)] ?? `skillId:${id}`;
-    // 이 스킬의 최종 버퍼 (Special 처리까지 완료된 상태)
-    const finalBuffer = debug.step3_specialBuffers[Number(id)] ?? {};
-
-    console.groupCollapsed(`  🗡️ ${skillName}`);
-
-    Object.entries(FIELD_TO_TYPES).forEach(([field, types]) => {
-      const modValue = (mods as any)[field] as number;
+    const formatModValue = (field: string, value: number): string => {
+      const sumFields = ['evoDamage', 'critChance', 'defPenetration', 'enemyDamageTaken', 'cdrP', 'spdAtk', 'spdMov'];
+      if (field === 'cdrC') return `${value.toFixed(1)}초`;
+      if (sumFields.includes(field)) return `${(value * 100).toFixed(2)}%`;
       const baseVal = field === 'critDamage' ? 2.0 : 1.0;
-      // 기본값과 동일하면 생략
-      if (Math.abs(modValue - baseVal) < 0.00001 && field !== 'critChance') return;
+      const gained  = ((value - baseVal) * 100).toFixed(2);
+      return `×${value.toFixed(4)} (+${gained}%)`;
+    };
 
-      const displayValue = formatModValue(field, modValue);
+    Object.entries(debug.finalMods).forEach(([id, mods]) => {
+      const skillId   = Number(id);
+      const skillName = debug.skillNameMap[skillId] ?? `skillId:${id}`;
+      // 최종 버퍼 (step3 완료 상태)
+      const finalBuffer = debug.step3_specialBuffers[skillId] ?? {};
 
-      // 실제 버퍼에서 이 type에 해당하는 행 수집
-      const bufferRows = types.flatMap(t =>
-        bufferTypeToRows(finalBuffer, t, debug.inputLogs)
-      );
+      console.groupCollapsed(`  🗡️ ${skillName}`);
 
-      console.group(`    ${FIELD_LABEL[field] ?? field}: ${displayValue}`);
-      bufferRows.length > 0
-        ? console.table(bufferRows)
-        : console.log('    (항목 없음)');
-      console.groupEnd();
-    });
+      Object.entries(FIELD_TO_TYPES).forEach(([field, types]) => {
+        const modValue = (mods as any)[field] as number;
+        const baseVal  = field === 'critDamage' ? 2.0 : 1.0;
+        if (Math.abs(modValue - baseVal) < 0.00001 && field !== 'critChance') return;
 
-    // 쿨타임 계산 (cdrC, cdrP 적용)
-    const skillMeta = debug.step0_resolvedSkills.find(s => s.skillId === Number(id));
-    if (skillMeta && skillMeta.cooldown > 0) {
-      const baseCooldown = skillMeta.cooldown;
-      const afterCdrC = Math.max(0, baseCooldown - mods.cdrC);
-      const finalCooldown = afterCdrC * (1 - Math.min(mods.cdrP, 1));
+        const displayValue = formatModValue(field, modValue);
 
-      // 쿨타임 관련 버퍼 행 수집
-      const cdrCRows = bufferTypeToRows(finalBuffer, 'CDR_C', debug.inputLogs);
-      const cdrPRows = bufferTypeToRows(finalBuffer, 'CDR_P', debug.inputLogs);
-      const cdrRows = [...cdrCRows, ...cdrPRows];
+        // skillDetailLogs의 bufferRows에서 이 type의 행만 필터링
+        const detailLog  = skillDetailLogs[skillId];
+        const bufferRows = detailLog
+          ? detailLog.bufferRows.filter(r => types.includes(r.type))
+          : [];
 
-      console.group(`    쿨타임: ${baseCooldown}초 → 최종 ${finalCooldown.toFixed(1)}초`);
-      cdrRows.length > 0
-        ? console.table(cdrRows)
-        : console.log('    (쿨타임 감소 없음)');
-      console.groupEnd();
-    }
-
-    console.groupEnd();
-  });
-  console.groupEnd();
-
-  // ── ⚪ 최종: 스킬 피해량 ────────────────────────────────
-  console.group(`⚪ 최종: 스킬 피해량 (${results.length}개)`);
-
-  // 스킬명 + 총피해량 + 피해원별 damage를 한 행으로 집약
-  const summaryRows = results
-    .sort((a, b) => b.totalDamage - a.totalDamage)
-    .map(r => {
-      const row: Record<string, string> = {
-        스킬명  : r.skillName,
-        총피해량: r.totalDamage.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-      };
-      // 피해원별 열 추가 (최대 5개)
-      r.sources.forEach((s, i) => {
-        const label = `${s.name}(${s.isCombined ? '합' : '별'})`;
-        row[label] = s.damage.toLocaleString(undefined, { maximumFractionDigits: 0 });
+        console.group(`    ${FIELD_LABEL[field] ?? field}: ${displayValue}`);
+        bufferRows.length > 0
+          ? console.table(bufferRows.map(r => ({ 출처: r.label, 타입: r.type, 값: r.value, subGroup: r.subGroup, desc: r.desc })))
+          : console.log('    (항목 없음)');
+        console.groupEnd();
       });
-      return row;
-    });
 
-  console.table(summaryRows);
-  console.groupEnd();
+      // 쿨타임 계산
+      const skillMeta = debug.step0_resolvedSkills.find(s => s.skillId === skillId);
+      if (skillMeta && skillMeta.cooldown > 0) {
+        const baseCooldown  = skillMeta.cooldown;
+        const afterCdrC     = Math.max(0, baseCooldown - mods.cdrC);
+        const finalCooldown = afterCdrC * (1 - Math.min(mods.cdrP, 1));
+
+        // skillDetailLogs에서 쿨타임 관련 행 필터링
+        const detailLog = skillDetailLogs[skillId];
+        const cdrRows   = detailLog
+          ? detailLog.bufferRows.filter(r => r.type === 'CDR_C' || r.type === 'CDR_P')
+          : [];
+
+        console.group(`    쿨타임: ${baseCooldown}초 → 최종 ${finalCooldown.toFixed(1)}초`);
+        cdrRows.length > 0
+          ? console.table(cdrRows.map(r => ({ 출처: r.label, 타입: r.type, 값: r.value, subGroup: r.subGroup, desc: r.desc })))
+          : console.log('    (쿨타임 감소 없음)');
+        console.groupEnd();
+      }
+
+      console.groupEnd();
+    });
+    console.groupEnd(); // 🎯 확정
+
+    // ── ⚪ 최종: 스킬 피해량 ────────────────────────────────
+    console.group(`⚪ 최종: 스킬 피해량 (${results.length}개)`);
+    const summaryRows = results
+      .sort((a, b) => b.totalDamage - a.totalDamage)
+      .map(r => {
+        const row: Record<string, string> = {
+          스킬명  : r.skillName,
+          총피해량: r.totalDamage.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+        };
+        r.sources.forEach(s => {
+          const label = `${s.name}(${s.isCombined ? '합' : '별'})`;
+          row[label]  = s.damage.toLocaleString(undefined, { maximumFractionDigits: 0 });
+        });
+        return row;
+      });
+    console.table(summaryRows);
+    console.groupEnd();
 
   console.groupEnd(); // 🚀 [파이프라인 디버그]
 };
@@ -878,9 +731,10 @@ const debugPipeline = (
 // ============================================================
 
 export interface SimulatorStore {
-  displayData       : CharacterDisplayData | null;
-  skillDamageResults: SkillDamageResult[];
-  setDisplayData    : (data: CharacterDisplayData) => void;
+  displayData         : CharacterDisplayData | null;
+  skillDamageResults  : SkillDamageResult[];
+  pipelineDebug       : PipelineDebugData | null;
+  setDisplayData      : (data: CharacterDisplayData) => void;
 }
 
 
@@ -895,15 +749,19 @@ export const useSimulatorStore = (): SimulatorStore => {
   const [skillDamageResults, setSkillDamageResults] =
     useState<SkillDamageResult[]>([]);
 
+  /** UI 상세 모달 등에서 직접 소비할 수 있도록 debug 전체를 상태로 보관 */
+  const [pipelineDebug, setPipelineDebug] =
+    useState<PipelineDebugData | null>(null);
+
   useEffect(() => {
     if (!displayData) {
       setSkillDamageResults([]);
+      setPipelineDebug(null);
       return;
     }
 
     const { pipelineLogs, statMods } = collectEffectLogs(displayData);
 
-    console.log('Collected Effect Logs:', pipelineLogs);
     const combatInfo = {
       baseAtk       : displayData.combatStats.attackPower,
       specialization: displayData.combatStats.specialization,
@@ -912,6 +770,7 @@ export const useSimulatorStore = (): SimulatorStore => {
     const { results, debug } = runPipeline(displayData, pipelineLogs, statMods, combatInfo);
 
     setSkillDamageResults(results);
+    setPipelineDebug(debug);
     debugPipeline(statMods, results, debug);
 
   }, [displayData]);
@@ -919,5 +778,5 @@ export const useSimulatorStore = (): SimulatorStore => {
   const setDisplayData = (data: CharacterDisplayData) =>
     setDisplayDataState(data);
 
-  return { displayData, setDisplayData, skillDamageResults };
+  return { displayData, setDisplayData, skillDamageResults, pipelineDebug };
 };

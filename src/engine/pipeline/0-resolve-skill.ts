@@ -125,15 +125,14 @@ const applyAllOverrides = (
 const resolveQiCost = (
   skill          : SkillData,
   selectedTripods: TripodData[],
+  externalLogs: PipelineEffectLog[],
 ): number | undefined => {
-  // QI 소모 자원이 아닌 스킬은 undefined
   if (skill.resource?.typeId !== 'QI_EMBERES') return undefined;
 
   const baseCost = skill.resource.isStatic
     ? skill.resource.value
     : (skill.resource.values?.[0] ?? 0);
 
-  // 트라이포드 GK_QI_COST 합산
   const tripodCost = selectedTripods.reduce((sum, tripod) => {
     if (!tripod.effects) return sum;
     return sum + tripod.effects
@@ -141,7 +140,22 @@ const resolveQiCost = (
       .reduce((s, eff) => s + (eff.value?.[0] ?? 0), 0);
   }, 0);
 
-  return baseCost + tripodCost;
+  const externalCost = externalLogs
+    .filter(log => {
+      if (log.type !== 'GK_QI_COST') return false;
+
+      return isTargetMatch(
+        log.target || {}, 
+        skill.id,
+        skill.category,
+        skill.typeId,
+        skill.attackId,
+        skill.resource?.typeId
+      );
+    })
+    .reduce((sum, log) => sum + (log.value ?? 0), 0);
+
+  return baseCost + tripodCost + externalCost;
 };
 
 
@@ -219,7 +233,7 @@ export const resolveSkillMeta = (
   const addedSources = collectAddedSources(selectedTripods, attackId, level);
 
   // 기운 소모 개수 확정
-  const cost = resolveQiCost(skill, selectedTripods);
+  const cost = resolveQiCost(skill, selectedTripods, externalLogs);
 
   return {
     skillId     : skill.id,
