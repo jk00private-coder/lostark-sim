@@ -457,43 +457,6 @@ const logsToTableRows = (logs: PipelineEffectLog[]) =>
  *  이제 skillCalcLogs를 기준으로 역탐색합니다.
  *  (atkDetailLogs는 버퍼에 포함되지 않으므로 역탐색 대상에서 제외)
  */
-const bufferTypeToRows = (
-  bufferMap    : BufferMap,
-  type         : string,
-  skillCalcLogs: PipelineEffectLog[],
-) => {
-  const subGroups = bufferMap[type];
-  if (!subGroups) return [];
-
-  const logsByValue = new Map<number, PipelineEffectLog[]>();
-  skillCalcLogs.filter(l => l.type === type).forEach(l => {
-    const key = Math.round(l.value * 10000);
-    if (!logsByValue.has(key)) logsByValue.set(key, []);
-    logsByValue.get(key)!.push(l);
-  });
-  const usedLogIndices = new Set<number>();
-
-  const rows: { 출처: string; 타입: string; 값: number; subGroup: string; desc: string }[] = [];
-
-  Object.entries(subGroups).forEach(([group, values]) => {
-    const displayGroup = group.startsWith('__solo_') ? '-' : group;
-    values.forEach(val => {
-      const key        = Math.round(val * 10000);
-      const candidates = logsByValue.get(key) ?? [];
-      const matchLog   = candidates.find((_, idx) => !usedLogIndices.has(
-        skillCalcLogs.indexOf(candidates[idx])
-      ));
-      if (matchLog) {
-        usedLogIndices.add(skillCalcLogs.indexOf(matchLog));
-        rows.push({ 출처: matchLog.label, 타입: type, 값: val, subGroup: displayGroup, desc: matchLog.desc ?? '-' });
-      } else {
-        rows.push({ 출처: '(계산됨)', 타입: type, 값: val, subGroup: displayGroup, desc: '-' });
-      }
-    });
-  });
-
-  return rows;
-};
 
 const debugPipeline = (
   statMods : StatModifiers,
@@ -549,6 +512,14 @@ const debugPipeline = (
       ));
     console.groupEnd();
 
+    // ── 📊 StatModifiers ────────────────────────────────────
+    console.groupCollapsed('📊 StatModifiers (장비/악세 기본 스탯 누산값)');
+    const nonZeroStats = Object.entries(statMods).filter(([, v]) => v !== 0);
+    nonZeroStats.length > 0
+      ? console.table(nonZeroStats.map(([k, v]) => ({ 필드: k, 값: v })))
+      : console.log('(모두 0 — 장비 DB 매칭 확인 필요)');
+    console.groupEnd();
+
     // ── ⚙️ 공격력 4종 계산 ──────────────────────────────────
     // atkDetailLogs: run-pipeline에서 분리된 공격력 전용 로그
     console.groupCollapsed('⚙️ 공격력 4종 계산');
@@ -601,111 +572,39 @@ const debugPipeline = (
       : console.log('(없음)');
     console.groupEnd();
 
-    // ── 📊 StatModifiers ────────────────────────────────────
-    console.group('📊 StatModifiers (장비/악세 기본 스탯 누산값)');
-    const nonZeroStats = Object.entries(statMods).filter(([, v]) => v !== 0);
-    nonZeroStats.length > 0
-      ? console.table(nonZeroStats.map(([k, v]) => ({ 필드: k, 값: v })))
-      : console.log('(모두 0 — 장비 DB 매칭 확인 필요)');
-    console.groupEnd();
-
     // ── 🎯 확정: 스킬별 DamageModifiers ─────────────────────
     // skillDetailLogs(run-pipeline 생성)에서 bufferRows를 직접 참조
     console.group('🎯 확정: 스킬별 DamageModifiers');
 
-    const FIELD_TO_TYPES: Record<string, string[]> = {
-      damageInc       : ['DMG_INC'],
-      evoDamage       : ['EVO_DMG'],
-      addDamage       : ['ADD_DMG'],
-      critChance      : ['CRIT_CHANCE'],
-      critDamage      : ['CRIT_DMG'],
-      critDamageInc   : ['CRIT_DMG_INC'],
-      defPenetration  : ['DEF_PENETRATION'],
-      enemyDamageTaken: ['ENEMY_DMG_TAKEN'],
-      cdrC            : ['CDR_C'],
-      cdrP            : ['CDR_P'],
-      spdAtk          : ['SPEED_ATK'],
-      spdMov          : ['SPEED_MOV'],
-    };
+    Object.entries(skillDetailLogs).forEach(([id, detail]: [string, any]) => {
+    console.groupCollapsed(`  🗡️ ${detail.skillName}`);
 
-    const FIELD_LABEL: Record<string, string> = {
-      damageInc       : '피해 증가',
-      evoDamage       : '진화형 피해',
-      addDamage       : '추가 피해',
-      critChance      : '치명타 확률',
-      critDamage      : '치명타 피해',
-      critDamageInc   : '치명타시 피해 증가',
-      defPenetration  : '방어력 관통',
-      enemyDamageTaken: '적 받는 피해 증가',
-      cdrC            : '쿨타임 감소(고정)',
-      cdrP            : '쿨타임 감소(%)',
-      spdAtk          : '공격 속도',
-      spdMov          : '이동 속도',
-    };
+    // 파이프라인에서 이미 분류해준 groups를 순회[cite: 8]
+    Object.values(detail.groups).forEach((group: any) => {
+      // 수치 포맷팅 로직만 가볍게 유지[cite: 8]
+      const displayValue = typeof group.finalValue === 'number' 
+        ? group.finalValue.toFixed(4) 
+        : group.finalValue;
 
-    const formatModValue = (field: string, value: number): string => {
-      const sumFields = ['evoDamage', 'critChance', 'defPenetration', 'enemyDamageTaken', 'cdrP', 'spdAtk', 'spdMov'];
-      if (field === 'cdrC') return `${value.toFixed(1)}초`;
-      if (sumFields.includes(field)) return `${(value * 100).toFixed(2)}%`;
-      const baseVal = field === 'critDamage' ? 2.0 : 1.0;
-      const gained  = ((value - baseVal) * 100).toFixed(2);
-      return `×${value.toFixed(4)} (+${gained}%)`;
-    };
-
-    Object.entries(debug.finalMods).forEach(([id, mods]) => {
-      const skillId   = Number(id);
-      const skillName = debug.skillNameMap[skillId] ?? `skillId:${id}`;
-      // 최종 버퍼 (step3 완료 상태)
-      const finalBuffer = debug.step3_specialBuffers[skillId] ?? {};
-
-      console.groupCollapsed(`  🗡️ ${skillName}`);
-
-      Object.entries(FIELD_TO_TYPES).forEach(([field, types]) => {
-        const modValue = (mods as any)[field] as number;
-        const baseVal  = field === 'critDamage' ? 2.0 : 1.0;
-        if (Math.abs(modValue - baseVal) < 0.00001 && field !== 'critChance') return;
-
-        const displayValue = formatModValue(field, modValue);
-
-        // skillDetailLogs의 bufferRows에서 이 type의 행만 필터링
-        const detailLog  = skillDetailLogs[skillId];
-        const bufferRows = detailLog
-          ? detailLog.bufferRows.filter(r => types.includes(r.type))
-          : [];
-
-        console.group(`    ${FIELD_LABEL[field] ?? field}: ${displayValue}`);
-        bufferRows.length > 0
-          ? console.table(bufferRows.map(r => ({ 출처: r.label, 타입: r.type, 값: r.value, subGroup: r.subGroup, desc: r.desc })))
-          : console.log('    (항목 없음)');
-        console.groupEnd();
-      });
-
-      // 쿨타임 계산
-      const skillMeta = debug.step0_resolvedSkills.find(s => s.skillId === skillId);
-      if (skillMeta && skillMeta.cooldown > 0) {
-        const baseCooldown  = skillMeta.cooldown;
-        const afterCdrC     = Math.max(0, baseCooldown - mods.cdrC);
-        const finalCooldown = afterCdrC * (1 - Math.min(mods.cdrP, 1));
-
-        // skillDetailLogs에서 쿨타임 관련 행 필터링
-        const detailLog = skillDetailLogs[skillId];
-        const cdrRows   = detailLog
-          ? detailLog.bufferRows.filter(r => r.type === 'CDR_C' || r.type === 'CDR_P')
-          : [];
-
-        console.group(`    쿨타임: ${baseCooldown}초 → 최종 ${finalCooldown.toFixed(1)}초`);
-        cdrRows.length > 0
-          ? console.table(cdrRows.map(r => ({ 출처: r.label, 타입: r.type, 값: r.value, subGroup: r.subGroup, desc: r.desc })))
-          : console.log('    (쿨타임 감소 없음)');
-        console.groupEnd();
-      }
-
+      console.group(`    ${group.label}: ${displayValue}`);
+      console.table(group.rows.map((r: any) => ({
+        출처: r.label,
+        타입: r.type,
+        값: r.value,
+        그룹: r.subGroup,
+        설명: r.desc
+      })));
       console.groupEnd();
     });
-    console.groupEnd(); // 🎯 확정
+
+    console.groupEnd();
+  });
+
+  console.groupEnd(); // 🎯 확정 종료
+
 
     // ── ⚪ 최종: 스킬 피해량 ────────────────────────────────
-    console.group(`⚪ 최종: 스킬 피해량 (${results.length}개)`);
+    console.groupCollapsed(`⚪ 최종: 스킬 피해량 (${results.length}개)`);
     const summaryRows = results
       .sort((a, b) => b.totalDamage - a.totalDamage)
       .map(r => {

@@ -94,14 +94,10 @@ export const buildDynamicBuffers = (
   const skillStatsBuffer: SkillStatsBuffer = {};
 
   resolvedSkills.forEach(meta => {
-    // Static 버퍼 깊은 복사 → 스킬별 초기 버퍼
     const bufferMap: BufferMap = cloneBufferMap(staticBuffer);
 
-    // Dynamic 로그 중 이 스킬에 적용 가능한 것만 추가
-    let soloIdx = 10000; // Static의 soloIdx와 충돌 방지를 위해 큰 값에서 시작
-
-    dynamicLogs.forEach(log => {
-      if (!log.target) return; // target 없는 건 여기 오지 않음 (방어 코드)
+    dynamicLogs.forEach((log,idx) => {
+      if (!log.target) return;
 
       const match = isTargetMatch(
         log.target,
@@ -113,7 +109,7 @@ export const buildDynamicBuffers = (
       );
 
       if (match) {
-        pushToBuffer(bufferMap, log.type, log.subGroup, log.value, soloIdx++);
+        pushToBuffer(bufferMap, log.type, log.subGroup, log.value, 10000 + idx);
       }
     });
 
