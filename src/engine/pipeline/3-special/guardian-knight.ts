@@ -53,13 +53,13 @@ export const processGuardianKnightSpecials = (
   combatStats: SpecialCombatStats,
 ): PipelineEffectLog[] => {
   // QI 소모가 없는 스킬은 스킵
-  if (!meta.qiCost || meta.qiCost <= 0) return [];
+  if (!meta.cost || meta.cost <= 0) return [];
 
   // GK_QI_DMG 추가치 합산 (버퍼에 쌓인 값)
   const qiDmgBonus = readBufferSum(skillBuffer.bufferMap, 'GK_QI_DMG');
 
   // 기본값: 소모 기운 × 10%
-  const baseQiDmg = meta.qiCost * QI_BASE_COEFF;
+  const baseQiDmg = meta.cost * QI_BASE_COEFF;
   let totalQiDmg = baseQiDmg;
 
   // 화신 스킬: 특화 수치 × 특화계수 추가
@@ -74,7 +74,7 @@ export const processGuardianKnightSpecials = (
 
   // ── desc: 계산 근거 명시 ──────────────────────────────────
   const descParts: string[] = [
-    `기운${meta.qiCost}개×${(QI_BASE_COEFF * 100).toFixed(0)}%(=${(baseQiDmg * 100).toFixed(1)}%)`,
+    `기운${meta.cost}개×${(QI_BASE_COEFF * 100).toFixed(0)}%(=${(baseQiDmg * 100).toFixed(1)}%)`,
   ];
   if (isGodForm && specBonus > 0) {
     descParts.push(
@@ -88,7 +88,7 @@ export const processGuardianKnightSpecials = (
 
   // 최종 DMG_INC로 변환하여 반환
   return [{
-    label   : `GK 기운 피해 (소모${meta.qiCost}개)`,
+    label   : `GK 기운 피해 (소모${meta.cost}개)`,
     type    : 'DMG_INC',
     value   : totalQiDmg,
     special : false, // 이미 계산 완료

@@ -43,7 +43,7 @@ export const pushToBuffer = (
 
   const key = subGroup ?? `__solo_${soloIdx}`;
   if (!bufferMap[type][key]) bufferMap[type][key] = [];
-  bufferMap[type][key].push(value);
+  bufferMap[type][key].push({ v: value, i: soloIdx });
 };
 
 
@@ -73,19 +73,8 @@ export const buildStaticBuffer = (
   const specialLogs : PipelineEffectLog[] = [];
 
   effectLogs.forEach((log, idx) => {
-    // [분기 1] Special → 3단계로 패스
-    if (log.special) {
-      specialLogs.push(log);
-      return;
-    }
-
-    // [분기 2] target 있음 → 2단계로 패스
-    if (log.target) {
-      dynamicLogs.push(log);
-      return;
-    }
-
-    // [분기 3] target 없음 + special 아님 → StaticBuffer에 push
+    if (log.special) { specialLogs.push(log); return; }
+    if (log.target) { dynamicLogs.push(log); return; }
     pushToBuffer(staticBuffer, log.type, log.subGroup, log.value, idx);
   });
 

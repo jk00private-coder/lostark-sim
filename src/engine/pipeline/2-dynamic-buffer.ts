@@ -94,7 +94,6 @@ export const buildDynamicBuffers = (
   const skillStatsBuffer: SkillStatsBuffer = {};
 
   resolvedSkills.forEach(meta => {
-    // Static 버퍼 깊은 복사 → 스킬별 초기 버퍼
     const bufferMap: BufferMap = cloneBufferMap(staticBuffer);
 
     // Dynamic 로그 중 이 스킬에 적용 가능한 것만 추가

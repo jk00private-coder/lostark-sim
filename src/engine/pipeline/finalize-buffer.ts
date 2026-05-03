@@ -56,11 +56,10 @@ export const finalizeBuffer = (bufferMap: BufferMap): DamageModifiers => {
 
   Object.entries(bufferMap).forEach(([type, subGroups]) => {
     const entry = EFFECT_MAP[type as CommonEffectTypeId];
-    if (!entry) return; // EFFECT_MAP에 없는 타입은 무시 (GK_QI_DMG 등 중간 타입)
+    if (!entry) return;
 
-    // subGroup별 합산 후 독립 곱연산
-    Object.values(subGroups).forEach(values => {
-      const groupSum = values.reduce((s, v) => s + v, 0);
+    Object.values(subGroups).forEach(items => {
+      const groupSum = items.reduce((s, item) => s + item.v, 0);
       modRecord[entry.field] *= (1 + groupSum);
     });
   });

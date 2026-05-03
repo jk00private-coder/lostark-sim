@@ -34,31 +34,18 @@ import { SkillOverride } from '@/types/skill-types';
 // 버퍼 타입
 // ============================================================
 
-/**
- * 합산 전 원본값 보관 구조
- *
- * 예) { DMG_INC: { card: [0.08, 0.12], __solo_0: [0.18] }, EVO_DMG: { __solo_0: [0.075] } }
- *
- * subGroup 없음 → '__solo_{idx}' 키로 독립 보관
- * subGroup 있음 → 해당 키로 합산 보관
- */
-export type BufferMap = Record<string, Record<string, number[]>>;
+/** v: 수치(value), i: 원본 로그 인덱스(index) */
+export type BufferItem = { v: number; i: number };
 
-/**
- * 스킬 하나의 버퍼
- * Static 복사 후 Dynamic 추가분이 합쳐진 상태
- */
+/** [타입][그룹명] -> 데이터 배열 */
+export type BufferMap = Record<string, Record<string, BufferItem[]>>;
+
 export interface SkillBuffer {
   skillId   : number;
   bufferMap : BufferMap;
-  /** Special 처리가 완료된 후 확정된 DamageModifiers */
   finalMods?: DamageModifiers;
 }
 
-/**
- * 전체 스킬별 완성된 버퍼 묶음
- * key: skillId
- */
 export type SkillStatsBuffer = Record<number, SkillBuffer>;
 
 
@@ -265,12 +252,6 @@ export interface PipelineDebugData {
   // ── 단계별 중간값 ────────────────────────────────────────
   /** 0단계: 스킬별 확정 특성 */
   step0_resolvedSkills: SkillMetaDebug[];
-  /** 1단계: Static 버퍼 (공통 효과만) */
-  step1_staticBuffer  : BufferMap;
-  /** 2단계: 스킬별 Dynamic 버퍼 (key: skillId) */
-  step2_dynamicBuffers: Record<number, BufferMap>;
-  /** 3단계: Special 처리 후 스킬별 버퍼 (key: skillId) */
-  step3_specialBuffers: Record<number, BufferMap>;
 
   // ── 확정값 ──────────────────────────────────────────────
   /** 공격력 4종 최종값 */
