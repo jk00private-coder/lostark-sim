@@ -77,6 +77,9 @@ const ATK_RELATED_TYPES = new Set([
   'MAIN_STAT_C',  'MAIN_STAT_P',
   'ATK_C',        'ATK_P',
   'BASE_ATK_P',
+  'STAT_CRIT', 'STAT_SPEC', 'STAT_SWIFT',
+  'STAT_DOM',  'STAT_END',  'STAT_EXP',
+  'STAT_HP_C', 'STAT_HP_P',
 ]);
 
 /**
