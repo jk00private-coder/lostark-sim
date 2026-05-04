@@ -77,9 +77,6 @@ const ATK_RELATED_TYPES = new Set([
   'MAIN_STAT_C',  'MAIN_STAT_P',
   'ATK_C',        'ATK_P',
   'BASE_ATK_P',
-  'STAT_CRIT', 'STAT_SPEC', 'STAT_SWIFT',
-  'STAT_DOM',  'STAT_END',  'STAT_EXP',
-  'STAT_HP_C', 'STAT_HP_P',
 ]);
 
 /**
@@ -218,45 +215,6 @@ const buildSkillMetaDebug = (
 // ============================================================
 // 헬퍼: 최종 버퍼 → EffectRow[] 생성 (UI 상세 로그용)
 // ============================================================
-const buildEffectRows = (
-  bufferMap     : BufferMap,
-  skillCalcLogs : PipelineEffectLog[],
-): EffectRow[] => {
-  const rows: EffectRow[] = [];
-
-  Object.entries(bufferMap).forEach(([type, subGroups]) => {
-    Object.entries(subGroups).forEach(([group, items]) => {
-      const displayGroup = group.startsWith('__solo_') ? '-' : group;
-
-      items.forEach(item => {
-        // item.i에 이미 원본 인덱스가 들어있으므로 즉시 참조[cite: 1, 3]
-        // dynamic 로그 오프셋(10000) 처리가 필요하다면 여기서 수행
-        const logIdx = item.i >= 10000 ? item.i - 10000 : item.i;
-        const log = skillCalcLogs[logIdx];
-
-        if (log) {
-          rows.push({
-            label   : log.label,
-            type,
-            value   : item.v, // .v 사용[cite: 2]
-            subGroup: displayGroup,
-            desc    : log.desc ?? '-',
-          });
-        } else {
-          rows.push({
-            label   : '(계산됨)',
-            type,
-            value   : item.v,
-            subGroup: displayGroup,
-            desc    : '-',
-          });
-        }
-      });
-    });
-  });
-
-  return rows;
-};
 
 /**
  * 전체 스킬의 SkillDetailLog 생성
@@ -286,7 +244,7 @@ const DETAIL_CATEGORIES = [
 const buildSkillDetailLogs = (
   resolvedSkills : ResolvedSkillMeta[],
   skillStatsBuffer: SkillStatsBuffer,
-  staticLogs: PipelineEffectLog[],
+  allLogs: PipelineEffectLog[],
   dynamicLogs: PipelineEffectLog[],
   specialLogs: PipelineEffectLog[]
 ): Record<number, SkillDetailLog> => {
@@ -313,7 +271,7 @@ const buildSkillDetailLogs = (
 
             if (item.i >= 20000) { log = specialLogs[item.i - 20000]; }
             else if (item.i >= 10000) { log = dynamicLogs[item.i - 10000]; }
-            else { log = staticLogs[item.i]; }
+            else { log = allLogs[item.i]; }
 
             rows.push({
               label: log?.label ?? '(계산됨)',
